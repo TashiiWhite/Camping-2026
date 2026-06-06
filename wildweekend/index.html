@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WildWeekend · The Crew's Field Plan</title>
+<meta name="description" content="A 3-day car camping field plan: campsites, gear, meals, costs & contingencies.">
+<meta name="theme-color" content="#0e120d">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 2L2 22h20z' fill='%239bce6f'/></svg>">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap');
+:root{
+  --bg:#0e120d;--surface:#161d14;--surface2:#1d271a;--surface3:#243021;
+  --border:rgba(173,196,150,.13);--border-strong:rgba(173,196,150,.26);
+  --text:#e9eee2;--muted:#9aaa8c;--faint:#6b7a60;
+  --green:#9bce6f;--green-d:#7bb661;--amber:#f0b455;--amber-d:#e8a13c;--river:#6cb6d4;--coral:#e8896b;--danger:#e87a6b;
+  --radius:14px;--radius-sm:9px;
+  --mono:'JetBrains Mono',monospace;--display:'Bricolage Grotesque',sans-serif;--body:'Hanken Grotesk',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;min-height:100vh;position:relative;overflow-x:hidden}
+.topo{position:fixed;inset:0;z-index:0;opacity:.5;pointer-events:none}
+.topo svg{width:100%;height:100%}
+.glow{position:fixed;width:600px;height:600px;border-radius:50%;filter:blur(120px);z-index:0;pointer-events:none;opacity:.18}
+.glow.g1{background:var(--green);top:-200px;right:-150px}
+.glow.g2{background:var(--amber);bottom:-250px;left:-150px;opacity:.12}
+.app{position:relative;z-index:2;max-width:1080px;margin:0 auto;padding:0 20px 80px}
+header{padding:38px 0 22px;display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.brand{display:flex;flex-direction:column;gap:2px}
+.brand .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--amber);display:flex;align-items:center;gap:8px}
+.brand h1{font-family:var(--display);font-weight:800;font-size:clamp(38px,7vw,62px);line-height:.92;letter-spacing:-.02em}
+.brand h1 em{font-style:normal;color:var(--green)}
+.brand .sub{font-size:13px;color:var(--muted);margin-top:6px;font-family:var(--mono);letter-spacing:.04em}
+.countdown{text-align:right;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 20px;min-width:150px}
+.countdown .num{font-family:var(--display);font-weight:800;font-size:46px;line-height:1;color:var(--amber)}
+.countdown .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint);margin-top:4px}
+nav{position:sticky;top:0;z-index:10;display:flex;gap:4px;padding:10px 20px;margin:0 -20px 8px;background:linear-gradient(180deg,var(--bg) 70%,transparent);overflow-x:auto;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+.tab{font-family:var(--mono);font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);background:transparent;border:1px solid transparent;padding:9px 15px;border-radius:99px;cursor:pointer;white-space:nowrap;transition:all .18s;display:flex;align-items:center;gap:7px}
+.tab:hover{color:var(--text);background:var(--surface)}
+.tab.active{color:var(--bg);background:var(--green);border-color:var(--green);font-weight:700}
+.tab svg{width:14px;height:14px}
+.panel{display:none;animation:fade .4s ease}
+.panel.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.sec-title{font-family:var(--display);font-weight:700;font-size:26px;letter-spacing:-.01em;margin:8px 0 4px}
+.sec-desc{color:var(--muted);font-size:14px;margin-bottom:22px;max-width:62ch}
+.kicker{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--amber);margin:34px 0 12px;display:flex;align-items:center;gap:10px}
+.kicker::after{content:'';flex:1;height:1px;background:var(--border)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.hero-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:14px}
+@media(max-width:760px){.hero-grid{grid-template-columns:1fr}}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px}
+.stat .v{font-family:var(--display);font-weight:700;font-size:24px}
+.stat .v small{font-size:13px;color:var(--muted);font-family:var(--body);font-weight:400}
+.stat .k{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-top:2px}
+.dash-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.quicklink{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);text-decoration:none;color:var(--text);transition:all .16s}
+.quicklink:hover{border-color:var(--border-strong);background:var(--surface2);transform:translateX(3px)}
+.quicklink .ico{width:34px;height:34px;border-radius:8px;background:var(--surface3);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:17px}
+.quicklink .qt{font-size:13px;font-weight:600}
+.quicklink .qd{font-size:11px;color:var(--muted);font-family:var(--mono)}
+.quicklink .arr{margin-left:auto;color:var(--faint)}
+.crew-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.crew-chip{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:99px;padding:5px 6px 5px 5px;font-size:13px}
+.avatar{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:700;font-size:12px;color:var(--bg);flex-shrink:0}
+.crew-chip .x{cursor:pointer;color:var(--faint);font-size:15px;line-height:1;padding:0 3px}
+.crew-chip .x:hover{color:var(--danger)}
+input,select{font-family:var(--body);font-size:14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 12px;outline:none;transition:border .16s}
+input:focus,select:focus{border-color:var(--green)}
+input::placeholder{color:var(--faint)}
+.btn{font-family:var(--mono);font-size:12px;letter-spacing:.04em;text-transform:uppercase;font-weight:700;background:var(--green);color:var(--bg);border:none;border-radius:8px;padding:9px 16px;cursor:pointer;transition:all .16s}
+.btn:hover{background:var(--green-d)}
+.btn.ghost{background:transparent;border:1px solid var(--border-strong);color:var(--text)}
+.btn.ghost:hover{background:var(--surface2)}
+.btn.sm{padding:6px 12px;font-size:11px}
+.site{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column}
+.site.win{border-color:var(--green);border-width:1.5px}
+.site-top{padding:18px 18px 14px;border-bottom:1px solid var(--border)}
+.site-flag{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--river);margin-bottom:8px}
+.site-top h3{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:-.01em}
+.site-meta{font-size:12px;color:var(--muted);font-family:var(--mono);margin-top:4px}
+.site-body{padding:16px 18px;flex:1}
+.drow{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
+.drow:last-child{border-bottom:none}
+.drow .dl{color:var(--muted)}
+.drow .dv{font-weight:600;text-align:right;font-family:var(--mono);font-size:12px}
+.plist{margin-top:14px;display:flex;flex-direction:column;gap:5px}
+.pli{font-size:12.5px;color:var(--muted);display:flex;gap:8px;line-height:1.4}
+.pli.pro::before{content:'+';color:var(--green);font-weight:700;font-family:var(--mono)}
+.pli.con::before{content:'!';color:var(--amber);font-weight:700;font-family:var(--mono)}
+.site-foot{padding:14px 18px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center}
+.vote-tally{font-family:var(--mono);font-size:11px;color:var(--amber);margin-left:auto}
+.tl{position:relative;padding-left:30px}
+.tl::before{content:'';position:absolute;left:8px;top:6px;bottom:6px;width:2px;background:var(--border)}
+.tl-item{position:relative;padding-bottom:24px}
+.tl-item:last-child{padding-bottom:0}
+.tl-item::before{content:'';position:absolute;left:-26px;top:5px;width:12px;height:12px;border-radius:50%;background:var(--green);border:3px solid var(--bg)}
+.tl-item.amber::before{background:var(--amber)}
+.tl-time{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);margin-bottom:3px}
+.tl-item h4{font-family:var(--display);font-weight:700;font-size:17px;margin-bottom:3px}
+.tl-item p{font-size:13.5px;color:var(--muted)}
+.gear-cat{margin-bottom:20px}
+.gear-item{display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:7px;transition:border .16s}
+.gear-item:hover{border-color:var(--border-strong)}
+.gear-item.claimed{background:var(--surface2)}
+.gear-info{flex:1;min-width:0}
+.gear-name{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.gear-note{font-size:11.5px;color:var(--faint);margin-top:1px}
+.gtype{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:5px;white-space:nowrap}
+.gt-shared{background:rgba(108,182,212,.16);color:var(--river)}
+.gt-each{background:rgba(154,170,140,.16);color:var(--muted)}
+.gt-someone{background:rgba(240,180,85,.16);color:var(--amber)}
+.gear-claim{flex-shrink:0}
+.gear-claim select{font-size:12px;padding:6px 10px;min-width:120px}
+.claimed-by{display:flex;align-items:center;gap:7px;font-size:12px;font-family:var(--mono);color:var(--green)}
+.claimed-by .x{cursor:pointer;color:var(--faint)}
+.claimed-by .x:hover{color:var(--danger)}
+.ftable{width:100%;border-collapse:collapse;font-size:13px}
+.ftable th{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);text-align:left;padding:9px 12px;border-bottom:1px solid var(--border-strong)}
+.ftable td{padding:11px 12px;border-bottom:1px solid var(--border);color:var(--muted);vertical-align:top;line-height:1.45}
+.ftable .fn{font-weight:600;color:var(--text)}
+.ftable tr:hover td{background:var(--surface)}
+.fpill{font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;padding:3px 8px;border-radius:99px;white-space:nowrap;display:inline-block}
+.fp-cooler{background:rgba(108,182,212,.16);color:var(--river)}
+.fp-dry{background:rgba(155,206,111,.16);color:var(--green)}
+.fp-fire{background:rgba(232,137,107,.18);color:var(--coral)}
+.fp-stove{background:rgba(240,180,85,.16);color:var(--amber)}
+.fp-none{background:rgba(154,170,140,.14);color:var(--muted)}
+.ffilter{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
+.fbtn{font-family:var(--mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase;background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:7px 13px;border-radius:99px;cursor:pointer;transition:all .16s}
+.fbtn:hover{color:var(--text)}
+.fbtn.on{background:var(--green);color:var(--bg);border-color:var(--green);font-weight:700}
+.meal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px}
+.meal .mh{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--amber);margin-bottom:3px}
+.meal h4{font-family:var(--display);font-weight:700;font-size:16px;margin-bottom:8px}
+.meal ul{list-style:none}
+.meal li{font-size:12.5px;color:var(--muted);padding:2px 0;display:flex;gap:7px}
+.meal li::before{content:'·';color:var(--faint)}
+.meal .mtip{font-size:11.5px;color:var(--green);margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+.chk{display:flex;align-items:flex-start;gap:11px;padding:9px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.chk:last-child{border-bottom:none}
+.chk .box{width:19px;height:19px;border-radius:5px;border:1.5px solid var(--border-strong);flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;transition:all .14s}
+.chk.done .box{background:var(--green);border-color:var(--green)}
+.chk.done .box svg{display:block}
+.chk .box svg{display:none;width:12px;height:12px;color:var(--bg)}
+.chk .ct{font-size:13.5px}
+.chk.done .ct{color:var(--faint);text-decoration:line-through}
+.expense-form{display:grid;grid-template-columns:1fr 110px 130px auto;gap:8px;margin-bottom:16px}
+@media(max-width:680px){.expense-form{grid-template-columns:1fr 1fr}}
+.exp-row{display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:7px}
+.exp-row .ed{flex:1}
+.exp-row .edesc{font-size:14px;font-weight:600}
+.exp-row .emeta{font-size:11px;color:var(--faint);font-family:var(--mono)}
+.exp-row .eamt{font-family:var(--display);font-weight:700;font-size:18px;color:var(--amber)}
+.exp-row .x{cursor:pointer;color:var(--faint);font-size:18px}
+.exp-row .x:hover{color:var(--danger)}
+.settle{background:var(--surface2);border:1px solid var(--border-strong);border-radius:var(--radius);padding:18px;margin-top:18px}
+.settle h4{font-family:var(--display);font-weight:700;font-size:17px;margin-bottom:12px}
+.settle-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.settle-row:last-child{border-bottom:none}
+.settle-row .owe{font-family:var(--mono);font-weight:700}
+.owe.pos{color:var(--green)}
+.owe.neg{color:var(--coral)}
+.icard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:15px}
+.icard .itag{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:5px;display:inline-block;margin-bottom:9px}
+.it-struct{background:rgba(155,206,111,.16);color:var(--green)}
+.it-log{background:rgba(108,182,212,.16);color:var(--river)}
+.it-prep{background:rgba(240,180,85,.16);color:var(--amber)}
+.it-safe{background:rgba(232,122,107,.18);color:var(--danger)}
+.it-food{background:rgba(155,206,111,.16);color:var(--green)}
+.it-app{background:rgba(173,150,212,.18);color:#b49ad4}
+.icard h4{font-family:var(--display);font-weight:700;font-size:15px;margin-bottom:5px}
+.icard p{font-size:12.5px;color:var(--muted);line-height:1.5}
+.tip{display:flex;gap:13px;padding:13px 0;border-bottom:1px solid var(--border)}
+.tip:last-child{border-bottom:none}
+.tip .ti{width:34px;height:34px;border-radius:9px;background:var(--surface3);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:17px}
+.tip h4{font-family:var(--display);font-weight:700;font-size:15px;margin-bottom:2px}
+.tip p{font-size:12.5px;color:var(--muted);line-height:1.5}
+.note{background:rgba(240,180,85,.1);border:1px solid rgba(240,180,85,.3);border-radius:var(--radius-sm);padding:12px 15px;font-size:12.5px;color:var(--amber);line-height:1.5;margin-top:12px}
+.role-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.role{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px}
+.role .rn{font-family:var(--display);font-weight:700;font-size:15px;margin-bottom:8px}
+.role select{width:100%;font-size:13px}
+footer{text-align:center;margin-top:50px;padding-top:24px;border-top:1px solid var(--border);font-family:var(--mono);font-size:11px;color:var(--faint);letter-spacing:.06em}
+.empty{text-align:center;color:var(--faint);font-size:13px;padding:24px;font-family:var(--mono)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+</style>
+</head>
+<body>
+<div class="topo">
+<svg viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+<g fill="none" stroke="#9bce6f" stroke-width="1" opacity="0.5">
+<path d="M-50,200 Q200,120 450,200 T950,180 T1300,220"/><path d="M-50,250 Q220,170 460,250 T960,230 T1300,270"/>
+<path d="M-50,300 Q240,230 470,300 T970,280 T1300,320"/><path d="M-50,360 Q260,300 480,360 T980,340 T1300,380"/>
+<path d="M-50,440 Q280,390 500,440 T1000,420 T1300,460"/><path d="M-50,520 Q300,480 520,520 T1020,500 T1300,540"/>
+<path d="M-50,600 Q320,570 540,600 T1040,580 T1300,620"/>
+<circle cx="500" cy="380" r="60"/><circle cx="500" cy="380" r="110"/><circle cx="500" cy="380" r="170"/>
+<circle cx="900" cy="240" r="40"/><circle cx="900" cy="240" r="80"/>
+</g></svg>
+</div>
+<div class="glow g1"></div><div class="glow g2"></div>
+<div class="app">
+<header>
+  <div class="brand">
+    <div class="eyebrow">◆ Basecamp · the crew's field plan</div>
+    <h1>Wild<em>Weekend</em></h1>
+    <div class="sub">Fri Jun 19 → Sun Jun 21, 2026 · 4–5 guys · 2 cars · car camping</div>
+  </div>
+  <div class="countdown"><div class="num" id="cd-num">–</div><div class="lbl" id="cd-lbl">days to go</div></div>
+</header>
+<nav id="nav">
+  <button class="tab active" data-p="dash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>Basecamp</button>
+  <button class="tab" data-p="sites"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 22h20z"/></svg>Campsites</button>
+  <button class="tab" data-p="plan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Itinerary</button>
+  <button class="tab" data-p="gear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Gear</button>
+  <button class="tab" data-p="food"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3v18M5 11h6V3M19 3c-2 0-3 2-3 5s1 4 3 4v9"/></svg>Food</button>
+  <button class="tab" data-p="shop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6h15l-1.5 9h-12zM6 6L5 3H2M9 20a1 1 0 100-2 1 1 0 000 2zM18 20a1 1 0 100-2 1 1 0 000 2z"/></svg>Shopping</button>
+  <button class="tab" data-p="money"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h4a1.5 1.5 0 010 3h-3a1.5 1.5 0 000 3h4"/></svg>Costs</button>
+  <button class="tab" data-p="info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>Survival</button>
+</nav>
+
+<section class="panel active" id="dash">
+  <div class="hero-grid">
+    <div class="card">
+      <div class="kicker" style="margin-top:0">◆ The mission</div>
+      <p style="color:var(--muted);font-size:14px;margin-bottom:16px">A three-day, two-night car-camping weekend for the crew — heavy on the campfire, the lake, and the food. Two cars rolling out of DDO, one shared cooler philosophy, zero forgotten tent poles. Everything you need lives in these tabs.</p>
+      <div class="dash-stats">
+        <div class="stat"><div class="v">3<small> days</small></div><div class="k">Jun 19–21</div></div>
+        <div class="stat"><div class="v">4–5</div><div class="k">crew members</div></div>
+        <div class="stat"><div class="v">2</div><div class="k">cars · convoy</div></div>
+        <div class="stat"><div class="v">$90<small>–175</small></div><div class="k">est. / person</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="kicker" style="margin-top:0">◆ The crew</div>
+      <p style="color:var(--muted);font-size:12.5px;margin-bottom:12px">Add everyone first — names power the gear claims, cost splits, votes &amp; roles.</p>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <input id="crew-input" placeholder="Add a name…" style="flex:1" onkeydown="if(event.key==='Enter')addCrew()">
+        <button class="btn" onclick="addCrew()">Add</button>
+      </div>
+      <div class="crew-bar" id="crew-bar"></div>
+    </div>
+  </div>
+  <div class="kicker">◆ Quick links</div>
+  <div class="grid g2">
+    <a class="quicklink" href="http://www.campingdelaplage-qc.ca" target="_blank" rel="noopener"><div class="ico">🏞️</div><div><div class="qt">Camping de la Plage</div><div class="qd">campingdelaplage-qc.ca · 819-275-7757</div></div><div class="arr">↗</div></a>
+    <a class="quicklink" href="https://reservations.parks.on.ca/" target="_blank" rel="noopener"><div class="ico">🛶</div><div><div class="qt">Ivy Lea — Book now</div><div class="qd">reservations.parks.on.ca · 613-659-3057</div></div><div class="arr">↗</div></a>
+    <a class="quicklink" href="https://sopfeu.qc.ca/" target="_blank" rel="noopener"><div class="ico">🔥</div><div><div class="qt">QC fire ban status (SOPFEU)</div><div class="qd">sopfeu.qc.ca · check before you leave</div></div><div class="arr">↗</div></a>
+    <a class="quicklink" href="https://www.ontario.ca/page/forest-fires" target="_blank" rel="noopener"><div class="ico">🔥</div><div><div class="qt">ON fire ban status</div><div class="qd">ontario.ca/page/forest-fires</div></div><div class="arr">↗</div></a>
+    <a class="quicklink" href="https://weather.gc.ca/" target="_blank" rel="noopener"><div class="ico">⛅</div><div><div class="qt">Environment Canada weather</div><div class="qd">weather.gc.ca · search the campsite town</div></div><div class="arr">↗</div></a>
+    <a class="quicklink" href="https://www.stlawrenceparks.com/fees/" target="_blank" rel="noopener"><div class="ico">💵</div><div><div class="qt">Ivy Lea fees &amp; rules</div><div class="qd">stlawrenceparks.com/fees</div></div><div class="arr">↗</div></a>
+  </div>
+  <div class="note">⚠️ Book ASAP — June 19 is the Friday right before Saint-Jean-Baptiste (Jun 24). Both campgrounds fill up fast around this long weekend. Lock in the site before sorting anything else.</div>
+  <div class="kicker">◆ Your data</div>
+  <div class="card">
+    <p style="color:var(--muted);font-size:13px">Everything you enter (crew, gear claims, costs, checklists, votes, roles) saves to <b>this browser</b>. To share the live state with the crew, use export/import — one person exports the file and the others import it.</p>
+    <div class="toolbar">
+      <button class="btn ghost sm" onclick="exportData()">⬇ Export crew data</button>
+      <button class="btn ghost sm" onclick="document.getElementById('import-file').click()">⬆ Import crew data</button>
+      <button class="btn ghost sm" onclick="resetData()">↺ Reset all</button>
+      <input type="file" id="import-file" accept="application/json" style="display:none" onchange="importData(this)">
+    </div>
+  </div>
+</section>
+
+<section class="panel" id="sites">
+  <div class="sec-title">Two campsites on the table</div>
+  <div class="sec-desc">Both are riverside, both have showers, stores &amp; swimming. The trade-off is distance vs. scenery. Cast your vote — pick your name and the tally updates.</div>
+  <div class="grid g2">
+    <div class="site" id="site-plage">
+      <div class="site-top"><div class="site-flag">🇨🇦 Quebec · Laurentians</div><h3>Camping de la Plage</h3><div class="site-meta">Rivière-Rouge, QC · Route 117</div></div>
+      <div class="site-body">
+        <div class="drow"><span class="dl">Drive from DDO</span><span class="dv">~2 h · 170 km</span></div>
+        <div class="drow"><span class="dl">Setting</span><span class="dv">Rivière Rouge bank</span></div>
+        <div class="drow"><span class="dl">Tent site</span><span class="dv">~$40–55 · call</span></div>
+        <div class="drow"><span class="dl">Open</span><span class="dv">May 10–Sep 22</span></div>
+        <div class="drow"><span class="dl">Curfew</span><span class="dv">11:00 PM</span></div>
+        <div class="drow"><span class="dl">Checkout</span><span class="dv">11:00 AM</span></div>
+        <div class="plist">
+          <div class="pli pro">Closest — only ~2 hrs north of DDO</div>
+          <div class="pli pro">River beach + canoe/kayak rentals</div>
+          <div class="pli pro">Showers, laundry, store, Wi-Fi, firewood</div>
+          <div class="pli pro">Live music weekends · ~25 min to Mont-Tremblant</div>
+          <div class="pli con">Call 819-275-7757 to confirm June rates</div>
+          <div class="pli con">Reviews note a strict noise policy — keep it chill</div>
+        </div>
+      </div>
+      <div class="site-foot"><button class="btn sm ghost" onclick="window.open('http://www.campingdelaplage-qc.ca','_blank')">Visit ↗</button><select id="vote-plage" onchange="castVote('plage',this.value)"><option value="">Vote as…</option></select><span class="vote-tally" id="tally-plage">0 votes</span></div>
+    </div>
+    <div class="site win" id="site-ivy">
+      <div class="site-top"><div class="site-flag">🇨🇦 Ontario · 1000 Islands</div><h3>Ivy Lea Campground</h3><div class="site-meta">Lansdowne, ON · Thousand Islands Pkwy</div></div>
+      <div class="site-body">
+        <div class="drow"><span class="dl">Drive from DDO</span><span class="dv">~3–3.5 h</span></div>
+        <div class="drow"><span class="dl">Basic site</span><span class="dv">$47.32 +HST</span></div>
+        <div class="drow"><span class="dl">Waterfront</span><span class="dv">$55.30 +HST</span></div>
+        <div class="drow"><span class="dl">Premium WF</span><span class="dv">$63.08 +HST</span></div>
+        <div class="drow"><span class="dl">Extra vehicle</span><span class="dv">$13.00 / night</span></div>
+        <div class="drow"><span class="dl">Reservation fee</span><span class="dv">$13.25 (n/r)</span></div>
+        <div class="drow"><span class="dl">Checkout</span><span class="dv">1:00 PM</span></div>
+        <div class="plist">
+          <div class="pli pro">Stunning 1000 Islands / St. Lawrence setting</div>
+          <div class="pli pro">Boat launch, scuba, trails, suspension bridge</div>
+          <div class="pli pro">Near Gananoque cruises + Boldt Castle</div>
+          <div class="pli pro">Premium waterfront sites available</div>
+          <div class="pli con">~1 hr farther than Rivière-Rouge</div>
+          <div class="pli con">HST adds ~13% · some sites under the bridge</div>
+        </div>
+      </div>
+      <div class="site-foot"><button class="btn sm ghost" onclick="window.open('https://reservations.parks.on.ca/','_blank')">Book ↗</button><select id="vote-ivy" onchange="castVote('ivy',this.value)"><option value="">Vote as…</option></select><span class="vote-tally" id="tally-ivy">0 votes</span></div>
+    </div>
+  </div>
+  <div class="note">Cancellation note for Ivy Lea: free changes 8+ days before arrival; within 7 days you forfeit one night's fee plus an $11.25 fee. Book early and don't cut it close.</div>
+</section>
+
+<section class="panel" id="plan">
+  <div class="sec-title">The weekend, hour by hour</div>
+  <div class="sec-desc">A loose-but-real timeline. Times assume a Rivière-Rouge run; add an hour of drive time for Ivy Lea.</div>
+  <div class="tl">
+    <div class="tl-item amber"><div class="tl-time">Thu Jun 18 · night before</div><h4>Pack &amp; prep</h4><p>Car-pack both vehicles. Pre-make marinades &amp; foil packets. Pre-crack eggs into a jar. Freeze water bottles (free ice + drinking water). Confirm reservation, check weather &amp; fire ban. Charge every power bank.</p></div>
+    <div class="tl-item"><div class="tl-time">Fri Jun 19 · 8–9 AM</div><h4>Roll out of DDO</h4><p>2-car convoy, lead car set. Gas up before the highway. Share the playlist across both cars.</p></div>
+    <div class="tl-item"><div class="tl-time">Fri Jun 19 · ~10 AM</div><h4>Road grocery stop</h4><p>Last real store: IGA in Saint-Jérôme (Rivière-Rouge run) or Foodland in Gananoque (Ivy Lea run). Grab ice top-up, fresh produce, buns, breakfast sandwiches.</p></div>
+    <div class="tl-item"><div class="tl-time">Fri Jun 19 · 12–1 PM</div><h4>Arrive &amp; set up</h4><p>Both cars park. Pitch all tents first — before anything else. Build the kitchen station. Buy firewood on-site. Light the first fire. Easy foil-packet dinner. Night-one campfire.</p></div>
+    <div class="tl-item"><div class="tl-time">Sat Jun 20 · all day</div><h4>The main day</h4><p>Slow breakfast &amp; coffee. Lake/river time — swim, canoe, kayak. No-cook lunch. Golden-hour hangs. Grill night (the best meal). Long fire with games, music &amp; s'mores.</p></div>
+    <div class="tl-item amber"><div class="tl-time">Sun Jun 21 · AM</div><h4>Wind down &amp; pack out</h4><p>Leftover brunch. Break down camp systematically across both cars. Leave-no-trace sweep. Check out (11 AM QC / 1 PM Ivy Lea). Poutine or a sit-down meal on the drive home.</p></div>
+  </div>
+</section>
+
+<section class="panel" id="gear">
+  <div class="sec-title">Gear — claim what you've got</div>
+  <div class="sec-desc">Several of you already own camping kit, so this stops duplicate buys. Pick your name next to each item you're bringing. <span style="color:var(--river)">Shared</span> = one for the group, <span style="color:var(--amber)">Someone</span> = whoever owns it, <span style="color:var(--muted)">Each</span> = everyone brings their own.</div>
+  <div id="gear-list"></div>
+</section>
+
+<section class="panel" id="food">
+  <div class="sec-title">Food — easy to haul, easy to cook, fills you up</div>
+  <div class="sec-desc">Filter the food matrix by how it stores or how it cooks. Below it: the full 9-meal plan and the expert prep &amp; storage playbook.</div>
+  <div class="ffilter" id="ffilter">
+    <button class="fbtn on" data-f="all">All</button><button class="fbtn" data-f="cooler">Cooler</button><button class="fbtn" data-f="dry">Dry / no fridge</button><button class="fbtn" data-f="fire">Campfire</button><button class="fbtn" data-f="stove">Camp stove</button><button class="fbtn" data-f="none">No cook</button>
+  </div>
+  <div class="card" style="padding:4px 0;overflow-x:auto"><table class="ftable" id="ftable"><thead><tr><th>Food</th><th>Store</th><th>Cook</th><th>Why it works + pro tip</th></tr></thead><tbody></tbody></table></div>
+  <div class="kicker">◆ The 9-meal plan</div>
+  <div class="grid g3" id="meal-grid"></div>
+  <div class="kicker">◆ Expert prep, packing &amp; storage</div>
+  <div class="grid g2" id="prep-grid"></div>
+</section>
+
+<section class="panel" id="shop">
+  <div class="sec-title">Shopping — buy in 3 phases</div>
+  <div class="sec-desc">Bulk-buy at home where it's cheapest, grab fresh + ice en route, and only buy local-essentials on-site. Check items off — saved in your browser.</div>
+  <div class="grid g3" id="shop-grid"></div>
+  <div class="note">Campground store prices run 30–50% above grocery. On-site, only buy what must be local (firewood) or what you genuinely forgot.</div>
+</section>
+
+<section class="panel" id="money">
+  <div class="sec-title">Cost splitter</div>
+  <div class="sec-desc">Log every shared expense — site fee, firewood, food runs, gas. The settle-up below tells everyone who owes who. Add the crew on the Basecamp tab first.</div>
+  <div class="card">
+    <div class="expense-form">
+      <input id="exp-desc" placeholder="What was it? (e.g. firewood)">
+      <input id="exp-amt" type="number" placeholder="$ amount" step="0.01">
+      <select id="exp-who"><option value="">Who paid?</option></select>
+      <button class="btn" onclick="addExpense()">Add</button>
+    </div>
+    <div id="exp-list"></div>
+  </div>
+  <div class="settle" id="settle"><h4>Settle up</h4><div id="settle-body"><div class="empty">Add crew + expenses to see the split.</div></div></div>
+</section>
+
+<section class="panel" id="info">
+  <div class="sec-title">Survival kit — tips, safety &amp; roles</div>
+  <div class="sec-desc">The soft stuff experienced crews always sort beforehand: who does what, the safety basics, and everything still worth nailing down.</div>
+  <div class="kicker" style="margin-top:8px">◆ Assign roles</div>
+  <div class="role-grid" id="role-grid"></div>
+  <div class="kicker">◆ Field tips &amp; good-to-knows</div>
+  <div class="card" id="tips-card"></div>
+  <div class="kicker">◆ Still worth nailing down</div>
+  <div class="grid g3" id="missing-grid"></div>
+  <div class="kicker">◆ Emergency &amp; key info</div>
+  <div class="grid g2">
+    <div class="icard"><div class="itag it-safe">Safety</div><h4>Print one copy per car</h4><p>Campground phone (Plage 819-275-7757 / Ivy Lea 613-659-3057), nearest hospital &amp; urgent care, and provincial fire/police non-emergency numbers. Don't rely on phones — service is spotty.</p></div>
+    <div class="icard"><div class="itag it-safe">Water</div><h4>Bring backup water</h4><p>Both sites have potable tap water, but pack 10–15 L in jugs as backup. Never drink from the river or lake without a filter.</p></div>
+  </div>
+</section>
+
+<footer>◆ WildWeekend · built for the crew · open-source &amp; self-hosted ◆</footer>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
