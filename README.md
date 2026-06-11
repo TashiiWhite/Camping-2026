@@ -1,4 +1,4 @@
-# 🏕️ WildWeekend v3 — Live-Synced Crew Field Plan (Aurora)
+# 🏕️ WildWeekend v4 — Live-Synced Crew Field Plan (Aurora)
 
 A PWA (installable web app) for planning a 3-day car-camping trip. One shared trip — **camping-june-2026** — that every crew member views and edits live, from any device. Built on plain HTML/CSS/JS + Supabase (free tier). No build step.
 
