@@ -1,57 +1,169 @@
-/* WildWeekend — crew field plan. Data persists in localStorage; share via export/import. */
-const STORE_KEY = 'wildweekend_v1';
-let state = { crew:[], gearClaims:{}, expenses:[], votes:{}, roles:{}, checks:{} };
+/* ============================================================
+   WildWeekend app — live-synced crew field plan
+   Modes:
+   - LIVE  : Supabase configured -> one shared trip, realtime
+   - LOCAL : placeholders in config.js -> localStorage only
+   ============================================================ */
+'use strict';
 
-function load(){
-  try{ const raw = localStorage.getItem(STORE_KEY); if(raw){ state = Object.assign(state, JSON.parse(raw)); } }
-  catch(e){ console.warn('load failed', e); }
-}
-function save(){
-  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
-  catch(e){ console.warn('save failed', e); }
+const CFG = window.WW_CONFIG || {};
+const TRIP_ID = CFG.TRIP_ID || 'camping-june-2026';
+const LS_KEY = 'wildweekend_' + TRIP_ID;
+const CLIENT_ID = Math.random().toString(36).slice(2);
+
+let sb = null;           // supabase client
+let live = false;        // realtime connected
+let user = null;         // signed-in user
+let saveTimer = null;
+let lastRev = 0;
+
+let state = defaultState();
+function defaultState(){
+  return { rev:0, by:'', crew:[], gear:null, gearArchive:[], gearClaims:{},
+    expenses:[], votes:{}, roles:{}, checks:{}, stops:[], chosenSite:'' };
 }
 
+/* ---------- utils ---------- */
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
 const palette=['#9bce6f','#f0b455','#6cb6d4','#e8896b','#b49ad4','#7bb661'];
-function colorFor(name){let h=0;for(let i=0;i<name.length;i++)h=name.charCodeAt(i)+((h<<5)-h);return palette[Math.abs(h)%palette.length];}
+function colorFor(n){let h=0;for(let i=0;i<n.length;i++)h=n.charCodeAt(i)+((h<<5)-h);return palette[Math.abs(h)%palette.length];}
 function initials(n){return n.trim().slice(0,2).toUpperCase();}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function uid(){return 'g'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2600);}
 
-/* ---------- data ---------- */
-const GEAR=[
- {c:'Shelter & sleep',items:[
-   {id:'tent',n:'Tent(s)',t:'someone',note:'1×4-person or 2×2-person — confirm who has one'},
-   {id:'sleepbag',n:'Sleeping bag + pad',t:'each',note:'Rate to at least 10°C for June nights'},
-   {id:'pillow',n:'Pillow + extra blanket',t:'each',note:'Nights get genuinely cold'},
-   {id:'tarp',n:'Tarp + rope',t:'someone',note:'Rain backup shelter over the kitchen'},
-   {id:'lantern',n:'Lantern',t:'someone',note:'LED battery or propane'},
-   {id:'headlamp',n:'Headlamp',t:'each',note:'Non-negotiable — phone torch doesn\'t cut it'},
- ]},
- {c:'Kitchen & fire',items:[
-   {id:'stove',n:'Camp stove + fuel',t:'someone',note:'Check fuel compatibility before packing'},
-   {id:'cooler',n:'Cooler (large)',t:'someone',note:'Pre-chill the night before with block ice'},
-   {id:'castiron',n:'Cast iron / grill grate',t:'someone',note:'Ideal for campfire cooking'},
-   {id:'pots',n:'Pots + pans',t:'someone',note:'1 large pot, 1 frying pan minimum'},
-   {id:'dishes',n:'Plates / cups / cutlery',t:'shared',note:'One person brings a set for the group'},
-   {id:'utensils',n:'Cooking utensils + knife + board',t:'someone',note:'Dedicated board for raw meat'},
-   {id:'lighter',n:'Lighter + matches + firestarter',t:'shared',note:'Two ignition methods, always'},
-   {id:'sticks',n:'Roasting sticks',t:'shared',note:'For s\'mores & sausages'},
- ]},
- {c:'Comfort & fun',items:[
-   {id:'chair',n:'Camp chair',t:'each',note:'Everyone brings their own'},
-   {id:'speaker',n:'Bluetooth speaker',t:'shared',note:'One waterproof for daytime + one for camp'},
-   {id:'powerbank',n:'Power bank(s)',t:'shared',note:'At least one per car'},
-   {id:'hammock',n:'Hammock',t:'someone',note:'Ideal for riverside lounging'},
-   {id:'games',n:'Cards / board games',t:'shared',note:'Rain-day insurance'},
-   {id:'coffee',n:'French press / AeroPress + kettle',t:'someone',note:'Morning ritual = good vibes'},
- ]},
- {c:'Safety & health',items:[
-   {id:'firstaid',n:'First aid kit',t:'shared',note:'Keep it in the lead car'},
-   {id:'bugspray',n:'Bug spray (DEET/picaridin)',t:'shared',note:'June is peak mosquito + blackfly'},
-   {id:'sunscreen',n:'Sunscreen',t:'each',note:'Plus a hat'},
-   {id:'sanitizer',n:'Hand sanitizer',t:'shared',note:'Use before every meal'},
-   {id:'water',n:'Water jugs (10–15 L)',t:'shared',note:'Backup to site tap water'},
- ]},
+/* ---------- persistence: local + supabase ---------- */
+function saveLocal(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){} }
+function loadLocal(){ try{ const r=localStorage.getItem(LS_KEY); if(r) state=Object.assign(defaultState(), JSON.parse(r)); }catch(e){} }
+
+function persist(){
+  state.rev=(state.rev||0)+1; state.by=CLIENT_ID; lastRev=state.rev;
+  saveLocal();
+  try{renderProgress();}catch(e){}
+  if(sb){
+    clearTimeout(saveTimer);
+    saveTimer=setTimeout(async()=>{
+      try{
+        const {error}=await sb.from('trips').upsert({id:TRIP_ID, data:state, updated_at:new Date().toISOString()});
+        if(error){ console.warn('supabase save:',error.message); setSync('local','Local (save failed)'); }
+        else setSync('live','Live');
+      }catch(e){ setSync('local','Offline — will retry'); }
+    },700);
+  }
+}
+
+function setSync(mode,text){
+  const p=$('#sync-pill');p.className='sync-pill sync-'+(mode==='live'?'live':mode==='off'?'off':'local');
+  $('#sync-text').textContent=text;
+  const ex=$('#sync-explainer');
+  if(!ex)return;
+  if(mode==='live') ex.innerHTML='🟢 <b>Live sync is on.</b> Every change — crew, gear, votes, stops, costs — is shared instantly with everyone on every device. The app also caches everything for offline use and re-syncs when you reconnect.';
+  else ex.innerHTML='🟡 <b>Local mode.</b> Data saves to this device only. To go live for the whole crew, set up Supabase (see README + config.js) — takes ~10 minutes. You can still share state with Export/Import below.';
+}
+
+async function initSupabase(){
+  const url=CFG.SUPABASE_URL||'', key=CFG.SUPABASE_ANON_KEY||'';
+  if(!url||url.includes('YOUR_')||!key||key.includes('YOUR_')){ setSync('local','Local'); renderAuth(); return; }
+  try{
+    sb = supabase.createClient(url,key);
+    // auth state
+    sb.auth.onAuthStateChange((_e,session)=>{ user=session?.user||null; renderAuth(); });
+    const {data:{session}}=await sb.auth.getSession(); user=session?.user||null;
+    // initial load
+    const {data,error}=await sb.from('trips').select('data').eq('id',TRIP_ID).maybeSingle();
+    if(error) throw error;
+    if(data && data.data && Object.keys(data.data).length){
+      const remote=Object.assign(defaultState(),data.data);
+      if((remote.rev||0) >= (state.rev||0)) state=remote;
+      else persist(); // local is newer (offline edits) -> push up
+    } else {
+      await sb.from('trips').upsert({id:TRIP_ID,data:state});
+    }
+    saveLocal();
+    // realtime subscription
+    sb.channel('trip-'+TRIP_ID)
+      .on('postgres_changes',{event:'*',schema:'public',table:'trips',filter:'id=eq.'+TRIP_ID},payload=>{
+        const d=payload.new?.data; if(!d)return;
+        if(d.by===CLIENT_ID && d.rev<=lastRev) return; // own echo
+        state=Object.assign(defaultState(),d); saveLocal(); renderAll();
+      })
+      .subscribe(status=>{ if(status==='SUBSCRIBED') setSync('live','Live'); });
+    setSync('live','Live');
+  }catch(e){ console.warn('supabase init:',e.message||e); setSync('local','Local (no connection)'); }
+  renderAuth();
+}
+
+function renderAuth(){
+  const area=$('#auth-area'); if(!area)return;
+  if(!sb){ area.innerHTML=''; return; }
+  if(user){
+    const name=user.user_metadata?.full_name||user.email||'Signed in';
+    const pic=user.user_metadata?.avatar_url;
+    area.innerHTML=`<span class="user-chip">${pic?`<img src="${esc(pic)}" alt="">`:''}${esc(name.split(' ')[0])} <span class="x" style="cursor:pointer;color:var(--faint)" onclick="signOut()" title="Sign out">⎋</span></span>`;
+  } else {
+    area.innerHTML=`<button class="btn ghost sm" onclick="signIn()">Sign in with Google</button>`;
+  }
+}
+async function signIn(){
+  if(!sb){toast('Connect Supabase first (see README)');return;}
+  const {error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.href.split('#')[0]}});
+  if(error) toast('Sign-in failed: '+error.message);
+}
+async function signOut(){ if(sb){await sb.auth.signOut(); user=null; renderAuth();} }
+
+/* ============================================================
+   DATA
+   ============================================================ */
+const SITES=[
+ {key:'plage',flag:'🇨🇦 Quebec · Laurentians',name:'Camping de la Plage',meta:'Rivière-Rouge, QC · Route 117',
+  mapsQ:'Camping de la Plage, Riviere-Rouge, QC', weatherQ:'Rivière-Rouge QC',
+  facilities:['🚿 Showers','🧺 Laundry','🏪 Store','📶 Wi-Fi','🛶 Canoe/kayak','🏖 River beach','🔥 Firewood'],
+  rows:[['Drive from DDO','~2 h · 170 km'],['Setting','Rivière Rouge bank'],['Tent site','~$40–55 · call'],['Open','May 10–Sep 22'],['Curfew','11:00 PM'],['Checkout','11:00 AM']],
+  pros:['Closest — only ~2 hrs north of DDO','River beach + canoe/kayak rentals','Showers, laundry, store, Wi-Fi, firewood','Live music weekends · ~25 min to Mont-Tremblant'],
+  cons:['Call 819-275-7757 to confirm June rates','Reviews note a strict noise policy — keep it chill'],
+  url:'http://www.campingdelaplage-qc.ca'},
+ {key:'ivy',flag:'🇨🇦 Ontario · 1000 Islands',name:'Ivy Lea Campground',meta:'Lansdowne, ON · Thousand Islands Pkwy',
+  mapsQ:'Ivy Lea Campground, 649 Thousand Islands Parkway, Lansdowne, ON', weatherQ:'Gananoque ON',
+  facilities:['🚿 Showers','🧺 Laundromat','🏪 Store','⛵ Boat launch','🤿 Scuba','🥾 Trails','🌉 Suspension bridge'],
+  rows:[['Drive from DDO','~3–3.5 h'],['Basic site','$47.32 +HST'],['Waterfront','$55.30 +HST'],['Premium WF','$63.08 +HST'],['Extra vehicle','$13.00 / night'],['Reservation fee','$13.25 (n/r)'],['Checkout','1:00 PM']],
+  pros:['Stunning 1000 Islands / St. Lawrence setting','Boat launch, scuba, trails, suspension bridge','Near Gananoque cruises + Boldt Castle','Premium waterfront sites available'],
+  cons:['~1 hr farther than Rivière-Rouge','HST adds ~13% · some sites under the bridge'],
+  url:'https://reservations.parks.on.ca/'},
 ];
+const ORIGIN='Dollard-des-Ormeaux, QC';
+
+const DEFAULT_GEAR=[
+ {cat:'Shelter & sleep',items:[
+  {id:'tent',n:'Tent(s)',t:'someone',note:'1×4-person or 2×2-person — confirm who has one'},
+  {id:'sleepbag',n:'Sleeping bag + pad',t:'each',note:'Rate to at least 10°C for June nights'},
+  {id:'pillow',n:'Pillow + extra blanket',t:'each',note:'Nights get genuinely cold'},
+  {id:'tarp',n:'Tarp + rope',t:'someone',note:'Rain backup shelter over the kitchen'},
+  {id:'lantern',n:'Lantern',t:'someone',note:'LED battery or propane'},
+  {id:'headlamp',n:'Headlamp',t:'each',note:'Non-negotiable — phone torch doesn\'t cut it'}]},
+ {cat:'Kitchen & fire',items:[
+  {id:'stove',n:'Camp stove + fuel',t:'someone',note:'Check fuel compatibility before packing'},
+  {id:'cooler',n:'Cooler (large)',t:'someone',note:'Pre-chill the night before with block ice'},
+  {id:'castiron',n:'Cast iron / grill grate',t:'someone',note:'Ideal for campfire cooking'},
+  {id:'pots',n:'Pots + pans',t:'someone',note:'1 large pot, 1 frying pan minimum'},
+  {id:'dishes',n:'Plates / cups / cutlery',t:'shared',note:'One person brings a set for the group'},
+  {id:'utensils',n:'Cooking utensils + knife + board',t:'someone',note:'Dedicated board for raw meat'},
+  {id:'lighter',n:'Lighter + matches + firestarter',t:'shared',note:'Two ignition methods, always'},
+  {id:'sticks',n:'Roasting sticks',t:'shared',note:'For s\'mores & sausages'}]},
+ {cat:'Comfort & fun',items:[
+  {id:'chair',n:'Camp chair',t:'each',note:'Everyone brings their own'},
+  {id:'speaker',n:'Bluetooth speaker',t:'shared',note:'One waterproof for daytime + one for camp'},
+  {id:'powerbank',n:'Power bank(s)',t:'shared',note:'At least one per car'},
+  {id:'hammock',n:'Hammock',t:'someone',note:'Ideal for riverside lounging'},
+  {id:'games',n:'Cards / board games',t:'shared',note:'Rain-day insurance'},
+  {id:'coffee',n:'French press / AeroPress + kettle',t:'someone',note:'Morning ritual = good vibes'}]},
+ {cat:'Safety & health',items:[
+  {id:'firstaid',n:'First aid kit',t:'shared',note:'Keep it in the lead car'},
+  {id:'bugspray',n:'Bug spray (DEET/picaridin)',t:'shared',note:'June is peak mosquito + blackfly'},
+  {id:'sunscreen',n:'Sunscreen',t:'each',note:'Plus a hat'},
+  {id:'sanitizer',n:'Hand sanitizer',t:'shared',note:'Use before every meal'},
+  {id:'water',n:'Water jugs (10–15 L)',t:'shared',note:'Backup to site tap water'}]},
+];
+
 const FOOD=[
  {n:'Marinated steaks / burgers',store:'cooler',cook:'fire',why:'Marinate at home in sealed bags, lay flat in cooler. Zero camp prep — just grill. Most filling meal of the trip.'},
  {n:'Sausages / hot dogs',store:'cooler',cook:'fire',why:'Easiest protein, no knife needed. Perfect Day-1 setup meal. Pre-cooked sausages are safest.'},
@@ -64,33 +176,119 @@ const FOOD=[
  {n:'Deli wraps',store:'cooler',cook:'none',why:'Tortillas + deli meat + cheese. Fast filling lunch, zero cooking. Tortillas beat bread in a cooler.'},
  {n:'Instant oatmeal',store:'dry',cook:'stove',why:'Just add boiling water. Stir in peanut butter + honey for serious calories. Solid backup breakfast.'},
  {n:'Canned beans / chili',store:'dry',cook:'stove',why:'Open, heat, wrap in a tortilla with cheese. Cheap, filling, no cooler space. Best emergency meal.'},
- {n:'Trail mix + granola bars',store:'dry',cook:'none',why:'High-calorie, travel-proof, no fridge. One bag per person in the day pack for hike/paddle days.'},
+ {n:'Trail mix + granola bars',store:'dry',cook:'none',why:'High-calorie, travel-proof, no fridge. One bag per person in the day pack.'},
  {n:'Cheese + crackers + salami',store:'cooler',cook:'none',why:'Hard cheeses survive 2–4 hrs out of the cooler. Great fireside charcuterie board.'},
  {n:'S\'mores',store:'dry',cook:'fire',why:'Use chocolate bars (not chips), big marshmallows, cinnamon grahams. Keep dry in a sealed bag.'},
  {n:'Campfire pancakes',store:'dry',cook:'stove',why:'Pre-mix dry ingredients at home in a bag; add water + egg at camp. Make a big batch.'},
 ];
 const MEALS=[
  {h:'Day 1 · Dinner',t:'Easy arrival',items:['Foil-packet veggies + sausage','Pre-made pasta salad','Garlic bread on the fire','Beers / drinks'],tip:'Foil packets prepped at home → straight on the grill'},
- {h:'Day 2 · Breakfast',t:'Slow morning',items:['Bacon + scrambled eggs (cast iron)','Toast on the grill grate','Fresh fruit + OJ','Pour-over / French press'],tip:'Eggs pre-cracked in a mason jar for easy cooking'},
+ {h:'Day 2 · Breakfast',t:'Slow morning',items:['Bacon + scrambled eggs (cast iron)','Toast on the grill grate','Fresh fruit + OJ','Pour-over / French press'],tip:'Eggs pre-cracked in a mason jar'},
  {h:'Day 2 · Lunch',t:'No-cook, relaxed',items:['Deli wraps + chips','Cheese, crackers, dips','Pickles, olives, snacks','Sparkling water / lemonade'],tip:''},
  {h:'Day 2 · Dinner ★',t:'Grill night — main event',items:['Marinated steaks or burgers','Corn on the cob (in fire)','Campfire baked potatoes','Coleslaw from home'],tip:'Marinate meat at home, packed flat in sealed bags'},
  {h:'Day 3 · Brunch',t:'Use up leftovers',items:['Campfire pancakes / French toast','Leftover sausage + eggs','Remaining fruit + snacks','Last of the coffee'],tip:''},
- {h:'Always-haves',t:'Accessible all trip',items:['Trail mix, granola bars, jerky','Chips, pretzels, popcorn','S\'mores: chocolate, grahams, mallows','Water + electrolytes'],tip:'Keep a snack bin outside the cooler for easy grabbing'},
+ {h:'Always-haves',t:'Accessible all trip',items:['Trail mix, granola bars, jerky','Chips, pretzels, popcorn','S\'mores: chocolate, grahams, mallows','Water + electrolytes'],tip:'Keep a snack bin outside the cooler'},
 ];
 const PREP=[
- {tag:'Cooler',c:'it-log',title:'Block ice, not cubed',body:'Block ice lasts 2–3× longer. Buy a 5–10 lb block before leaving; add cubes around it for gaps. Pre-chill the empty cooler overnight with a sacrificial bag of ice.'},
+ {tag:'Cooler',c:'it-log',title:'Block ice, not cubed',body:'Block ice lasts 2–3× longer. Buy a 5–10 lb block before leaving; add cubes around it. Pre-chill the empty cooler overnight with a sacrificial bag of ice.'},
  {tag:'Cooler',c:'it-log',title:'Layer in reverse meal order',body:'Bottom: ice → Day 3 → Day 2 → Day 1 on top. Drinks go in a separate cooler — that lid opens 20× more than the food cooler.'},
- {tag:'Cooler',c:'it-log',title:'Shade + drain daily',body:'Never leave it in a hot trunk (can hit 50°C). Keep it shaded and wrapped. Drain meltwater every morning — sitting water spoils food and melts the rest faster.'},
- {tag:'Prep',c:'it-prep',title:'Mason jar eggs',body:'Crack & whisk all eggs at home into a wide-mouth jar or Nalgene. At camp: shake and pour. No shells, no mess, no broken yolks.'},
- {tag:'Prep',c:'it-prep',title:'Pre-marinate in zip-locks',body:'Thursday night, bag the meat with marinade, squeeze out air, lay flat in the cooler. It marinates on the drive and arrives ready to cook.'},
- {tag:'Prep',c:'it-prep',title:'Strip the packaging',body:'Pull everything from cardboard at home, repack in labelled zip-locks. Less trash at camp, more pack space, instructions written right on the bag.'},
- {tag:'Camp',c:'it-food',title:'Two-bin kitchen + snack bin',body:'Bin 1 = cooler (cold), Bin 2 = dry tote (shelf-stable, bungee\'d shut against raccoons). Keep a separate open snack bin so nobody keeps opening the food cooler.'},
- {tag:'Safety',c:'it-safe',title:'Food safety basics',body:'Keep meat/dairy ≤4°C, never out >2 hrs in heat (1 hr if >30°C). Double-bag raw meat at the bottom of the cooler. Sanitize hands before every meal — the #1 way to avoid a group stomach bug.'},
+ {tag:'Cooler',c:'it-log',title:'Shade + drain daily',body:'Never leave it in a hot trunk (can hit 50°C). Keep it shaded and wrapped. Drain meltwater every morning.'},
+ {tag:'Prep',c:'it-prep',title:'Mason jar eggs',body:'Crack & whisk all eggs at home into a wide-mouth jar or Nalgene. At camp: shake and pour. No shells, no mess.'},
+ {tag:'Prep',c:'it-prep',title:'Pre-marinate in zip-locks',body:'Thursday night, bag the meat with marinade, squeeze out air, lay flat in the cooler. It marinates on the drive.'},
+ {tag:'Prep',c:'it-prep',title:'Strip the packaging',body:'Pull everything from cardboard at home, repack in labelled zip-locks. Less trash at camp, more pack space.'},
+ {tag:'Camp',c:'it-food',title:'Two-bin kitchen + snack bin',body:'Bin 1 = cooler (cold), Bin 2 = dry tote (bungee\'d shut against raccoons). Keep an open snack bin so nobody keeps opening the food cooler.'},
+ {tag:'Safety',c:'it-safe',title:'Food safety basics',body:'Keep meat/dairy ≤4°C, never out >2 hrs in heat (1 hr if >30°C). Double-bag raw meat at the bottom of the cooler. Sanitize hands before every meal.'},
 ];
+
+/* retailer search links: amz / ct / dec; best = our pick */
+function rlinks(q,best,reason){
+  const e=encodeURIComponent(q);
+  return {amz:`https://www.amazon.ca/s?k=${e}`,ct:`https://www.canadiantire.ca/en/search-results.html?q=${e}`,dec:`https://www.decathlon.ca/en/search?q=${e}`,best,reason};
+}
 const SHOP=[
- {tag:'Phase 1 — Home (DDO)',c:'it-log',title:'Buy before you leave',note:'Maxi or IGA in the West Island. Thu evening or Fri morning.',items:['All meat (marinate overnight)','Eggs (pre-crack into a jar)','Dairy: butter, cheese, sour cream','Dry: pasta, rice, oats, trail mix','Canned: beans, corn, tomatoes','Condiments + cooking oil','S\'mores supplies','Coffee (ground) + filters','Drinks: beer, cider, sparkling water','Snacks: chips, jerky, nuts','Bread / tortillas / pita','Foil, zip-locks, paper towels','Biodegradable dish soap','Garbage + compost bags']},
- {tag:'Phase 2 — Road stop',c:'it-prep',title:'Buy en route',note:'Rivière-Rouge: IGA Saint-Jérôme. Ivy Lea: Foodland Gananoque / Metro Kingston.',items:['Fresh produce (tomatoes, berries, corn)','Ice (top up cooler at a gas station)','Fresh buns for burgers','Any forgotten item','Breakfast sandwiches for the drive','Alcohol top-ups (SAQ / LCBO)']},
- {tag:'Phase 3 — On site',c:'it-food',title:'Buy at the campground',note:'30–50% pricier — local essentials only.',items:['Firewood — always buy local','Fire starters / cubes','Ice (if you run out)','Propane canisters if needed','Forgotten paper plates / cutlery','Roasting sticks if forgotten','Convenience-store snacks']},
+ // FOOD
+ {cat:'food',tag:'Phase 1 — Home (DDO)',c:'it-log',title:'🍳 Food — buy before you leave',note:'Maxi or IGA in the West Island. Thu evening or Fri morning. Groceries are cheapest here.',
+  items:[{n:'All meat (marinate overnight)'},{n:'Eggs (pre-crack into a jar)'},{n:'Dairy: butter, cheese, sour cream'},{n:'Dry: pasta, rice, oats, trail mix'},{n:'Canned: beans, corn, tomatoes'},{n:'Condiments + cooking oil'},{n:'S\'mores supplies'},{n:'Coffee (ground) + filters'},{n:'Drinks: beer, cider, sparkling water'},{n:'Snacks: chips, jerky, nuts'},{n:'Bread / tortillas / pita'},{n:'Foil, zip-locks, paper towels'},{n:'Biodegradable dish soap'},{n:'Garbage + compost bags'}]},
+ {cat:'food',tag:'Phase 2 — Road stop',c:'it-prep',title:'🍳 Food — buy en route',note:'Rivière-Rouge: IGA Saint-Jérôme. Ivy Lea: Foodland Gananoque / Metro Kingston.',
+  items:[{n:'Fresh produce (tomatoes, berries, corn)'},{n:'Ice (top up cooler at a gas station)'},{n:'Fresh buns for burgers'},{n:'Any forgotten item'},{n:'Breakfast sandwiches for the drive'},{n:'Alcohol top-ups (SAQ / LCBO)'}]},
+ {cat:'food',tag:'Phase 3 — On site',c:'it-food',title:'🍳 Food — at the campground',note:'30–50% pricier — local essentials only.',
+  items:[{n:'Firewood — always buy local'},{n:'Ice (if you run out)'},{n:'Convenience-store snacks'}]},
+ // GEAR
+ {cat:'gear',tag:'Phase 1 — Home · order early',c:'it-log',title:'🎒 Gear — core kit (order this week)',note:'Best store highlighted per item. Amazon = fast delivery; Canadian Tire = camping basics & sales; Decathlon = best value on real outdoor gear.',
+  items:[
+   {n:'Sleeping bag (10°C rated)',l:rlinks('sleeping bag 10 degree','dec','Decathlon Quechua bags are the value king')},
+   {n:'Sleeping pad / air mattress',l:rlinks('camping sleeping pad','dec','Decathlon pads punch above their price')},
+   {n:'Headlamp',l:rlinks('LED headlamp','amz','Amazon multipacks are cheapest')},
+   {n:'Camp chair',l:rlinks('folding camp chair','ct','Canadian Tire constantly has chairs on sale')},
+   {n:'Cooler (large hard-side)',l:rlinks('hard cooler 50qt','ct','Coleman/Igloo deals at Canadian Tire')},
+   {n:'Camp stove + propane',l:rlinks('camping propane stove','ct','Coleman 2-burner is the CT classic')},
+   {n:'Tarp + rope/paracord',l:rlinks('camping tarp paracord','ct','Cheap utility tarps in-store')},
+   {n:'LED lantern',l:rlinks('LED camping lantern','amz','Amazon lantern multipacks are unbeatable')},
+   {n:'Hammock',l:rlinks('camping hammock with straps','dec','Decathlon hammocks: solid + cheap')},
+  ]},
+ {cat:'gear',tag:'Phase 1 — Home · preventative',c:'it-safe',title:'🛡 Preventative & safety (do not skip)',note:'The unglamorous stuff that saves the weekend. All small, all cheap, all critical.',
+  items:[
+   {n:'Bug spray — DEET 25–30% or picaridin',l:rlinks('deet insect repellent','ct','Watkins/OFF! deals at Canadian Tire')},
+   {n:'After-bite + antihistamines',l:rlinks('after bite antihistamine','amz','Pharmacy basket — Amazon is easiest')},
+   {n:'First aid kit (full)',l:rlinks('first aid kit camping','amz','Best selection of compact kits')},
+   {n:'Sunscreen SPF 50',l:rlinks('sunscreen spf 50','ct','Grab with the rest of the CT run')},
+   {n:'Mosquito coils / thermacell',l:rlinks('thermacell mosquito repellent','ct','Thermacell units cheapest at CT')},
+   {n:'Duct tape + zip ties',l:rlinks('duct tape zip ties','ct','Hardware aisle, two minutes')},
+   {n:'Waterproof matches / firestarter',l:rlinks('waterproof matches fire starter','dec','Decathlon fire kit is great value')},
+   {n:'Compact rain poncho (backup)',l:rlinks('rain poncho','dec','Decathlon ponchos: $5–10')},
+   {n:'Water jugs / refillable 10 L',l:rlinks('water container 10l camping','ct','Reliance jugs at CT')},
+  ]},
+ {cat:'gear',tag:'Phase 2 — Road stop',c:'it-prep',title:'🎒 Gear — grab en route if forgotten',note:'Canadian Tire locations exist in Saint-Jérôme AND Kingston — perfect mid-route safety net for anything missed.',
+  items:[{n:'Propane canisters'},{n:'Batteries (AA/AAA)'},{n:'Cheap foam pad (if someone forgot theirs)'},{n:'Bungee cords'},{n:'Lighter fluid / firestarters'}]},
+];
+
+const AREA={
+ plage:{title:'Around Rivière-Rouge (QC)',items:['Canoe or kayak the Rouge River — rentals on-site','River beach swimming right at camp','Whitewater rafting day trips (Rouge River outfitters)','Mont-Tremblant village — 25 min north: lifts, luge, terrasses','Hiking in the Laurentians (Parc régional trails)','Live music nights at the campground (weekends)']},
+ ivy:{title:'Around Ivy Lea / 1000 Islands (ON)',items:['1000 Islands boat cruise from Gananoque or Rockport','Boldt Castle visit (bring passports — it\'s US side)','1000 Islands Tower — viewing deck over the river','Skydeck suspension bridge walks','Scuba diving — famous freshwater wrecks','Fishing off the dock or boat launch','Kingston nightlife — 30 min west for a big night']},
+};
+const BRING=[
+ {t:'Spikeball / volleyball',p:'The single best 4–5 person campsite game. Light, packs small.'},
+ {t:'Frisbee / football',p:'Zero setup, infinite hours. Floats if it lands in the river.'},
+ {t:'Fishing rods + basic tackle',p:'Both sites are on fishable water. Check licence rules (QC/ON).'},
+ {t:'Water floaties / inflatable',p:'River lounging upgrade. Cheap at Canadian Tire in June.'},
+ {t:'Binoculars',p:'1000 Islands ship-spotting or Laurentian birdlife. Underrated.'},
+ {t:'Instant camera / disposables',p:'Better trip photos than phones — and nobody doomscrolls.'},
+ {t:'Slackline',p:'Two trees + 15 minutes = hours of crew entertainment.'},
+ {t:'Glow sticks',p:'Night games, marking tent lines so nobody faceplants.'},
+];
+const GAMES=[
+ {t:'Cards: President / Poker',p:'Bring chips or play for camp chores. Classic fire-side format.'},
+ {t:'Werewolf / Mafia',p:'Perfect for exactly 4–5 people around a fire at night.'},
+ {t:'Campfire trivia',p:'One person preps 20 questions on the crew — guaranteed chaos.'},
+ {t:'Story one-word-each',p:'Build a story one word per person. Gets dumb fast. That\'s the point.'},
+ {t:'Flashlight hide & seek',p:'Sounds childish. Is incredible. Set boundaries before dark.'},
+ {t:'Tent cinema',p:'Pre-download a movie, prop a phone/tablet, rain-night backup.'},
+ {t:'Poker dice / Yahtzee',p:'One cup + five dice = entire rainy afternoon handled.'},
+ {t:'Wood-carving contest',p:'Everyone carves a spoon or stake. Judge at the last fire.'},
+];
+const SITUATIONS=[
+ {tag:'Rain',c:'it-log',title:'It starts raining hard',body:'Rig the tarp over the kitchen FIRST (ridgeline between trees, steep angle so water runs off). Trench check: never dig, but make sure the tent isn\'t in a depression. Keep gear off the tent walls — touching the fly wicks water through. Wet clothes go in a garbage bag, not the tent.'},
+ {tag:'Rain',c:'it-log',title:'Prevent a wet tent before it happens',body:'Footprint UNDER the tent, slightly smaller than the floor (oversize collects water). Fly staked taut, doors zipped, vents open to kill condensation. Pitch on high ground. Seam-seal old tents at home the week before.'},
+ {tag:'Bugs',c:'it-safe',title:'Mosquitos in the tent at night',body:'Rule 1: lights OFF before unzipping — light pulls them in. Open the zipper minimum, enter fast. Kill the ones inside with a headlamp sweep before bed. Never spray DEET inside the tent (it damages coatings); a Thermacell at the door 15 min before bed clears the zone.'},
+ {tag:'Bugs',c:'it-safe',title:'Reduce bites at camp, especially at dusk',body:'Dusk = peak attack. Long sleeves + pants from 7 PM, DEET/picaridin on exposed skin, smoke side of the fire is the bug-free side. Avoid scented deodorant/soap. Treat bites with after-bite or antihistamine — don\'t scratch, scratching = infection risk while camping.'},
+ {tag:'Fire',c:'it-prep',title:'Fire won\'t start / wood is damp',body:'Split damp logs — the inside is dry. Feather-stick the dry core with a knife. Build a proper ladder: firestarter → pencil-thin twigs → thumb-thick → wrist-thick. Don\'t smother it with big logs early. Cardboard + cooking oil is the emergency cheat.'},
+ {tag:'Heat/Cold',c:'it-prep',title:'Cold night, someone\'s freezing',body:'Layer them up BEFORE shivering starts. A toque while sleeping is worth more than an extra blanket. Hot water in a Nalgene at the foot of the sleeping bag = camp radiator. Off the ground matters more than over the top — double the pads.'},
+ {tag:'Wildlife',c:'it-safe',title:'Raccoons raided the camp',body:'They got food because food was out — fix the cause. Everything edible into the car or a latched cooler at night, including toothpaste and garbage. Never feed them or leave them dirty dishes. They remember sites that pay out.'},
+ {tag:'Injury',c:'it-safe',title:'Cuts, burns & sprains',body:'Burns: cool water 10+ min, never ice, never butter. Cuts: pressure, clean, close, dress — and keep it dry (hard while camping; redress daily). Sprains: rest + elevate + compress, no "walking it off." Anything deep, gaping, or won\'t-stop-bleeding = drive to urgent care. Know where it is BEFORE the trip.'},
+];
+const FAQ=[
+ {q:'How do I build a campfire that actually lights?',a:'Three sizes of fuel, staged: tinder (firestarter cube, birch bark, dryer lint), kindling (pencil → thumb thickness), then fuel logs (wrist+). Build a teepee or log-cabin around the tinder, light it from the upwind side, and don\'t add big logs until the kindling is roaring. Most failed fires die because people skip straight from tinder to logs.'},
+ {q:'How much firewood do we need?',a:'For two long campfire nights, budget 2–3 bundles per night for a group fire (so 5–6 total). Buy it at the campground or the nearest town — transporting wood across regions is prohibited because it spreads invasive pests.'},
+ {q:'What if there\'s a fire ban that weekend?',a:'Check sopfeu.qc.ca (QC) or ontario.ca/page/forest-fires (ON) the night before. A ban usually means no open fires but propane appliances are still allowed — so the camp stove handles cooking, and you pivot evenings to lantern + games. Pack the stove regardless.'},
+ {q:'What temperature sleeping bag do I need in June?',a:'Nights near water in the Laurentians or on the St. Lawrence can drop to 8–12°C even after a 25°C day. A bag rated to 10°C (50°F) or lower is the safe call, plus a fleece and toque as backup.'},
+ {q:'Do I really need a sleeping pad?',a:'Yes — and not mainly for comfort. The ground pulls heat out of you all night; a pad is insulation first, cushioning second. An air mattress with no insulation can actually sleep colder than a foam pad.'},
+ {q:'How do we keep food cold for 3 days?',a:'Block ice (lasts 2–3× longer than cubes), a pre-chilled cooler, packing in reverse meal order, a separate drinks cooler, shade, and draining meltwater daily. Done right, a decent hard cooler holds safe temps the whole weekend.'},
+ {q:'Is the water at the campsite drinkable?',a:'Both Camping de la Plage and Ivy Lea have potable tap water. Still bring 10–15 L in jugs as backup, and never drink straight from the river or lake without a filter.'},
+ {q:'What\'s the deal with raccoons and food?',a:'Both parks have bold raccoons (and squirrels). Anything with a scent — food, garbage, toothpaste — goes into a car or latched cooler overnight. A bungee cord on the cooler lid is the minimum.'},
+ {q:'Can we swim at both sites?',a:'Yes. Camping de la Plage has a river beach on the Rouge. Ivy Lea is on the St. Lawrence with dock and shoreline access — water is colder and currents are real, so swim near shore and never alone after drinks.'},
+ {q:'Do we need a fishing licence?',a:'Yes, in both provinces. Quebec and Ontario each require their own licence (day or annual), buyable online in minutes. Don\'t skip it — fines are steep.'},
+ {q:'Cell signal at the campsites?',a:'Spotty to fair at both — usable in open areas, weak in tree cover. That\'s exactly why this site works offline and why one printed emergency card per car matters.'},
+ {q:'Check-in / check-out times?',a:'Camping de la Plage: curfew 11 PM, checkout 11 AM. Ivy Lea: checkout 1 PM, check-in typically early-mid afternoon. Arriving before check-in is usually fine — you can park and hit the beach.'},
 ];
 const TIPS=[
  {i:'🌙',t:'June nights get cold',p:'Even with warm days, temps drop near water. Pack a fleece and a bag rated to at least 10°C (50°F).'},
@@ -100,190 +298,606 @@ const TIPS=[
  {i:'🗑️',t:'Leave No Trace',p:'Pack out all trash, never leave food out, biodegradable soap 200 ft from water. Leave it better than you found it.'},
  {i:'🌧️',t:'Weather backup plan',p:'A tarp rigged over the kitchen is a game-changer. Pack cards + indoor entertainment for a rain day.'},
 ];
-const MISSING=[
- {tag:'Structure',c:'it-struct',title:'Group chat / comms',body:'Make a group text before the trip. Pin reservation details, arrival time, and the gear list. Kills 50 scattered messages.'},
- {tag:'Logistics',c:'it-log',title:'Convoy protocol',body:'Set a meetup point if cars split. Agree on lead car, gas stop, and a check-in midpoint. Walkie-talkies are underrated.'},
- {tag:'Logistics',c:'it-log',title:'Parking & setup plan',body:'Decide which car holds kitchen gear vs sleeping gear, and where each parks. Smooths the chaotic first 30 minutes.'},
- {tag:'Prep',c:'it-prep',title:'Night-before checklist',body:'Freeze water bottles (free ice + drinking water), confirm reservation, check weather + fire ban, charge everything.'},
- {tag:'Prep',c:'it-prep',title:'Fire ban check',body:'Check the night before. QC: sopfeu.qc.ca. ON: ontario.ca/page/forest-fires. Ban = camp-stove-only backup plan.'},
- {tag:'Food',c:'it-food',title:'Allergies & drinks',body:'Confirm any allergies / dietary needs before finalizing meals. Sort the drinks plan + dedicated drink cooler.'},
-];
 const ROLES=['Fire master','Meal lead','Gear coordinator','Lead driver','Navigator (car 2)','Quartermaster (snacks/water)'];
 
-/* ---------- render: gear ---------- */
+/* ============================================================
+   RENDER
+   ============================================================ */
+function gearData(){ if(!state.gear) state.gear=JSON.parse(JSON.stringify(DEFAULT_GEAR)); return state.gear; }
+
+function renderSites(){
+  const grid=$('#sites-grid');grid.innerHTML='';
+  let pv=0,iv=0;Object.values(state.votes).forEach(v=>{if(v==='plage')pv++;if(v==='ivy')iv++;});
+  SITES.forEach(s=>{
+    const votes=Object.entries(state.votes).filter(([,v])=>v===s.key).map(([n])=>n);
+    const isChosen=state.chosenSite===s.key;
+    const isWin=!state.chosenSite&&((s.key==='plage'&&pv>iv&&pv>0)||(s.key==='ivy'&&iv>=pv&&(iv>0)));
+    const card=document.createElement('div');card.className='site'+(isChosen?' chosen':isWin?' win':'');
+    const opts=state.crew.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+    const faces=votes.map(n=>`<span class="avatar" style="background:${colorFor(n)}" title="${esc(n)}">${initials(n)}</span>`).join('');
+    card.innerHTML=`
+      <span class="chosen-badge">★ Chosen site</span>
+      <div class="site-top"><div class="site-flag">${s.flag}</div><h3>${s.name}</h3><div class="site-meta">${s.meta}</div>
+        <div class="facility-row">${s.facilities.map(f=>`<span class="fac">${f}</span>`).join('')}</div></div>
+      <div class="site-body">
+        ${s.rows.map(r=>`<div class="drow"><span class="dl">${r[0]}</span><span class="dv">${r[1]}</span></div>`).join('')}
+        <div class="plist">${s.pros.map(p=>`<div class="pli pro">${p}</div>`).join('')}${s.cons.map(c=>`<div class="pli con">${c}</div>`).join('')}</div>
+      </div>
+      <div class="site-foot">
+        <button class="btn sm ghost" onclick="window.open('${s.url}','_blank')">Visit ↗</button>
+        <button class="btn sm ghost" onclick="window.open('https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.mapsQ)}','_blank')">📍 Map</button>
+        <button class="btn sm ghost" onclick="window.open('https://weather.gc.ca/en/location/index.html?searchText=${encodeURIComponent(s.weatherQ)}','_blank')">⛅ Weather</button>
+        <select onchange="castVote('${s.key}',this.value)"><option value="">Vote as…</option>${opts}</select>
+        <button class="btn sm ${isChosen?'amber':''}" onclick="chooseSite('${s.key}')">${isChosen?'✓ Chosen':'Choose this site'}</button>
+        <span class="vote-tally"><span class="vote-faces">${faces}</span> ${votes.length} vote${votes.length===1?'':'s'}</span>
+      </div>`;
+    grid.appendChild(card);
+  });
+  renderRouteEndpoints();
+}
+function castVote(site,name){if(!name)return;state.votes[name]=site;persist();renderSites();}
+function chooseSite(key){state.chosenSite=state.chosenSite===key?'':key;persist();renderSites();toast(state.chosenSite?'Site locked in — route planner updated':'Site un-chosen');}
+
+/* ---------- route planner ---------- */
+function chosenSiteObj(){ return SITES.find(s=>s.key===state.chosenSite)||null; }
+function renderRouteEndpoints(){
+  const el=$('#route-endpoints');if(!el)return;
+  const dest=chosenSiteObj();
+  el.innerHTML=`<span class="endpoint">🏠 ${ORIGIN}</span><span style="color:var(--faint)">→ ${state.stops.length} stop${state.stops.length===1?'':'s'} →</span><span class="endpoint dest">${dest?'⛺ '+dest.name:'⛺ Choose a site in the Campsites tab'}</span>`;
+}
+function renderStops(){
+  const w=$('#stops-list');w.innerHTML='';
+  if(!state.stops.length){w.innerHTML='<div class="empty">No stops yet — straight shot. Add gas/grocery/coffee stops above if you want them.</div>';}
+  state.stops.forEach((s,i)=>{
+    const r=document.createElement('div');r.className='stop-row';
+    r.innerHTML=`<div class="num">${i+1}</div><div class="sd"><div class="sn">${esc(s.name)}</div><div class="sa">${esc(s.addr)}</div></div>
+      <span class="mv" onclick="moveStop(${i},-1)" title="Move up">▲</span><span class="mv" onclick="moveStop(${i},1)" title="Move down">▼</span>
+      <span class="x" onclick="delStop(${i})">✕</span>`;
+    w.appendChild(r);
+  });
+  renderRouteEndpoints();
+}
+function addStop(){
+  const n=$('#stop-name').value.trim(), a=$('#stop-addr').value.trim();
+  if(!n||!a){toast('Stop needs a name and an address');return;}
+  state.stops.push({name:n,addr:a});$('#stop-name').value='';$('#stop-addr').value='';persist();renderStops();
+}
+function delStop(i){state.stops.splice(i,1);persist();renderStops();}
+function moveStop(i,d){const j=i+d;if(j<0||j>=state.stops.length)return;[state.stops[i],state.stops[j]]=[state.stops[j],state.stops[i]];persist();renderStops();}
+function openRoute(reverse){
+  const dest=chosenSiteObj();
+  if(!dest){toast('Choose a campsite first (Campsites tab)');return;}
+  let origin=ORIGIN, destination=dest.mapsQ, ws=state.stops.map(s=>s.addr);
+  if(reverse){[origin,destination]=[destination,origin];ws=ws.slice().reverse();}
+  let url=`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&travelmode=driving`;
+  if(ws.length)url+=`&waypoints=${ws.map(encodeURIComponent).join('%7C')}`;
+  window.open(url,'_blank');
+}
+
+/* ---------- gear ---------- */
 function renderGear(){
-  const wrap=document.getElementById('gear-list');wrap.innerHTML='';
-  GEAR.forEach(cat=>{
-    const g=document.createElement('div');g.className='gear-cat';
-    g.innerHTML=`<div class="kicker" style="margin-top:0">◆ ${cat.c}</div>`;
+  const wrap=$('#gear-list');wrap.innerHTML='';
+  $('#arch-count').textContent=state.gearArchive.length;
+  gearData().forEach((cat,ci)=>{
+    if(!cat.items.length)return;
+    const g=document.createElement('div');
+    g.innerHTML=`<div class="kicker" style="margin-top:0">◆ ${esc(cat.cat)}</div>`;
     cat.items.forEach(it=>{
-      const claimed=state.gearClaims[it.id];
-      const row=document.createElement('div');row.className='gear-item'+(claimed?' claimed':'');
+      const claims=state.gearClaims[it.id]||[];
+      const row=document.createElement('div');row.className='gear-item'+(claims.length?' claimed':'');
       const tcls=it.t==='shared'?'gt-shared':it.t==='each'?'gt-each':'gt-someone';
-      let claimHTML;
-      if(claimed){
-        claimHTML=`<div class="claimed-by"><span class="avatar" style="width:22px;height:22px;font-size:10px;background:${colorFor(claimed)}">${initials(claimed)}</span>${esc(claimed)}<span class="x" onclick="unclaim('${it.id}')">✕</span></div>`;
-      }else{
-        const opts=state.crew.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
-        claimHTML=`<select onchange="claim('${it.id}',this.value)"><option value="">${state.crew.length?'Claim…':'Add crew first'}</option>${opts}</select>`;
-      }
-      row.innerHTML=`<div class="gear-info"><div class="gear-name">${it.n} <span class="gtype ${tcls}">${it.t}</span></div><div class="gear-note">${it.note}</div></div><div class="gear-claim">${claimHTML}</div>`;
+      const chips=claims.map(n=>n==='ALL'
+        ?`<span class="assignee all">👥 All crew <span class="x" onclick="unassign('${it.id}','ALL')">✕</span></span>`
+        :`<span class="assignee"><span class="avatar" style="width:18px;height:18px;font-size:9px;background:${colorFor(n)}">${initials(n)}</span>${esc(n)} <span class="x" onclick="unassign('${it.id}','${esc(n).replace(/&#39;/g,"\\'")}')">✕</span></span>`).join('');
+      const avail=state.crew.filter(c=>!claims.includes(c));
+      const opts=avail.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+      const allOpt=claims.includes('ALL')?'':'<option value="ALL">👥 All crew</option>';
+      row.innerHTML=`
+        <div class="gear-info"><div class="gear-name">${esc(it.n)} <span class="gtype ${tcls}">${it.t}</span></div><div class="gear-note">${esc(it.note||'')}</div></div>
+        <div class="gear-claim">${chips}
+          <select onchange="assign('${it.id}',this.value);this.value=''"><option value="">${state.crew.length?'+ Assign…':'Add crew first'}</option>${allOpt}${opts}</select>
+        </div>
+        <span class="gear-x" title="Remove (goes to archive)" onclick="archiveGear('${it.id}')">🗑</span>`;
       g.appendChild(row);
     });
     wrap.appendChild(g);
   });
 }
-function claim(id,name){if(!name)return;state.gearClaims[id]=name;save();renderGear();}
-function unclaim(id){delete state.gearClaims[id];save();renderGear();}
+function assign(id,name){
+  if(!name)return;
+  const arr=state.gearClaims[id]||(state.gearClaims[id]=[]);
+  if(name==='ALL'){state.gearClaims[id]=['ALL'];}
+  else{const i=arr.indexOf('ALL');if(i>-1)arr.splice(i,1);if(!arr.includes(name))arr.push(name);}
+  persist();renderGear();
+}
+function unassign(id,name){
+  const arr=state.gearClaims[id]||[];const i=arr.indexOf(name);if(i>-1)arr.splice(i,1);
+  if(!arr.length)delete state.gearClaims[id];
+  persist();renderGear();
+}
+function addGear(){
+  const n=$('#gear-name-in').value.trim(),note=$('#gear-note-in').value.trim(),t=$('#gear-type-in').value;
+  if(!n){toast('Give the gear a name');return;}
+  const g=gearData();let cat=g.find(c=>c.cat==='Crew additions');
+  if(!cat){cat={cat:'Crew additions',items:[]};g.push(cat);}
+  cat.items.push({id:uid(),n,t,note});
+  $('#gear-name-in').value='';$('#gear-note-in').value='';
+  persist();renderGear();toast('Gear added');
+}
+function archiveGear(id){
+  const g=gearData();
+  for(const cat of g){
+    const i=cat.items.findIndex(it=>it.id===id);
+    if(i>-1){
+      const [item]=cat.items.splice(i,1);
+      state.gearArchive.push({...item,fromCat:cat.cat,claims:state.gearClaims[id]||[],archivedAt:new Date().toISOString().slice(0,10)});
+      delete state.gearClaims[id];
+      persist();renderGear();toast('Moved to archive — restore anytime');return;
+    }
+  }
+}
+function restoreGear(idx){
+  const a=state.gearArchive.splice(idx,1)[0];if(!a)return;
+  const g=gearData();let cat=g.find(c=>c.cat===a.fromCat);
+  if(!cat){cat={cat:a.fromCat||'Crew additions',items:[]};g.push(cat);}
+  const {fromCat,claims,archivedAt,...item}=a;
+  cat.items.push(item);
+  if(claims&&claims.length)state.gearClaims[item.id]=claims;
+  persist();renderGear();renderArchive();toast('Restored to the gear list');
+}
+function deleteForever(idx){state.gearArchive.splice(idx,1);persist();renderArchive();renderGear();}
+function openArchive(){renderArchive();$('#archive-modal').classList.add('open');}
+function closeArchive(){$('#archive-modal').classList.remove('open');}
+function renderArchive(){
+  const w=$('#archive-list');w.innerHTML='';
+  if(!state.gearArchive.length){w.innerHTML='<div class="empty">Archive is empty — nothing has been removed.</div>';return;}
+  state.gearArchive.forEach((a,i)=>{
+    const r=document.createElement('div');r.className='gear-item';
+    r.innerHTML=`<div class="gear-info"><div class="gear-name">${esc(a.n)}</div><div class="gear-note">from ${esc(a.fromCat||'?')} · removed ${a.archivedAt||''}</div></div>
+      <button class="btn sm" onclick="restoreGear(${i})">Restore</button>
+      <button class="btn sm ghost" onclick="deleteForever(${i})">Delete forever</button>`;
+    w.appendChild(r);
+  });
+}
 
-/* ---------- render: food ---------- */
+/* ---------- food ---------- */
 let foodFilter='all';
 function renderFood(){
   const tb=document.querySelector('#ftable tbody');tb.innerHTML='';
+  const sl={cooler:'Cooler',dry:'Dry',fire:'Fire',stove:'Stove',none:'No cook'};
   FOOD.filter(f=>foodFilter==='all'||f.store===foodFilter||f.cook===foodFilter).forEach(f=>{
-    const sl={cooler:'Cooler',dry:'Dry',fire:'Fire',stove:'Stove',none:'No cook'};
     const tr=document.createElement('tr');
     tr.innerHTML=`<td class="fn">${f.n}</td><td><span class="fpill fp-${f.store}">${sl[f.store]}</span></td><td><span class="fpill fp-${f.cook}">${sl[f.cook]}</span></td><td>${f.why}</td>`;
     tb.appendChild(tr);
   });
 }
-function renderMeals(){
-  const w=document.getElementById('meal-grid');w.innerHTML='';
-  MEALS.forEach(m=>{const d=document.createElement('div');d.className='meal';
-    d.innerHTML=`<div class="mh">${m.h}</div><h4>${m.t}</h4><ul>${m.items.map(i=>`<li>${i}</li>`).join('')}</ul>${m.tip?`<div class="mtip">↳ ${m.tip}</div>`:''}`;w.appendChild(d);});
-}
-function renderPrep(){
-  const w=document.getElementById('prep-grid');w.innerHTML='';
-  PREP.forEach(p=>{const d=document.createElement('div');d.className='icard';
-    d.innerHTML=`<div class="itag ${p.c}">${p.tag}</div><h4>${p.title}</h4><p>${p.body}</p>`;w.appendChild(d);});
-}
+function renderMeals(){const w=$('#meal-grid');w.innerHTML='';MEALS.forEach(m=>{const d=document.createElement('div');d.className='meal';
+  d.innerHTML=`<div class="mh">${m.h}</div><h4>${m.t}</h4><ul>${m.items.map(i=>`<li>${i}</li>`).join('')}</ul>${m.tip?`<div class="mtip">↳ ${m.tip}</div>`:''}`;w.appendChild(d);});}
+function renderPrep(){const w=$('#prep-grid');w.innerHTML='';PREP.forEach(p=>{const d=document.createElement('div');d.className='icard';
+  d.innerHTML=`<div class="itag ${p.c}">${p.tag}</div><h4>${p.title}</h4><p>${p.body}</p>`;w.appendChild(d);});}
 
-/* ---------- render: shopping ---------- */
+/* ---------- shopping ---------- */
+let shopFilter='all';
+function shopCat(btn,f){$$('.fbtn[data-sc]').forEach(b=>b.classList.remove('on'));btn.classList.add('on');shopFilter=f;renderShop();}
 function renderShop(){
-  const w=document.getElementById('shop-grid');w.innerHTML='';
-  SHOP.forEach((s,si)=>{
+  const w=$('#shop-grid');w.innerHTML='';
+  SHOP.filter(s=>shopFilter==='all'||s.cat===shopFilter).forEach((s)=>{
+    const si=SHOP.indexOf(s);
     const card=document.createElement('div');card.className='icard';
     let html=`<div class="itag ${s.c}">${s.tag}</div><h4>${s.title}</h4><div style="margin:10px 0 0">`;
-    s.items.forEach((it,ii)=>{const key='shop-'+si+'-'+ii;const done=state.checks[key];
-      html+=`<div class="chk ${done?'done':''}" onclick="toggleCheck('${key}')"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div><div class="ct">${it}</div></div>`;});
+    s.items.forEach((it,ii)=>{
+      const key='shop-'+si+'-'+ii;const done=state.checks[key];
+      let links='';
+      if(it.l){
+        const L=it.l;
+        const mk=(k,label,cls)=>`<a class="shoplink ${cls} ${L.best===k?'best':''}" href="${L[k]}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${L.best===k?'★ ':''}${label}</a>`;
+        links=`<div class="shoplinks">${mk('amz','Amazon','sl-amz')}${mk('ct','Canadian Tire','sl-ct')}${mk('dec','Decathlon','sl-dec')}</div><div class="best-note">↳ ${L.reason}</div>`;
+      }
+      html+=`<div class="chk ${done?'done':''}" onclick="toggleCheck('${key}')"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div><div class="ct">${esc(it.n)}${links}</div></div>`;
+    });
     html+=`</div><div class="note" style="margin-top:12px">${s.note}</div>`;
     card.innerHTML=html;w.appendChild(card);
   });
 }
-function toggleCheck(k){state.checks[k]=!state.checks[k];save();renderShop();}
+function toggleCheck(k){state.checks[k]=!state.checks[k];persist();renderShop();}
 
-/* ---------- crew / votes / roles ---------- */
+/* ---------- crew / roles ---------- */
 function renderCrew(){
-  const bar=document.getElementById('crew-bar');bar.innerHTML='';
+  const bar=$('#crew-bar');bar.innerHTML='';
   if(!state.crew.length){bar.innerHTML='<span class="empty" style="padding:8px">No crew yet — add names above.</span>';}
   state.crew.forEach(c=>{const chip=document.createElement('div');chip.className='crew-chip';
     chip.innerHTML=`<span class="avatar" style="background:${colorFor(c)}">${initials(c)}</span>${esc(c)}<span class="x" onclick="removeCrew('${esc(c).replace(/&#39;/g,"\\'")}')">✕</span>`;bar.appendChild(chip);});
-  refreshCrewSelects();renderGear();renderRoles();renderVotes();renderSettle();
+  refreshCrewSelects();renderGear();renderRoles();renderSites();renderSettle();
 }
 function addCrew(){
-  const i=document.getElementById('crew-input');const v=i.value.trim();
-  if(!v||state.crew.includes(v))return;state.crew.push(v);i.value='';save();renderCrew();
+  const i=$('#crew-input');const v=i.value.trim();
+  if(!v||state.crew.includes(v))return;state.crew.push(v);i.value='';persist();renderCrew();
 }
 function removeCrew(name){
   state.crew=state.crew.filter(c=>c!==name);
-  Object.keys(state.gearClaims).forEach(k=>{if(state.gearClaims[k]===name)delete state.gearClaims[k];});
-  Object.keys(state.votes).forEach(k=>{if(k===name)delete state.votes[k];});
+  Object.keys(state.gearClaims).forEach(k=>{state.gearClaims[k]=(state.gearClaims[k]||[]).filter(n=>n!==name);if(!state.gearClaims[k].length)delete state.gearClaims[k];});
+  delete state.votes[name];
   Object.keys(state.roles).forEach(k=>{if(state.roles[k]===name)delete state.roles[k];});
   state.expenses=state.expenses.filter(e=>e.who!==name);
-  save();renderCrew();renderExpenses();
+  persist();renderCrew();renderExpenses();
 }
 function refreshCrewSelects(){
   const opts=state.crew.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
-  ['vote-plage','vote-ivy'].forEach(id=>{const s=document.getElementById(id);s.innerHTML=`<option value="">Vote as…</option>${opts}`;});
-  const ew=document.getElementById('exp-who');const cur=ew.value;ew.innerHTML=`<option value="">Who paid?</option>${opts}`;ew.value=cur;
-}
-function castVote(site,name){if(!name)return;state.votes[name]=site;save();renderVotes();document.getElementById('vote-'+site).value='';}
-function renderVotes(){
-  let p=0,i=0;Object.values(state.votes).forEach(v=>{if(v==='plage')p++;if(v==='ivy')i++;});
-  document.getElementById('tally-plage').textContent=p+(p===1?' vote':' votes');
-  document.getElementById('tally-ivy').textContent=i+(i===1?' vote':' votes');
-  document.getElementById('site-plage').classList.toggle('win',p>i&&p>0);
-  document.getElementById('site-ivy').classList.toggle('win',i>=p&&(i>0||p===0));
+  const ew=$('#exp-who');if(ew){const cur=ew.value;ew.innerHTML=`<option value="">Who paid?</option>${opts}`;ew.value=cur;}
 }
 function renderRoles(){
-  const w=document.getElementById('role-grid');w.innerHTML='';
+  const w=$('#role-grid');w.innerHTML='';
   ROLES.forEach(r=>{const opts=state.crew.map(c=>`<option value="${esc(c)}" ${state.roles[r]===c?'selected':''}>${esc(c)}</option>`).join('');
     const d=document.createElement('div');d.className='role';
     d.innerHTML=`<div class="rn">${r}</div><select onchange="setRole('${r.replace(/'/g,"\\'")}',this.value)"><option value="">${state.crew.length?'Assign…':'Add crew first'}</option>${opts}</select>`;w.appendChild(d);});
 }
-function setRole(r,n){if(n){state.roles[r]=n;}else{delete state.roles[r];}save();}
+function setRole(r,n){if(n)state.roles[r]=n;else delete state.roles[r];persist();}
 
 /* ---------- expenses ---------- */
 function addExpense(){
-  const d=document.getElementById('exp-desc'),a=document.getElementById('exp-amt'),w=document.getElementById('exp-who');
-  const desc=d.value.trim(),amt=parseFloat(a.value),who=w.value;
-  if(!desc||!amt||amt<=0||!who)return;
-  state.expenses.push({id:Date.now(),desc,amt:Math.round(amt*100)/100,who});
-  d.value='';a.value='';w.value='';save();renderExpenses();
+  const d=$('#exp-desc'),a=$('#exp-amt'),c=$('#exp-cat'),w=$('#exp-who');
+  const desc=d.value.trim(),amt=parseFloat(a.value),who=w.value,cat=c.value;
+  if(!desc||!amt||amt<=0||!who){toast('Need a description, amount & payer');return;}
+  state.expenses.push({id:Date.now(),desc,amt:Math.round(amt*100)/100,who,cat});
+  d.value='';a.value='';w.value='';persist();renderExpenses();
 }
-function delExpense(id){state.expenses=state.expenses.filter(e=>e.id!==id);save();renderExpenses();}
+function delExpense(id){state.expenses=state.expenses.filter(e=>e.id!==id);persist();renderExpenses();}
 function renderExpenses(){
-  const w=document.getElementById('exp-list');w.innerHTML='';
+  const w=$('#exp-list');w.innerHTML='';
   if(!state.expenses.length){w.innerHTML='<div class="empty">No expenses logged yet.</div>';}
   state.expenses.forEach(e=>{const r=document.createElement('div');r.className='exp-row';
-    r.innerHTML=`<span class="avatar" style="background:${colorFor(e.who)}">${initials(e.who)}</span><div class="ed"><div class="edesc">${esc(e.desc)}</div><div class="emeta">paid by ${esc(e.who)}</div></div><div class="eamt">$${e.amt.toFixed(2)}</div><span class="x" onclick="delExpense(${e.id})">✕</span>`;w.appendChild(r);});
-  renderSettle();
+    r.innerHTML=`<span class="avatar" style="background:${colorFor(e.who)}">${initials(e.who)}</span><div class="ed"><div class="edesc">${esc(e.desc)} <span class="catpill">${esc(e.cat||'Other')}</span></div><div class="emeta">paid by ${esc(e.who)}</div></div><div class="eamt">$${e.amt.toFixed(2)}</div><span class="x" onclick="delExpense(${e.id})">✕</span>`;w.appendChild(r);});
+  renderCatBars();renderSettle();
+}
+function renderCatBars(){
+  const w=$('#cat-bars');w.innerHTML='';
+  if(!state.expenses.length)return;
+  const byCat={};let max=0,total=0;
+  state.expenses.forEach(e=>{const c=e.cat||'Other';byCat[c]=(byCat[c]||0)+e.amt;total+=e.amt;});
+  Object.values(byCat).forEach(v=>max=Math.max(max,v));
+  const colors={Site:'#9bce6f',Food:'#f0b455',Gas:'#6cb6d4',Firewood:'#e8896b',Gear:'#b49ad4',Other:'#9aaa8c'};
+  let html=`<div class="kicker" style="margin:8px 0 10px">◆ Spend by category · total $${total.toFixed(2)}</div>`;
+  Object.entries(byCat).sort((a,b)=>b[1]-a[1]).forEach(([c,v])=>{
+    html+=`<div class="cat-bar-row"><span class="cl">${c}</span><div class="cat-track"><div class="cat-fill" style="width:${(v/max*100).toFixed(1)}%;background:${colors[c]||'#9aaa8c'}"></div></div><span class="cv">$${v.toFixed(2)}</span></div>`;
+  });
+  w.innerHTML=html;
 }
 function renderSettle(){
-  const w=document.getElementById('settle-body');
+  const w=$('#settle-body');
   if(!state.crew.length||!state.expenses.length){w.innerHTML='<div class="empty">Add crew + expenses to see the split.</div>';return;}
   const total=state.expenses.reduce((s,e)=>s+e.amt,0);
   const share=total/state.crew.length;
   const bal={};state.crew.forEach(c=>bal[c]=-share);
   state.expenses.forEach(e=>{if(bal[e.who]!==undefined)bal[e.who]+=e.amt;});
   let html=`<div class="settle-row"><span>Total spent</span><span class="owe">$${total.toFixed(2)}</span></div><div class="settle-row"><span>Per person (${state.crew.length})</span><span class="owe">$${share.toFixed(2)}</span></div><div style="height:8px"></div>`;
-  state.crew.forEach(c=>{const b=bal[c];const cls=b>=0?'pos':'neg';const txt=b>=0?`gets back $${b.toFixed(2)}`:`owes $${Math.abs(b).toFixed(2)}`;
+  state.crew.forEach(c=>{const b=bal[c];const cls=b>=-0.005?'pos':'neg';const txt=b>=-0.005?`gets back $${Math.max(0,b).toFixed(2)}`:`owes $${Math.abs(b).toFixed(2)}`;
     html+=`<div class="settle-row"><span><span class="avatar" style="width:20px;height:20px;font-size:9px;background:${colorFor(c)};display:inline-flex;vertical-align:middle;margin-right:7px">${initials(c)}</span>${esc(c)}</span><span class="owe ${cls}">${txt}</span></div>`;});
+  // minimal transfers (greedy)
+  const debtors=[],creditors=[];
+  Object.entries(bal).forEach(([n,b])=>{if(b<-0.005)debtors.push([n,-b]);else if(b>0.005)creditors.push([n,b]);});
+  debtors.sort((a,b)=>b[1]-a[1]);creditors.sort((a,b)=>b[1]-a[1]);
+  const transfers=[];let di=0,ci=0;
+  while(di<debtors.length&&ci<creditors.length){
+    const pay=Math.min(debtors[di][1],creditors[ci][1]);
+    transfers.push([debtors[di][0],creditors[ci][0],pay]);
+    debtors[di][1]-=pay;creditors[ci][1]-=pay;
+    if(debtors[di][1]<0.005)di++;if(creditors[ci][1]<0.005)ci++;
+  }
+  if(transfers.length){
+    html+=`<div class="kicker" style="margin:14px 0 10px">◆ Who pays who — ${transfers.length} transfer${transfers.length===1?'':'s'}</div>`;
+    transfers.forEach(([from,to,amt])=>{
+      html+=`<div class="transfer"><span class="avatar" style="background:${colorFor(from)}">${initials(from)}</span> ${esc(from)} <span style="color:var(--faint)">pays</span> <span class="avatar" style="background:${colorFor(to)}">${initials(to)}</span> ${esc(to)} <span class="amt">$${amt.toFixed(2)}</span></div>`;
+    });
+  }
   w.innerHTML=html;
 }
 
-/* ---------- export / import / reset ---------- */
-function exportData(){
+/* ---------- activities / survival / faq ---------- */
+function renderActivities(){
+  const ag=$('#area-grid');ag.innerHTML='';
+  const order=state.chosenSite==='ivy'?['ivy','plage']:['plage','ivy'];
+  order.forEach(k=>{
+    const a=AREA[k];const chosen=state.chosenSite===k;
+    const d=document.createElement('div');d.className='icard';if(chosen)d.style.borderColor='var(--amber)';
+    d.innerHTML=`<div class="itag it-fun">${chosen?'★ Our site':'Option'}</div><h4>${a.title}</h4><ul>${a.items.map(i=>`<li>${i}</li>`).join('')}</ul>`;
+    ag.appendChild(d);
+  });
+  const bg=$('#bring-grid');bg.innerHTML='';
+  BRING.forEach(b=>{const d=document.createElement('div');d.className='icard';d.innerHTML=`<h4>${b.t}</h4><p>${b.p}</p>`;bg.appendChild(d);});
+  const gg=$('#games-grid');gg.innerHTML='';
+  GAMES.forEach(g=>{const d=document.createElement('div');d.className='icard';d.innerHTML=`<h4>${g.t}</h4><p>${g.p}</p>`;gg.appendChild(d);});
+}
+function renderSituations(){
+  const w=$('#situations-grid');w.innerHTML='';
+  SITUATIONS.forEach(s=>{const d=document.createElement('div');d.className='icard';
+    d.innerHTML=`<div class="itag ${s.c}">${s.tag}</div><h4>${s.title}</h4><p>${s.body}</p>`;w.appendChild(d);});
+}
+function renderFAQ(){
+  const w=$('#faq-list');w.innerHTML='';
+  FAQ.forEach(f=>{const d=document.createElement('details');d.className='faq';
+    d.innerHTML=`<summary>${f.q}</summary><div class="fa">${f.a}</div>`;w.appendChild(d);});
+}
+function renderTips(){const w=$('#tips-card');w.innerHTML='';
+  TIPS.forEach(t=>{const d=document.createElement('div');d.className='tip';
+    d.innerHTML=`<div class="ti">${t.i}</div><div><h4>${t.t}</h4><p>${t.p}</p></div>`;w.appendChild(d);});}
+
+/* ---------- help / export / misc ---------- */
+function openHelp(){$('#help-modal').classList.add('open');}
+function closeHelp(){$('#help-modal').classList.remove('open');}
+function dismissBanner(){$('#help-banner').style.display='none';try{localStorage.setItem('ww_banner_hidden','1');}catch(e){}}
+function showBannerAgain(){try{localStorage.removeItem('ww_banner_hidden');}catch(e){}$('#help-banner').style.display='flex';closeSettings();toast('Welcome banner restored');}
+
+/* ---------- settings & theme (per-device, never synced) ---------- */
+function getTheme(){try{return localStorage.getItem('ww_theme')||'aurora';}catch(e){return 'aurora';}}
+function motionOn(){try{return localStorage.getItem('ww_motion')!=='0';}catch(e){return true;}}
+function setTheme(t){
+  try{localStorage.setItem('ww_theme',t);}catch(e){}
+  document.documentElement.dataset.theme=t;
+  renderSettingsUI();
+  if(t==='aurora'&&motionOn()){stopAmbient();startAmbient();}else stopAmbient();
+  toast(t==='aurora'?'Aurora theme — just for you, not the crew':'Classic theme — just for you, not the crew');
+}
+function toggleMotion(){
+  const on=!motionOn();
+  try{localStorage.setItem('ww_motion',on?'1':'0');}catch(e){}
+  renderSettingsUI();
+  if(on&&getTheme()==='aurora')startAmbient();else stopAmbient();
+  document.querySelectorAll('#aurora-blobs .blob').forEach(b=>b.style.animationPlayState=on?'running':'paused');
+}
+function renderSettingsUI(){
+  const t=getTheme();
+  $('#tc-aurora')?.classList.toggle('on',t==='aurora');
+  $('#tc-classic')?.classList.toggle('on',t==='classic');
+  $('#motion-toggle')?.classList.toggle('done',motionOn());
+}
+function openSettings(){renderSettingsUI();$('#settings-modal').classList.add('open');}
+function closeSettings(){$('#settings-modal').classList.remove('open');}
+
+/* ---------- ambient visuals (aurora theme only) ----------
+   Desktop (fine pointer, ≥1024px, WebGL OK) -> Three.js particle field
+   Mobile / fallback -> lightweight 2D canvas fireflies              */
+let ffRAF=null,ffParticles=null;
+let threeRAF=null,threeCtx=null;
+
+function isDesktop(){
+  try{return window.matchMedia('(pointer: fine)').matches && innerWidth>=1024 && !('ontouchstart' in window);}catch(e){return innerWidth>=1024;}
+}
+function startAmbient(){
+  if(getTheme()!=='aurora'||!motionOn())return;
+  if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const c=$('#fireflies');if(!c)return;
+  // a canvas can only ever hold ONE context type — stay consistent per session
+  if(c.dataset.mode==='2d'){startFireflies2D();return;}
+  if(c.dataset.mode==='three'){startThree();return;}
+  if(isDesktop())startThree();else startFireflies2D();
+}
+function stopAmbient(){stopFireflies2D();stopThree();}
+
+function loadThree(){
+  return new Promise((res,rej)=>{
+    if(window.THREE)return res();
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js';
+    s.onload=res;s.onerror=rej;document.head.appendChild(s);
+  });
+}
+async function startThree(){
+  const c=$('#fireflies');if(!c)return;
+  try{await loadThree();}catch(e){startFireflies2D();return;}
+  if(threeCtx){threeCtx.running=true;cancelAnimationFrame(threeRAF);threeLoop();return;}
+  let renderer;
+  try{
+    renderer=new THREE.WebGLRenderer({canvas:c,alpha:true,antialias:false,powerPreference:'low-power'});
+  }catch(e){startFireflies2D();return;}
+  c.dataset.mode='three';
+  const DPR=Math.min(window.devicePixelRatio||1,1.5);
+  renderer.setPixelRatio(DPR);
+  const scene=new THREE.Scene();
+  const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,1,260);
+  camera.position.z=90;
+  // soft round glow sprite (fixes square points)
+  const spr=document.createElement('canvas');spr.width=spr.height=64;
+  const sctx=spr.getContext('2d');
+  const grad=sctx.createRadialGradient(32,32,0,32,32,32);
+  grad.addColorStop(0,'rgba(255,255,255,1)');grad.addColorStop(.35,'rgba(255,255,255,.5)');grad.addColorStop(1,'rgba(255,255,255,0)');
+  sctx.fillStyle=grad;sctx.fillRect(0,0,64,64);
+  const sprite=new THREE.CanvasTexture(spr);
+  function makeCloud(count,size,colA,colB,spread){
+    const pos=new Float32Array(count*3),col=new Float32Array(count*3);
+    const a=new THREE.Color(colA),bC=new THREE.Color(colB);
+    for(let i=0;i<count;i++){
+      pos[i*3]=(Math.random()-.5)*spread;
+      pos[i*3+1]=(Math.random()-.5)*spread*.7;
+      pos[i*3+2]=(Math.random()-.5)*spread;
+      const mix=Math.random(),cc=a.clone().lerp(bC,mix);
+      col[i*3]=cc.r;col[i*3+1]=cc.g;col[i*3+2]=cc.b;
+    }
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+    g.setAttribute('color',new THREE.BufferAttribute(col,3));
+    const m=new THREE.PointsMaterial({size,map:sprite,vertexColors:true,transparent:true,opacity:.45,
+      blending:THREE.AdditiveBlending,depthWrite:false,sizeAttenuation:true});
+    const p=new THREE.Points(g,m);scene.add(p);return p;
+  }
+  const cloudA=makeCloud(320,2.2,'#7ee2a8','#7cc8ff',200); // green→blue drift field
+  const cloudB=makeCloud(120,3.2,'#ffc46b','#c5a8ff',160); // warm sparse accents
+  let mx=0,my=0,tx=0,ty=0;
+  const onMouse=e=>{tx=(e.clientX/innerWidth-.5)*2;ty=(e.clientY/innerHeight-.5)*2;};
+  const onResize=()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight,false);};
+  window.addEventListener('mousemove',onMouse,{passive:true});
+  window.addEventListener('resize',onResize);
+  onResize();
+  threeCtx={renderer,scene,camera,cloudA,cloudB,running:true,t:0,
+    get mx(){return mx},set mx(v){mx=v},onMouse,onResize};
+  function loop(){
+    if(!threeCtx||!threeCtx.running)return;
+    if(document.hidden){threeRAF=requestAnimationFrame(loop);return;}
+    threeCtx.t+=.0035;
+    mx+=(tx-mx)*.03;my+=(ty-my)*.03;
+    cloudA.rotation.y=threeCtx.t*.5;cloudA.rotation.x=Math.sin(threeCtx.t*.6)*.06;
+    cloudB.rotation.y=-threeCtx.t*.35;cloudB.rotation.z=Math.cos(threeCtx.t*.4)*.05;
+    cloudA.material.opacity=.32+.16*Math.sin(threeCtx.t*2.1);
+    cloudB.material.opacity=.28+.18*Math.sin(threeCtx.t*1.4+1);
+    camera.position.x=mx*9;camera.position.y=-my*6;
+    camera.lookAt(0,0,0);
+    renderer.render(scene,camera);
+    threeRAF=requestAnimationFrame(loop);
+  }
+  window.threeLoop=loop; loop();
+}
+function stopThree(){
+  cancelAnimationFrame(threeRAF);
+  if(threeCtx){
+    threeCtx.running=false;
+    try{threeCtx.renderer.clear();}catch(e){}
+  }
+}
+function startFireflies2D(){
+  const c=$('#fireflies');if(!c)return;
+  if(c.dataset.mode==='three')return; // canvas already WebGL — can't mix
+  c.dataset.mode='2d';
+  const ctx=c.getContext('2d');if(!ctx)return;
+  const DPR=Math.min(window.devicePixelRatio||1,2);
+  function size(){c.width=innerWidth*DPR;c.height=innerHeight*DPR;}
+  size();window.addEventListener('resize',size);
+  const N=innerWidth<700?18:36;
+  if(!ffParticles){
+    ffParticles=Array.from({length:N},()=>({
+      x:Math.random()*c.width,y:Math.random()*c.height,
+      r:(Math.random()*1.6+0.8)*DPR,
+      vx:(Math.random()-.5)*.18*DPR,vy:(Math.random()-.5)*.14*DPR,
+      ph:Math.random()*Math.PI*2,sp:.008+Math.random()*.015,
+      col:Math.random()<.7?'126,226,168':'255,196,107'
+    }));
+  }
+  cancelAnimationFrame(ffRAF);
+  (function tick(){
+    if(document.hidden){ffRAF=requestAnimationFrame(tick);return;}
+    ctx.clearRect(0,0,c.width,c.height);
+    for(const p of ffParticles){
+      p.x+=p.vx;p.y+=p.vy;p.ph+=p.sp;
+      if(p.x<0)p.x=c.width;if(p.x>c.width)p.x=0;
+      if(p.y<0)p.y=c.height;if(p.y>c.height)p.y=0;
+      const a=.18+.5*Math.abs(Math.sin(p.ph));
+      const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r*5);
+      g.addColorStop(0,`rgba(${p.col},${a})`);g.addColorStop(1,`rgba(${p.col},0)`);
+      ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,p.r*5,0,7);ctx.fill();
+    }
+    ffRAF=requestAnimationFrame(tick);
+  })();
+}
+function stopFireflies2D(){
+  cancelAnimationFrame(ffRAF);
+  const c=$('#fireflies');
+  if(c&&c.dataset.mode==='2d'){try{c.getContext('2d').clearRect(0,0,c.width,c.height);}catch(e){}}
+}
+
+/* ---------- GSAP entrance animations ---------- */
+function animatePanel(panel){
+  if(!window.gsap||!motionOn())return;
+  const kids=panel.querySelectorAll('.card,.icard,.site,.meal,.gear-item,.tl-item,.role,.quicklink,details.faq,.stop-row,.exp-row,.sec-title,.sec-desc');
+  if(!kids.length)return;
+  gsap.fromTo(Array.from(kids).slice(0,24),
+    {opacity:0,y:18},
+    {opacity:1,y:0,duration:.45,stagger:.035,ease:'power2.out',clearProps:'all'});
+}
+function animateBoot(){
+  if(!window.gsap||!motionOn())return;
+  gsap.fromTo('header .brand',{opacity:0,y:-16},{opacity:1,y:0,duration:.7,ease:'power3.out'});
+  gsap.fromTo('header .head-right',{opacity:0,y:-10},{opacity:1,y:0,duration:.7,delay:.12,ease:'power3.out'});
+  gsap.fromTo('nav .tab',{opacity:0,y:10},{opacity:1,y:0,duration:.4,stagger:.04,delay:.2,ease:'power2.out',clearProps:'all'});
+}
+
+/* ---------- progress + share ---------- */
+function renderProgress(){
+  const w=$('#progress-wrap');if(!w)return;
+  // gear claimed %
+  let total=0,claimed=0;
+  gearData().forEach(c=>c.items.forEach(it=>{total++;if((state.gearClaims[it.id]||[]).length)claimed++;}));
+  // shopping %
+  let sTotal=0,sDone=0;
+  SHOP.forEach((s,si)=>s.items.forEach((_,ii)=>{sTotal++;if(state.checks['shop-'+si+'-'+ii])sDone++;}));
+  const sitePicked=state.chosenSite?100:0;
+  const crewPct=Math.min(100,Math.round(state.crew.length/4*100));
+  const rows=[['Crew added',crewPct],['Site chosen',sitePicked],['Gear claimed',total?Math.round(claimed/total*100):0],['Shopping done',sTotal?Math.round(sDone/sTotal*100):0]];
+  w.innerHTML=rows.map(([l,v])=>`<div class="progress-row"><span class="pl">${l}</span><div class="progress-track"><div class="progress-fill" style="width:${v}%"></div></div><span class="pv">${v}%</span></div>`).join('');
+}
+function copySettle(){
+  if(!state.crew.length||!state.expenses.length){toast('Nothing to copy yet');return;}
+  const total=state.expenses.reduce((s,e)=>s+e.amt,0);
+  const share=total/state.crew.length;
+  const bal={};state.crew.forEach(c=>bal[c]=-share);
+  state.expenses.forEach(e=>{if(bal[e.who]!==undefined)bal[e.who]+=e.amt;});
+  const debtors=[],creditors=[];
+  Object.entries(bal).forEach(([n,b])=>{if(b<-0.005)debtors.push([n,-b]);else if(b>0.005)creditors.push([n,b]);});
+  debtors.sort((a,b)=>b[1]-a[1]);creditors.sort((a,b)=>b[1]-a[1]);
+  let lines=['🏕 WildWeekend — settle up','Total: $'+total.toFixed(2)+' · per person: $'+share.toFixed(2),''];
+  let di=0,ci=0;
+  while(di<debtors.length&&ci<creditors.length){
+    const pay=Math.min(debtors[di][1],creditors[ci][1]);
+    lines.push(debtors[di][0]+' pays '+creditors[ci][0]+' $'+pay.toFixed(2));
+    debtors[di][1]-=pay;creditors[ci][1]-=pay;
+    if(debtors[di][1]<0.005)di++;if(creditors[ci][1]<0.005)ci++;
+  }
+  const txt=lines.join('\n');
+  if(navigator.clipboard){navigator.clipboard.writeText(txt).then(()=>toast('Settle-up copied — paste in the group chat')).catch(()=>toast(txt));}
+  else toast(txt);
+}
+async function shareSite(){
+  const data={title:'WildWeekend — our camping plan',text:'Our June 19–21 camping field plan — gear, route, costs, everything:',url:location.href};
+  if(navigator.share){try{await navigator.share(data);}catch(e){}}
+  else{try{await navigator.clipboard.writeText(location.href);toast('Link copied — paste it in the group chat');}catch(e){toast(location.href);}}
+}
+
+function exportJSON(){
   const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);const a=document.createElement('a');
   a.href=url;a.download='wildweekend-crew-data.json';a.click();URL.revokeObjectURL(url);
 }
-function importData(input){
+function importJSON(input){
   const file=input.files[0];if(!file)return;const r=new FileReader();
-  r.onload=()=>{try{const data=JSON.parse(r.result);state=Object.assign({crew:[],gearClaims:{},expenses:[],votes:{},roles:{},checks:{}},data);save();renderAll();alert('Crew data imported.');}catch(e){alert('Could not read that file.');}};
+  r.onload=()=>{try{state=Object.assign(defaultState(),JSON.parse(r.result));persist();renderAll();toast('Crew data imported');}catch(e){toast('Could not read that file');}};
   r.readAsText(file);input.value='';
 }
-function resetData(){if(confirm('Reset everything? This clears crew, gear, costs, votes, roles & checklists on this device.')){state={crew:[],gearClaims:{},expenses:[],votes:{},roles:{},checks:{}};save();renderAll();}}
+function exportPDF(){window.print();}
+function resetData(){if(confirm('Reset everything? This clears crew, gear, costs, votes, stops, roles & checklists for EVERYONE (live mode) or this device (local mode).')){state=defaultState();persist();renderAll();}}
 
-/* ---------- tabs / filters / countdown ---------- */
+/* ---------- tabs / boot ---------- */
 function initTabs(){
-  document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
-    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-    document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
-    t.classList.add('active');document.getElementById(t.dataset.p).classList.add('active');
+  $$('.tab').forEach(t=>t.addEventListener('click',()=>{
+    $$('.tab').forEach(x=>x.classList.remove('active'));
+    $$('.panel').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');const panel=document.getElementById(t.dataset.p);panel.classList.add('active');
+    animatePanel(panel);
     window.scrollTo({top:0,behavior:'smooth'});
   }));
-  document.querySelectorAll('.fbtn').forEach(b=>b.addEventListener('click',()=>{
-    document.querySelectorAll('.fbtn').forEach(x=>x.classList.remove('on'));b.classList.add('on');foodFilter=b.dataset.f;renderFood();
+  $$('.fbtn[data-f]').forEach(b=>b.addEventListener('click',()=>{
+    $$('.fbtn[data-f]').forEach(x=>x.classList.remove('on'));b.classList.add('on');foodFilter=b.dataset.f;renderFood();
   }));
 }
 function countdown(){
   const target=new Date('2026-06-19T08:00:00-04:00');const now=new Date();
-  const diff=Math.ceil((target-now)/(1000*60*60*24));
-  const n=document.getElementById('cd-num'),l=document.getElementById('cd-lbl');
+  const diff=Math.ceil((target-now)/(86400000));
+  const n=$('#cd-num'),l=$('#cd-lbl');
   if(diff>0){n.textContent=diff;l.textContent=diff===1?'day to go':'days to go';}
-  else if(diff===0){n.textContent='GO';l.textContent='it\'s today';}
+  else if(diff===0){n.textContent='GO';l.textContent="it's today";}
   else{n.textContent='✓';l.textContent='trip done';}
 }
-function renderTips(){const w=document.getElementById('tips-card');w.innerHTML='';
-  TIPS.forEach(t=>{const d=document.createElement('div');d.className='tip';
-    d.innerHTML=`<div class="ti">${t.i}</div><div><h4>${t.t}</h4><p>${t.p}</p></div>`;w.appendChild(d);});}
-function renderMissing(){const w=document.getElementById('missing-grid');w.innerHTML='';
-  MISSING.forEach(m=>{const d=document.createElement('div');d.className='icard';
-    d.innerHTML=`<div class="itag ${m.c}">${m.tag}</div><h4>${m.title}</h4><p>${m.body}</p>`;w.appendChild(d);});}
-
 function renderAll(){
-  renderFood();renderMeals();renderPrep();renderShop();renderTips();renderMissing();renderCrew();renderExpenses();
+  renderCrew();renderExpenses();renderFood();renderMeals();renderPrep();renderShop();
+  renderTips();renderSituations();renderFAQ();renderActivities();renderStops();renderSites();renderProgress();
 }
-function boot(){ load(); initTabs(); countdown(); renderAll(); }
+async function boot(){
+  loadLocal();
+  try{if(localStorage.getItem('ww_banner_hidden'))$('#help-banner').style.display='none';}catch(e){}
+  initTabs();countdown();renderAll();setSync('local','Local');
+  renderSettingsUI();
+  startAmbient();
+  animateBoot();
+  if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  }
+  await initSupabase();
+  renderAll();
+}
 boot();
