@@ -959,7 +959,7 @@ function copySettle(){
   else toast(txt);
 }
 async function shareSite(){
-  const data={title:'WildWeekend — our camping plan',text:'Our June 19–21 camping field plan — gear, route, costs, everything:',url:location.href};
+  const data={title:'Camping 2026 — our camping plan',text:'Our June 19–21 camping plan — gear, route, costs, everything:',url:location.href};
   if(navigator.share){try{await navigator.share(data);}catch(e){}}
   else{try{await navigator.clipboard.writeText(location.href);toast('Link copied — paste it in the group chat');}catch(e){toast(location.href);}}
 }
