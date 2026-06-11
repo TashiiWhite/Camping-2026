@@ -1011,6 +1011,11 @@ async function boot(){
   animateBoot();
   if('serviceWorker' in navigator && location.protocol.startsWith('http')){
     navigator.serviceWorker.register('sw.js').catch(()=>{});
+    // auto-reload once when a new version of the app takes control
+    let swReloaded=false;
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{
+      if(swReloaded)return;swReloaded=true;location.reload();
+    });
   }
   await initSupabase();
   renderAll();
