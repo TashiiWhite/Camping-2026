@@ -116,14 +116,14 @@ async function signOut(){ if(sb){await sb.auth.signOut(); user=null; renderAuth(
    ============================================================ */
 const SITES=[
  {key:'plage',flag:'🇨🇦 Quebec · Laurentians',name:'Camping de la Plage',meta:'Rivière-Rouge, QC · Route 117',
-  mapsQ:'Camping de la Plage, Riviere-Rouge, QC', weatherQ:'Rivière-Rouge QC',
+  mapsQ:'Camping de la Plage, Riviere-Rouge, QC', weatherUrl:'https://www.theweathernetwork.com/en/city/ca/quebec/riviere-rouge/14-days',
   facilities:['🚿 Showers','🧺 Laundry','🏪 Store','📶 Wi-Fi','🛶 Canoe/kayak','🏖 River beach','🔥 Firewood'],
   rows:[['Drive from DDO','~2 h · 170 km'],['Setting','Rivière Rouge bank'],['Tent site','~$40–55 · call'],['Open','May 10–Sep 22'],['Curfew','11:00 PM'],['Checkout','11:00 AM']],
   pros:['Closest — only ~2 hrs north of DDO','River beach + canoe/kayak rentals','Showers, laundry, store, Wi-Fi, firewood','Live music weekends · ~25 min to Mont-Tremblant'],
   cons:['Call 819-275-7757 to confirm June rates','Reviews note a strict noise policy — keep it chill'],
   url:'http://www.campingdelaplage-qc.ca'},
  {key:'ivy',flag:'🇨🇦 Ontario · 1000 Islands',name:'Ivy Lea Campground',meta:'Lansdowne, ON · Thousand Islands Pkwy',
-  mapsQ:'Ivy Lea Campground, 649 Thousand Islands Parkway, Lansdowne, ON', weatherQ:'Gananoque ON',
+  mapsQ:'Ivy Lea Campground, 649 Thousand Islands Parkway, Lansdowne, ON', weatherUrl:'https://www.theweathernetwork.com/en/city/ca/ontario/gananoque/14-days',
   facilities:['🚿 Showers','🧺 Laundromat','🏪 Store','⛵ Boat launch','🤿 Scuba','🥾 Trails','🌉 Suspension bridge'],
   rows:[['Drive from DDO','~3–3.5 h'],['Basic site','$47.32 +HST'],['Waterfront','$55.30 +HST'],['Premium WF','$63.08 +HST'],['Extra vehicle','$13.00 / night'],['Reservation fee','$13.25 (n/r)'],['Checkout','1:00 PM']],
   pros:['Stunning 1000 Islands / St. Lawrence setting','Boat launch, scuba, trails, suspension bridge','Near Gananoque cruises + Boldt Castle','Premium waterfront sites available'],
@@ -156,6 +156,24 @@ const DEFAULT_GEAR=[
   {id:'hammock',n:'Hammock',t:'someone',note:'Ideal for riverside lounging'},
   {id:'games',n:'Cards / board games',t:'shared',note:'Rain-day insurance'},
   {id:'coffee',n:'French press / AeroPress + kettle',t:'someone',note:'Morning ritual = good vibes'}]},
+ {cat:'Clothing & attire',items:[
+  {id:'cl1',n:'Fleece / warm layer',t:'each',note:'June nights near water drop to 8–12°C'},
+  {id:'cl2',n:'Rain jacket',t:'each',note:'Always — even on a sunny forecast'},
+  {id:'cl3',n:'Swimsuit + quick-dry towel',t:'each',note:'River/lake time both sites'},
+  {id:'cl4',n:'Hiking shoes + camp shoes',t:'each',note:'Closed shoes for trails, slides/crocs at camp'},
+  {id:'cl5',n:'Hat + sunglasses',t:'each',note:'Sun bounces hard off the water'},
+  {id:'cl6',n:'Toque (yes, in June)',t:'each',note:'Worth more than an extra blanket at night'},
+  {id:'cl7',n:'Long sleeves + pants for dusk',t:'each',note:'Mosquito armor from 7 PM'},
+  {id:'cl8',n:'2–3 outfit changes + extra socks',t:'each',note:'Wet socks ruin a trip — pack double'}]},
+ {cat:'Personal kit',items:[
+  {id:'pk1',n:'Toiletries bag',t:'each',note:'Toothbrush, paste, deodorant, soap (biodegradable)'},
+  {id:'pk2',n:'Sunscreen + after-sun cream',t:'each',note:'SPF 50 + aloe for the inevitable'},
+  {id:'pk3',n:'Lip balm + moisturizer',t:'each',note:'Sun and campfire smoke dry you out'},
+  {id:'pk4',n:'Personal meds + allergy pills',t:'each',note:'Plus antihistamines for bites'},
+  {id:'pk5',n:'Phone charger + cable',t:'each',note:'One per person, power banks are shared'},
+  {id:'pk6',n:'Earplugs + eye mask',t:'each',note:'5 AM birds and early sun are real'},
+  {id:'pk7',n:'Garbage bag for dirty clothes',t:'each',note:'Keeps the wet/smoky stuff contained'},
+  {id:'pk8',n:'ID, health card + some cash',t:'each',note:'Campground stores are often cash-friendly'}]},
  {cat:'Safety & health',items:[
   {id:'firstaid',n:'First aid kit',t:'shared',note:'Keep it in the lead car'},
   {id:'bugspray',n:'Bug spray (DEET/picaridin)',t:'shared',note:'June is peak mosquito + blackfly'},
@@ -303,7 +321,21 @@ const ROLES=['Fire master','Meal lead','Gear coordinator','Lead driver','Navigat
 /* ============================================================
    RENDER
    ============================================================ */
-function gearData(){ if(!state.gear) state.gear=JSON.parse(JSON.stringify(DEFAULT_GEAR)); return state.gear; }
+function gearData(){
+  if(!state.gear){state.gear=JSON.parse(JSON.stringify(DEFAULT_GEAR));return state.gear;}
+  // migration: merge any new default categories/items into existing synced data
+  const have=new Set();state.gear.forEach(c=>c.items.forEach(i=>have.add(i.id)));
+  const archived=new Set(state.gearArchive.map(a=>a.id));
+  DEFAULT_GEAR.forEach(dc=>{
+    let cat=state.gear.find(c=>c.cat===dc.cat);
+    dc.items.forEach(di=>{
+      if(have.has(di.id)||archived.has(di.id))return;
+      if(!cat){cat={cat:dc.cat,items:[]};state.gear.push(cat);}
+      cat.items.push(JSON.parse(JSON.stringify(di)));have.add(di.id);
+    });
+  });
+  return state.gear;
+}
 
 function renderSites(){
   const grid=$('#sites-grid');grid.innerHTML='';
@@ -326,7 +358,7 @@ function renderSites(){
       <div class="site-foot">
         <button class="btn sm ghost" onclick="window.open('${s.url}','_blank')">Visit ↗</button>
         <button class="btn sm ghost" onclick="window.open('https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.mapsQ)}','_blank')">📍 Map</button>
-        <button class="btn sm ghost" onclick="window.open('https://weather.gc.ca/en/location/index.html?searchText=${encodeURIComponent(s.weatherQ)}','_blank')">⛅ Weather</button>
+        <button class="btn sm ghost" onclick="window.open('${s.weatherUrl}','_blank')">⛅ Weather</button>
         <select onchange="castVote('${s.key}',this.value)"><option value="">Vote as…</option>${opts}</select>
         <button class="btn sm ${isChosen?'amber':''}" onclick="chooseSite('${s.key}')">${isChosen?'✓ Chosen':'Choose this site'}</button>
         <span class="vote-tally"><span class="vote-faces">${faces}</span> ${votes.length} vote${votes.length===1?'':'s'}</span>
@@ -634,44 +666,54 @@ function setTheme(t){
   try{localStorage.setItem('ww_theme',t);}catch(e){}
   document.documentElement.dataset.theme=t;
   renderSettingsUI();
-  if(t==='aurora'&&motionOn()){stopAmbient();startAmbient();}else stopAmbient();
-  toast(t==='aurora'?'Aurora theme — just for you, not the crew':'Classic theme — just for you, not the crew');
+  stopAmbient();startAmbient();
+  const names={aurora:'Aurora',ember:'Ember 🔥',glacier:'Glacier',topo:'Topo',classic:'Classic'};
+  toast((names[t]||t)+' theme — just for you, not the crew');
 }
 function toggleMotion(){
   const on=!motionOn();
   try{localStorage.setItem('ww_motion',on?'1':'0');}catch(e){}
   renderSettingsUI();
-  if(on&&getTheme()==='aurora')startAmbient();else stopAmbient();
+  if(on)startAmbient();else stopAmbient();
   document.querySelectorAll('#aurora-blobs .blob').forEach(b=>b.style.animationPlayState=on?'running':'paused');
 }
 function renderSettingsUI(){
   const t=getTheme();
-  $('#tc-aurora')?.classList.toggle('on',t==='aurora');
-  $('#tc-classic')?.classList.toggle('on',t==='classic');
+  ['aurora','ember','glacier','topo','classic'].forEach(k=>$('#tc-'+k)?.classList.toggle('on',t===k));
   $('#motion-toggle')?.classList.toggle('done',motionOn());
 }
 function openSettings(){renderSettingsUI();$('#settings-modal').classList.add('open');}
 function closeSettings(){$('#settings-modal').classList.remove('open');}
 
-/* ---------- ambient visuals (aurora theme only) ----------
-   Desktop (fine pointer, ≥1024px, WebGL OK) -> Three.js particle field
-   Mobile / fallback -> lightweight 2D canvas fireflies              */
-let ffRAF=null,ffParticles=null;
-let threeRAF=null,threeCtx=null;
+/* ---------- ambient visuals — per-theme engine ----------
+   Desktop (fine pointer, >=1024px, WebGL OK) -> Three.js scene per theme
+   Mobile / fallback -> themed 2D canvas particles
+   Themes: aurora (drift field) · ember (rising embers, camping)
+           glacier (snowfall) · topo (wireframe terrain) · classic (none) */
+let ffRAF=null,ffParticles=null,ff2dTheme=null;
+let threeRAF=null,threeEnv=null;
+
+const AMBIENT={
+  aurora:{colors2d:['126,226,168','255,196,107'],drift:'float'},
+  ember:{colors2d:['255,140,66','255,200,87','255,90,60'],drift:'rise'},
+  glacier:{colors2d:['200,235,255','150,205,250'],drift:'fall'},
+  topo:{colors2d:['88,255,155'],drift:'float'},
+};
 
 function isDesktop(){
   try{return window.matchMedia('(pointer: fine)').matches && innerWidth>=1024 && !('ontouchstart' in window);}catch(e){return innerWidth>=1024;}
 }
 function startAmbient(){
-  if(getTheme()!=='aurora'||!motionOn())return;
+  const theme=getTheme();
+  const cfg=AMBIENT[theme];
+  if(!cfg||!motionOn()){stopAmbient();return;}
   if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
   const c=$('#fireflies');if(!c)return;
-  // a canvas can only ever hold ONE context type — stay consistent per session
-  if(c.dataset.mode==='2d'){startFireflies2D();return;}
-  if(c.dataset.mode==='three'){startThree();return;}
-  if(isDesktop())startThree();else startFireflies2D();
+  if(c.dataset.mode==='2d'){start2D(cfg,theme);return;}
+  if(c.dataset.mode==='three'){startThree(theme);return;}
+  if(isDesktop())startThree(theme);else start2D(cfg,theme);
 }
-function stopAmbient(){stopFireflies2D();stopThree();}
+function stopAmbient(){stop2D();stopThree();}
 
 function loadThree(){
   return new Promise((res,rej)=>{
@@ -681,93 +723,166 @@ function loadThree(){
     s.onload=res;s.onerror=rej;document.head.appendChild(s);
   });
 }
-async function startThree(){
-  const c=$('#fireflies');if(!c)return;
-  try{await loadThree();}catch(e){startFireflies2D();return;}
-  if(threeCtx){threeCtx.running=true;cancelAnimationFrame(threeRAF);threeLoop();return;}
-  let renderer;
-  try{
-    renderer=new THREE.WebGLRenderer({canvas:c,alpha:true,antialias:false,powerPreference:'low-power'});
-  }catch(e){startFireflies2D();return;}
-  c.dataset.mode='three';
-  const DPR=Math.min(window.devicePixelRatio||1,1.5);
-  renderer.setPixelRatio(DPR);
-  const scene=new THREE.Scene();
-  const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,1,260);
-  camera.position.z=90;
-  // soft round glow sprite (fixes square points)
+function softSprite(){
   const spr=document.createElement('canvas');spr.width=spr.height=64;
-  const sctx=spr.getContext('2d');
-  const grad=sctx.createRadialGradient(32,32,0,32,32,32);
-  grad.addColorStop(0,'rgba(255,255,255,1)');grad.addColorStop(.35,'rgba(255,255,255,.5)');grad.addColorStop(1,'rgba(255,255,255,0)');
-  sctx.fillStyle=grad;sctx.fillRect(0,0,64,64);
-  const sprite=new THREE.CanvasTexture(spr);
-  function makeCloud(count,size,colA,colB,spread){
-    const pos=new Float32Array(count*3),col=new Float32Array(count*3);
-    const a=new THREE.Color(colA),bC=new THREE.Color(colB);
-    for(let i=0;i<count;i++){
-      pos[i*3]=(Math.random()-.5)*spread;
-      pos[i*3+1]=(Math.random()-.5)*spread*.7;
-      pos[i*3+2]=(Math.random()-.5)*spread;
-      const mix=Math.random(),cc=a.clone().lerp(bC,mix);
-      col[i*3]=cc.r;col[i*3+1]=cc.g;col[i*3+2]=cc.b;
+  const x=spr.getContext('2d');
+  const g=x.createRadialGradient(32,32,0,32,32,32);
+  g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.35,'rgba(255,255,255,.5)');g.addColorStop(1,'rgba(255,255,255,0)');
+  x.fillStyle=g;x.fillRect(0,0,64,64);
+  return new THREE.CanvasTexture(spr);
+}
+function makePoints(scene,sprite,count,size,colA,colB,spread,ySpread){
+  const pos=new Float32Array(count*3),col=new Float32Array(count*3);
+  const a=new THREE.Color(colA),bC=new THREE.Color(colB);
+  for(let i=0;i<count;i++){
+    pos[i*3]=(Math.random()-.5)*spread;
+    pos[i*3+1]=(Math.random()-.5)*(ySpread||spread*.7);
+    pos[i*3+2]=(Math.random()-.5)*spread;
+    const cc=a.clone().lerp(bC,Math.random());
+    col[i*3]=cc.r;col[i*3+1]=cc.g;col[i*3+2]=cc.b;
+  }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  g.setAttribute('color',new THREE.BufferAttribute(col,3));
+  const m=new THREE.PointsMaterial({size,map:sprite,vertexColors:true,transparent:true,opacity:.4,
+    blending:THREE.AdditiveBlending,depthWrite:false,sizeAttenuation:true});
+  const p=new THREE.Points(g,m);scene.add(p);return p;
+}
+
+/* ---- per-theme scene builders: return {update(t,mx,my), objects[]} ---- */
+function buildAurora(scene,sprite,camera){
+  camera.position.set(0,0,90);
+  const A=makePoints(scene,sprite,300,1.4,'#7ee2a8','#7cc8ff',200);
+  const B=makePoints(scene,sprite,110,2.0,'#ffc46b','#c5a8ff',160);
+  return {objects:[A,B],update(t,mx,my){
+    A.rotation.y=t*.22;A.rotation.x=Math.sin(t*.28)*.04;
+    B.rotation.y=-t*.16;B.rotation.z=Math.cos(t*.2)*.03;
+    A.material.opacity=.28+.12*Math.sin(t*.9);
+    B.material.opacity=.24+.14*Math.sin(t*.7+1);
+    camera.position.x=mx*5;camera.position.y=-my*3.5;camera.lookAt(0,0,0);
+  }};
+}
+function buildEmber(scene,sprite,camera){
+  camera.position.set(0,0,90);
+  const N=200;
+  const E=makePoints(scene,sprite,N,1.5,'#ff9d4a','#ff5c3a',180,150);
+  const pos=E.geometry.attributes.position;
+  const meta=Array.from({length:N},()=>({vy:.04+Math.random()*.1,ph:Math.random()*6.28,sway:.5+Math.random()*1.2}));
+  const glow=makePoints(scene,sprite,40,3.4,'#ffd27d','#ff7d3a',150,130);
+  glow.material.opacity=.18;
+  return {objects:[E,glow],update(t,mx,my){
+    for(let i=0;i<N;i++){
+      let y=pos.getY(i)+meta[i].vy;
+      if(y>78){y=-78;pos.setX(i,(Math.random()-.5)*180);}
+      pos.setY(i,y);
+      pos.setX(i,pos.getX(i)+Math.sin(t*1.4+meta[i].ph)*.018*meta[i].sway);
     }
-    const g=new THREE.BufferGeometry();
-    g.setAttribute('position',new THREE.BufferAttribute(pos,3));
-    g.setAttribute('color',new THREE.BufferAttribute(col,3));
-    const m=new THREE.PointsMaterial({size,map:sprite,vertexColors:true,transparent:true,opacity:.45,
-      blending:THREE.AdditiveBlending,depthWrite:false,sizeAttenuation:true});
-    const p=new THREE.Points(g,m);scene.add(p);return p;
+    pos.needsUpdate=true;
+    E.material.opacity=.34+.12*Math.sin(t*2.2);
+    glow.rotation.y=t*.1;
+    camera.position.x=mx*4;camera.position.y=-my*3;camera.lookAt(0,0,0);
+  }};
+}
+function buildGlacier(scene,sprite,camera){
+  camera.position.set(0,0,90);
+  const N=260;
+  const S=makePoints(scene,sprite,N,1.3,'#eaf6ff','#9fd4ff',200,170);
+  const pos=S.geometry.attributes.position;
+  const meta=Array.from({length:N},()=>({vy:.03+Math.random()*.08,ph:Math.random()*6.28,sway:.4+Math.random()}));
+  return {objects:[S],update(t,mx,my){
+    for(let i=0;i<N;i++){
+      let y=pos.getY(i)-meta[i].vy;
+      if(y<-88){y=88;pos.setX(i,(Math.random()-.5)*200);}
+      pos.setY(i,y);
+      pos.setX(i,pos.getX(i)+Math.sin(t*.9+meta[i].ph)*.02*meta[i].sway);
+    }
+    pos.needsUpdate=true;
+    S.material.opacity=.34+.1*Math.sin(t*.8);
+    camera.position.x=mx*4;camera.position.y=-my*3;camera.lookAt(0,0,0);
+  }};
+}
+function buildTopo(scene,sprite,camera){
+  camera.position.set(0,26,70);
+  const geo=new THREE.PlaneGeometry(340,340,64,64);
+  geo.rotateX(-Math.PI/2);
+  const mat=new THREE.MeshBasicMaterial({wireframe:true,color:0x58ff9b,transparent:true,opacity:.13});
+  const mesh=new THREE.Mesh(geo,mat);mesh.position.y=-24;scene.add(mesh);
+  const pos=geo.attributes.position;
+  const dots=makePoints(scene,sprite,70,1.6,'#58ff9b','#a8ffd0',240,90);
+  dots.material.opacity=.22;
+  return {objects:[mesh,dots],update(t,mx,my){
+    for(let i=0;i<pos.count;i++){
+      const x=pos.getX(i),z=pos.getZ(i);
+      pos.setY(i,5.5*Math.sin(x*.045+t*.7)+4*Math.cos(z*.05+t*.5)+2.2*Math.sin((x+z)*.03+t*.9));
+    }
+    pos.needsUpdate=true;
+    mesh.rotation.y=t*.03;
+    dots.rotation.y=-t*.05;
+    camera.position.x=mx*6;camera.position.y=26-my*4;camera.lookAt(0,-14,0);
+  }};
+}
+const THREE_BUILDERS={aurora:buildAurora,ember:buildEmber,glacier:buildGlacier,topo:buildTopo};
+
+async function startThree(theme){
+  const c=$('#fireflies');if(!c)return;
+  try{await loadThree();}catch(e){start2D(AMBIENT[theme],theme);return;}
+  if(threeEnv&&threeEnv.theme===theme){threeEnv.running=true;cancelAnimationFrame(threeRAF);threeEnv.loop();return;}
+  if(!threeEnv){
+    let renderer;
+    try{renderer=new THREE.WebGLRenderer({canvas:c,alpha:true,antialias:false,powerPreference:'low-power'});}
+    catch(e){start2D(AMBIENT[theme],theme);return;}
+    c.dataset.mode='three';
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
+    const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,1,400);
+    let tx=0,ty=0;
+    const onMouse=e=>{tx=(e.clientX/innerWidth-.5)*2;ty=(e.clientY/innerHeight-.5)*2;};
+    const onResize=()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight,false);};
+    window.addEventListener('mousemove',onMouse,{passive:true});
+    window.addEventListener('resize',onResize);
+    onResize();
+    threeEnv={renderer,camera,scene:new THREE.Scene(),sprite:softSprite(),t:0,mx:0,my:0,
+      get tx(){return tx},get ty(){return ty},running:true,theme:null,built:null,loop:null};
   }
-  const cloudA=makeCloud(320,2.2,'#7ee2a8','#7cc8ff',200); // green→blue drift field
-  const cloudB=makeCloud(120,3.2,'#ffc46b','#c5a8ff',160); // warm sparse accents
-  let mx=0,my=0,tx=0,ty=0;
-  const onMouse=e=>{tx=(e.clientX/innerWidth-.5)*2;ty=(e.clientY/innerHeight-.5)*2;};
-  const onResize=()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight,false);};
-  window.addEventListener('mousemove',onMouse,{passive:true});
-  window.addEventListener('resize',onResize);
-  onResize();
-  threeCtx={renderer,scene,camera,cloudA,cloudB,running:true,t:0,
-    get mx(){return mx},set mx(v){mx=v},onMouse,onResize};
-  function loop(){
-    if(!threeCtx||!threeCtx.running)return;
-    if(document.hidden){threeRAF=requestAnimationFrame(loop);return;}
-    threeCtx.t+=.0035;
-    mx+=(tx-mx)*.03;my+=(ty-my)*.03;
-    cloudA.rotation.y=threeCtx.t*.5;cloudA.rotation.x=Math.sin(threeCtx.t*.6)*.06;
-    cloudB.rotation.y=-threeCtx.t*.35;cloudB.rotation.z=Math.cos(threeCtx.t*.4)*.05;
-    cloudA.material.opacity=.32+.16*Math.sin(threeCtx.t*2.1);
-    cloudB.material.opacity=.28+.18*Math.sin(threeCtx.t*1.4+1);
-    camera.position.x=mx*9;camera.position.y=-my*6;
-    camera.lookAt(0,0,0);
-    renderer.render(scene,camera);
-    threeRAF=requestAnimationFrame(loop);
-  }
-  window.threeLoop=loop; loop();
+  const env=threeEnv;
+  // clear previous theme objects
+  if(env.built){env.built.objects.forEach(o=>{env.scene.remove(o);o.geometry&&o.geometry.dispose();o.material&&o.material.dispose();});}
+  env.theme=theme;env.running=true;
+  env.built=THREE_BUILDERS[theme](env.scene,env.sprite,env.camera);
+  cancelAnimationFrame(threeRAF);
+  env.loop=function loop(){
+    if(!env.running)return;
+    if(document.hidden){threeRAF=requestAnimationFrame(env.loop);return;}
+    env.t+=.0016;
+    env.mx+=(env.tx-env.mx)*.025;env.my+=(env.ty-env.my)*.025;
+    env.built.update(env.t,env.mx,env.my);
+    env.renderer.render(env.scene,env.camera);
+    threeRAF=requestAnimationFrame(env.loop);
+  };
+  env.loop();
 }
 function stopThree(){
   cancelAnimationFrame(threeRAF);
-  if(threeCtx){
-    threeCtx.running=false;
-    try{threeCtx.renderer.clear();}catch(e){}
-  }
+  if(threeEnv){threeEnv.running=false;try{threeEnv.renderer.clear();}catch(e){}}
 }
-function startFireflies2D(){
+function start2D(cfg,theme){
   const c=$('#fireflies');if(!c)return;
-  if(c.dataset.mode==='three')return; // canvas already WebGL — can't mix
+  if(c.dataset.mode==='three')return;
   c.dataset.mode='2d';
   const ctx=c.getContext('2d');if(!ctx)return;
   const DPR=Math.min(window.devicePixelRatio||1,2);
   function size(){c.width=innerWidth*DPR;c.height=innerHeight*DPR;}
   size();window.addEventListener('resize',size);
   const N=innerWidth<700?18:36;
-  if(!ffParticles){
+  if(!ffParticles||ff2dTheme!==theme){
+    ff2dTheme=theme;
+    const rise=cfg.drift==='rise',fall=cfg.drift==='fall';
     ffParticles=Array.from({length:N},()=>({
       x:Math.random()*c.width,y:Math.random()*c.height,
-      r:(Math.random()*1.6+0.8)*DPR,
-      vx:(Math.random()-.5)*.18*DPR,vy:(Math.random()-.5)*.14*DPR,
-      ph:Math.random()*Math.PI*2,sp:.008+Math.random()*.015,
-      col:Math.random()<.7?'126,226,168':'255,196,107'
+      r:(Math.random()*1.5+0.7)*DPR,
+      vx:(Math.random()-.5)*.14*DPR,
+      vy:rise?-(.08+Math.random()*.2)*DPR:fall?(.06+Math.random()*.16)*DPR:(Math.random()-.5)*.12*DPR,
+      ph:Math.random()*6.28,sp:.006+Math.random()*.012,
+      col:cfg.colors2d[Math.floor(Math.random()*cfg.colors2d.length)]
     }));
   }
   cancelAnimationFrame(ffRAF);
@@ -777,8 +892,8 @@ function startFireflies2D(){
     for(const p of ffParticles){
       p.x+=p.vx;p.y+=p.vy;p.ph+=p.sp;
       if(p.x<0)p.x=c.width;if(p.x>c.width)p.x=0;
-      if(p.y<0)p.y=c.height;if(p.y>c.height)p.y=0;
-      const a=.18+.5*Math.abs(Math.sin(p.ph));
+      if(p.y<-20)p.y=c.height+10;if(p.y>c.height+20)p.y=-10;
+      const a=.16+.45*Math.abs(Math.sin(p.ph));
       const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r*5);
       g.addColorStop(0,`rgba(${p.col},${a})`);g.addColorStop(1,`rgba(${p.col},0)`);
       ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,p.r*5,0,7);ctx.fill();
@@ -786,7 +901,7 @@ function startFireflies2D(){
     ffRAF=requestAnimationFrame(tick);
   })();
 }
-function stopFireflies2D(){
+function stop2D(){
   cancelAnimationFrame(ffRAF);
   const c=$('#fireflies');
   if(c&&c.dataset.mode==='2d'){try{c.getContext('2d').clearRect(0,0,c.width,c.height);}catch(e){}}
@@ -831,7 +946,7 @@ function copySettle(){
   const debtors=[],creditors=[];
   Object.entries(bal).forEach(([n,b])=>{if(b<-0.005)debtors.push([n,-b]);else if(b>0.005)creditors.push([n,b]);});
   debtors.sort((a,b)=>b[1]-a[1]);creditors.sort((a,b)=>b[1]-a[1]);
-  let lines=['🏕 WildWeekend — settle up','Total: $'+total.toFixed(2)+' · per person: $'+share.toFixed(2),''];
+  let lines=['🏕 Camping 2026 — settle up','Total: $'+total.toFixed(2)+' · per person: $'+share.toFixed(2),''];
   let di=0,ci=0;
   while(di<debtors.length&&ci<creditors.length){
     const pay=Math.min(debtors[di][1],creditors[ci][1]);
