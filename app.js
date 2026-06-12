@@ -40,7 +40,7 @@ function persist(){
   state.rev=(state.rev||0)+1; state.by=CLIENT_ID; lastRev=state.rev;
   saveLocal();
   try{renderProgress();}catch(e){}
-  if(sb){
+  if(sb&&user&&liveReady){
     clearTimeout(saveTimer);
     saveTimer=setTimeout(async()=>{
       try{
@@ -52,45 +52,85 @@ function persist(){
   }
 }
 
-function setSync(mode,text){
+const SYNC_TIPS={
+  live:'Live — you are signed in. Every change syncs instantly to the whole crew on every device.',
+  local:'Local — data saves to this device only. Sign in with Google (top right) to join the live shared trip.',
+  off:'Offline — no connection right now. Changes are saved locally and will sync when you reconnect.'
+};
+function setSync(mode,text,tip){
   const p=$('#sync-pill');p.className='sync-pill sync-'+(mode==='live'?'live':mode==='off'?'off':'local');
+  p.setAttribute('data-tip',tip||SYNC_TIPS[mode==='live'?'live':mode==='off'?'off':'local']);
   $('#sync-text').textContent=text;
   const ex=$('#sync-explainer');
   if(!ex)return;
-  if(mode==='live') ex.innerHTML='🟢 <b>Live sync is on.</b> Every change — crew, gear, votes, stops, costs — is shared instantly with everyone on every device. The app also caches everything for offline use and re-syncs when you reconnect.';
-  else ex.innerHTML='🟡 <b>Local mode.</b> Data saves to this device only. To go live for the whole crew, set up Supabase (see README + config.js) — takes ~10 minutes. You can still share state with Export/Import below.';
+  if(mode==='live') ex.innerHTML='🟢 <b>Live sync is on.</b> You are signed in — every change is shared instantly with everyone signed into the trip, on every device. Everything also caches for offline use.';
+  else ex.innerHTML='🟡 <b>Local mode.</b> Data saves to this device only. <b>Sign in with Google</b> (top right) to join the live shared trip, sync with the crew, and unlock all themes. You can still share state manually with Export/Import below.';
 }
+
+let liveChannel=null,liveReady=false,onlineCount=0;
 
 async function initSupabase(){
   const url=CFG.SUPABASE_URL||'', key=CFG.SUPABASE_ANON_KEY||'';
   if(!url||url.includes('YOUR_')||!key||key.includes('YOUR_')){ setSync('local','Local'); renderAuth(); return; }
   try{
     sb = supabase.createClient(url,key);
-    // auth state
-    sb.auth.onAuthStateChange((_e,session)=>{ user=session?.user||null; renderAuth(); });
+    sb.auth.onAuthStateChange((_e,session)=>{ user=session?.user||null; applyAccess(); });
     const {data:{session}}=await sb.auth.getSession(); user=session?.user||null;
-    // initial load
+    await applyAccess();
+  }catch(e){ console.warn('supabase init:',e.message||e); setSync('local','Local (no connection)'); renderAuth(); }
+}
+
+async function applyAccess(){
+  renderAuth();
+  enforceThemeAccess();
+  renderSettingsUI();
+  if(user){ await connectLive(); }
+  else { disconnectLive(); setSync('local','Local — sign in for live'); }
+  renderAll();
+}
+
+async function connectLive(){
+  if(!sb||!user)return;
+  try{
     const {data,error}=await sb.from('trips').select('data').eq('id',TRIP_ID).maybeSingle();
     if(error) throw error;
     if(data && data.data && Object.keys(data.data).length){
       const remote=Object.assign(defaultState(),data.data);
       if((remote.rev||0) >= (state.rev||0)) state=remote;
-      else persist(); // local is newer (offline edits) -> push up
     } else {
       await sb.from('trips').upsert({id:TRIP_ID,data:state});
     }
     saveLocal();
-    // realtime subscription
-    sb.channel('trip-'+TRIP_ID)
+    if(liveChannel){try{sb.removeChannel(liveChannel);}catch(e){}}
+    liveChannel=sb.channel('trip-'+TRIP_ID,{config:{presence:{key:CLIENT_ID}}})
       .on('postgres_changes',{event:'*',schema:'public',table:'trips',filter:'id=eq.'+TRIP_ID},payload=>{
         const d=payload.new?.data; if(!d)return;
-        if(d.by===CLIENT_ID && d.rev<=lastRev) return; // own echo
+        if(d.by===CLIENT_ID && d.rev<=lastRev) return;
         state=Object.assign(defaultState(),d); saveLocal(); renderAll();
       })
-      .subscribe(status=>{ if(status==='SUBSCRIBED') setSync('live','Live'); });
+      .on('presence',{event:'sync'},()=>{
+        try{onlineCount=Object.keys(liveChannel.presenceState()).length;}catch(e){onlineCount=1;}
+        renderPresence();
+      })
+      .subscribe(async status=>{
+        if(status==='SUBSCRIBED'){
+          liveReady=true; setSync('live','Live');
+          try{await liveChannel.track({name:user?.user_metadata?.full_name||user?.email||'crew',at:Date.now()});}catch(e){}
+        }
+      });
     setSync('live','Live');
-  }catch(e){ console.warn('supabase init:',e.message||e); setSync('local','Local (no connection)'); }
-  renderAuth();
+  }catch(e){ console.warn('connectLive:',e.message||e); liveReady=false; setSync('local','Local (no connection)'); }
+}
+function disconnectLive(){
+  liveReady=false;onlineCount=0;renderPresence();
+  if(liveChannel&&sb){try{sb.removeChannel(liveChannel);}catch(e){} liveChannel=null;}
+}
+function renderPresence(){
+  const p=$('#presence-pill');if(!p)return;
+  if(liveReady&&onlineCount>0){
+    p.style.display='flex';
+    $('#presence-count').textContent=onlineCount+(onlineCount===1?' online':' online');
+  } else p.style.display='none';
 }
 
 function renderAuth(){
@@ -109,7 +149,7 @@ async function signIn(){
   const {error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.href.split('#')[0]}});
   if(error) toast('Sign-in failed: '+error.message);
 }
-async function signOut(){ if(sb){await sb.auth.signOut(); user=null; renderAuth();} }
+async function signOut(){ if(sb){await sb.auth.signOut(); user=null; await applyAccess();} }
 
 /* ============================================================
    DATA
@@ -121,7 +161,7 @@ const SITES=[
   rows:[['Drive from DDO','~2 h · 170 km'],['Setting','Rivière Rouge bank'],['Tent site','~$40–55 · call'],['Open','May 10–Sep 22'],['Curfew','11:00 PM'],['Checkout','11:00 AM']],
   pros:['Closest — only ~2 hrs north of DDO','River beach + canoe/kayak rentals','Showers, laundry, store, Wi-Fi, firewood','Live music weekends · ~25 min to Mont-Tremblant'],
   cons:['Call 819-275-7757 to confirm June rates','Reviews note a strict noise policy — keep it chill'],
-  url:'http://www.campingdelaplage-qc.ca'},
+  url:'http://www.campingdelaplage-qc.ca/plan-eng.html'},
  {key:'ivy',flag:'🇨🇦 Ontario · 1000 Islands',name:'Ivy Lea Campground',meta:'Lansdowne, ON · Thousand Islands Pkwy',
   mapsQ:'Ivy Lea Campground, 649 Thousand Islands Parkway, Lansdowne, ON', weatherUrl:'https://www.theweathernetwork.com/en/city/ca/ontario/gananoque/14-days',
   facilities:['🚿 Showers','🧺 Laundromat','🏪 Store','⛵ Boat launch','🤿 Scuba','🥾 Trails','🌉 Suspension bridge'],
@@ -660,28 +700,50 @@ function dismissBanner(){$('#help-banner').style.display='none';try{localStorage
 function showBannerAgain(){try{localStorage.removeItem('ww_banner_hidden');}catch(e){}$('#help-banner').style.display='flex';closeSettings();toast('Welcome banner restored');}
 
 /* ---------- settings & theme (per-device, never synced) ---------- */
-function getTheme(){try{return localStorage.getItem('ww_theme')||'aurora';}catch(e){return 'aurora';}}
+const ALL_THEMES=['classic','aurora','ember','glacier','topo','nebula','synthwave','botanic','abyss','sakura','carbon','dune'];
+function getTheme(){try{return localStorage.getItem('ww_theme')||'classic';}catch(e){return 'classic';}}
+function canUseTheme(t){return t==='classic'||!!user;}
+function enforceThemeAccess(){
+  if(!canUseTheme(getTheme())){
+    try{localStorage.setItem('ww_theme','classic');}catch(e){}
+    document.documentElement.dataset.theme='classic';
+    stopAmbient();
+  }
+}
 function motionOn(){try{return localStorage.getItem('ww_motion')!=='0';}catch(e){return true;}}
 function setTheme(t){
+  if(!canUseTheme(t)){toast('🔒 Sign in with Google to unlock this theme');return;}
   try{localStorage.setItem('ww_theme',t);}catch(e){}
   document.documentElement.dataset.theme=t;
   renderSettingsUI();
   stopAmbient();startAmbient();
-  const names={aurora:'Aurora',ember:'Ember 🔥',glacier:'Glacier',topo:'Topo',classic:'Classic'};
+  if(t==='classic')unlockReveals();
+  const names={aurora:'Aurora',ember:'Ember 🔥',glacier:'Glacier',topo:'Topo',classic:'Classic',nebula:'Nebula',synthwave:'Synthwave',botanic:'Botanic ☀',abyss:'Abyss',sakura:'Sakura',carbon:'Carbon',dune:'Dune'};
   toast((names[t]||t)+' theme — just for you, not the crew');
 }
 function toggleMotion(){
   const on=!motionOn();
   try{localStorage.setItem('ww_motion',on?'1':'0');}catch(e){}
   renderSettingsUI();
-  if(on)startAmbient();else stopAmbient();
+  if(on)startAmbient();else{stopAmbient();unlockReveals();}
   document.querySelectorAll('#aurora-blobs .blob').forEach(b=>b.style.animationPlayState=on?'running':'paused');
 }
 function renderSettingsUI(){
   const t=getTheme();
-  ['aurora','ember','glacier','topo','classic'].forEach(k=>$('#tc-'+k)?.classList.toggle('on',t===k));
+  ALL_THEMES.forEach(k=>{
+    const card=$('#tc-'+k);if(!card)return;
+    card.classList.toggle('on',t===k);
+    card.classList.toggle('locked',!canUseTheme(k));
+  });
+  const note=$('#theme-lock-note');if(note)note.style.display=user?'none':'block';
   $('#motion-toggle')?.classList.toggle('done',motionOn());
+  $('#perf-toggle')?.classList.toggle('done',perfOn());
+  $('#compact-toggle')?.classList.toggle('done',compactOn());
 }
+function perfOn(){try{return localStorage.getItem('ww_perf')==='1';}catch(e){return false;}}
+function compactOn(){try{return localStorage.getItem('ww_compact')==='1';}catch(e){return false;}}
+function togglePerf(){const v=!perfOn();try{localStorage.setItem('ww_perf',v?'1':'0');}catch(e){}document.documentElement.classList.toggle('perf',v);renderSettingsUI();}
+function toggleCompact(){const v=!compactOn();try{localStorage.setItem('ww_compact',v?'1':'0');}catch(e){}document.documentElement.classList.toggle('compact',v);renderSettingsUI();}
 function openSettings(){renderSettingsUI();$('#settings-modal').classList.add('open');}
 function closeSettings(){$('#settings-modal').classList.remove('open');}
 
@@ -698,6 +760,13 @@ const AMBIENT={
   ember:{colors2d:['255,140,66','255,200,87','255,90,60'],drift:'rise'},
   glacier:{colors2d:['200,235,255','150,205,250'],drift:'fall'},
   topo:{colors2d:['88,255,155'],drift:'float'},
+  nebula:{colors2d:['210,200,255','255,160,235','160,210,255'],drift:'float'},
+  synthwave:{colors2d:['255,41,117','80,240,255'],drift:'float'},
+  botanic:{colors2d:['120,150,60','170,190,90'],drift:'rise',blend:'normal'},
+  abyss:{colors2d:['120,220,255','200,250,255'],drift:'rise'},
+  sakura:{colors2d:['255,157,189','255,200,220'],drift:'fall'},
+  carbon:{colors2d:['235,235,235'],drift:'float'},
+  dune:{colors2d:['230,180,120','250,210,150'],drift:'wind'},
 };
 
 function isDesktop(){
@@ -754,12 +823,12 @@ function buildAurora(scene,sprite,camera){
   camera.position.set(0,0,90);
   const A=makePoints(scene,sprite,300,1.4,'#7ee2a8','#7cc8ff',200);
   const B=makePoints(scene,sprite,110,2.0,'#ffc46b','#c5a8ff',160);
-  return {objects:[A,B],update(t,mx,my){
+  return {objects:[A,B],update(t,mx,my,sc){
     A.rotation.y=t*.22;A.rotation.x=Math.sin(t*.28)*.04;
     B.rotation.y=-t*.16;B.rotation.z=Math.cos(t*.2)*.03;
     A.material.opacity=.28+.12*Math.sin(t*.9);
     B.material.opacity=.24+.14*Math.sin(t*.7+1);
-    camera.position.x=mx*5;camera.position.y=-my*3.5;camera.lookAt(0,0,0);
+    camera.position.x=mx*5;camera.position.y=-my*3.5-Math.min(sc*.004,8);camera.lookAt(0,0,0);
   }};
 }
 function buildEmber(scene,sprite,camera){
@@ -770,7 +839,7 @@ function buildEmber(scene,sprite,camera){
   const meta=Array.from({length:N},()=>({vy:.04+Math.random()*.1,ph:Math.random()*6.28,sway:.5+Math.random()*1.2}));
   const glow=makePoints(scene,sprite,40,3.4,'#ffd27d','#ff7d3a',150,130);
   glow.material.opacity=.18;
-  return {objects:[E,glow],update(t,mx,my){
+  return {objects:[E,glow],update(t,mx,my,sc){
     for(let i=0;i<N;i++){
       let y=pos.getY(i)+meta[i].vy;
       if(y>78){y=-78;pos.setX(i,(Math.random()-.5)*180);}
@@ -789,7 +858,7 @@ function buildGlacier(scene,sprite,camera){
   const S=makePoints(scene,sprite,N,1.3,'#eaf6ff','#9fd4ff',200,170);
   const pos=S.geometry.attributes.position;
   const meta=Array.from({length:N},()=>({vy:.03+Math.random()*.08,ph:Math.random()*6.28,sway:.4+Math.random()}));
-  return {objects:[S],update(t,mx,my){
+  return {objects:[S],update(t,mx,my,sc){
     for(let i=0;i<N;i++){
       let y=pos.getY(i)-meta[i].vy;
       if(y<-88){y=88;pos.setX(i,(Math.random()-.5)*200);}
@@ -810,7 +879,7 @@ function buildTopo(scene,sprite,camera){
   const pos=geo.attributes.position;
   const dots=makePoints(scene,sprite,70,1.6,'#58ff9b','#a8ffd0',240,90);
   dots.material.opacity=.22;
-  return {objects:[mesh,dots],update(t,mx,my){
+  return {objects:[mesh,dots],update(t,mx,my,sc){
     for(let i=0;i<pos.count;i++){
       const x=pos.getX(i),z=pos.getZ(i);
       pos.setY(i,5.5*Math.sin(x*.045+t*.7)+4*Math.cos(z*.05+t*.5)+2.2*Math.sin((x+z)*.03+t*.9));
@@ -818,10 +887,142 @@ function buildTopo(scene,sprite,camera){
     pos.needsUpdate=true;
     mesh.rotation.y=t*.03;
     dots.rotation.y=-t*.05;
-    camera.position.x=mx*6;camera.position.y=26-my*4;camera.lookAt(0,-14,0);
+    camera.position.x=mx*6;camera.position.y=26-my*4+Math.min(sc*.006,10);camera.lookAt(0,-14,0);
   }};
 }
-const THREE_BUILDERS={aurora:buildAurora,ember:buildEmber,glacier:buildGlacier,topo:buildTopo};
+function buildNebula(scene,sprite,camera){
+  camera.position.set(0,0,100);
+  const stars=makePoints(scene,sprite,520,1.0,'#ffffff','#b9a8ff',260,200);
+  stars.material.opacity=.5;
+  const tint=makePoints(scene,sprite,140,1.8,'#ff7ad9','#8fd0ff',220,170);
+  tint.material.opacity=.25;
+  // shooting star: single bright point
+  const shoot=makePoints(scene,sprite,1,4.5,'#ffffff','#ffffff',1,1);
+  const sp=shoot.geometry.attributes.position;
+  let sx=999,sy=0,svx=0,svy=0,nextAt=2;
+  return {objects:[stars,tint,shoot],update(t,mx,my,sc){
+    stars.rotation.y=t*.05;stars.rotation.z=t*.012;
+    tint.rotation.y=-t*.035;
+    stars.material.opacity=.4+.15*Math.sin(t*1.2);
+    if(t>nextAt&&sx>900){sx=-160;sy=40+Math.random()*60;svx=2.4+Math.random()*1.6;svy=-(.6+Math.random()*.5);}
+    if(sx<900){sx+=svx;sy+=svy;sp.setXYZ(0,sx,sy,-30);sp.needsUpdate=true;
+      shoot.material.opacity=Math.max(0,.9-Math.abs(sx)/200);
+      if(sx>180){sx=999;nextAt=t+2.5+Math.random()*4;shoot.material.opacity=0;}}
+    camera.position.x=mx*6;camera.position.y=-my*4-Math.min(sc*.005,10);camera.lookAt(0,0,0);
+  }};
+}
+function buildSynthwave(scene,sprite,camera){
+  camera.position.set(0,9,72);
+  const geo=new THREE.PlaneGeometry(480,480,48,48);
+  geo.rotateX(-Math.PI/2);
+  const grid=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({wireframe:true,color:0xff2975,transparent:true,opacity:.3}));
+  grid.position.y=-16;scene.add(grid);
+  const sun=makePoints(scene,sprite,1,150,'#ff7ad9','#ff7ad9',1,1);
+  sun.geometry.attributes.position.setXYZ(0,0,26,-180);sun.geometry.attributes.position.needsUpdate=true;
+  sun.material.opacity=.5;
+  const stars=makePoints(scene,sprite,160,1.1,'#50f0ff','#ffffff',300,140);
+  stars.material.opacity=.3;
+  const STEP=10;
+  return {objects:[grid,sun,stars],update(t,mx,my,sc){
+    grid.position.z=((t*46)%STEP);
+    stars.rotation.y=t*.02;
+    sun.material.opacity=.42+.1*Math.sin(t*1.6);
+    camera.position.x=mx*7;camera.position.y=9-my*3+Math.min(sc*.004,6);camera.lookAt(0,-2,-60);
+  }};
+}
+function buildBotanic(scene,sprite,camera){
+  camera.position.set(0,0,90);
+  const N=150;
+  const P=makePoints(scene,sprite,N,2.0,'#7a9a3c','#b9c468',200,160);
+  P.material.blending=THREE.NormalBlending;P.material.opacity=.5;
+  const pos=P.geometry.attributes.position;
+  const meta=Array.from({length:N},()=>({vy:.015+Math.random()*.05,ph:Math.random()*6.28,sw:.6+Math.random()}));
+  return {objects:[P],update(t,mx,my,sc){
+    for(let i=0;i<N;i++){
+      let y=pos.getY(i)+meta[i].vy;
+      if(y>85){y=-85;pos.setX(i,(Math.random()-.5)*200);}
+      pos.setY(i,y);
+      pos.setX(i,pos.getX(i)+Math.sin(t*.8+meta[i].ph)*.02*meta[i].sw);
+    }
+    pos.needsUpdate=true;
+    camera.position.x=mx*4;camera.position.y=-my*3-Math.min(sc*.003,6);camera.lookAt(0,0,0);
+  }};
+}
+function buildAbyss(scene,sprite,camera){
+  camera.position.set(0,0,90);
+  const N=230;
+  const B=makePoints(scene,sprite,N,1.5,'#9fe8ff','#e6fbff',200,180);
+  const pos=B.geometry.attributes.position;
+  const meta=Array.from({length:N},()=>({vy:.05+Math.random()*.14,ph:Math.random()*6.28,sw:.6+Math.random()*1.4,sz:Math.random()}));
+  return {objects:[B],update(t,mx,my,sc){
+    for(let i=0;i<N;i++){
+      let y=pos.getY(i)+meta[i].vy;
+      if(y>95){y=-95;pos.setX(i,(Math.random()-.5)*200);}
+      pos.setY(i,y);
+      pos.setX(i,pos.getX(i)+Math.sin(t*1.8+meta[i].ph)*.05*meta[i].sw);
+    }
+    pos.needsUpdate=true;
+    B.material.opacity=.3+.1*Math.sin(t*.7);
+    camera.position.x=Math.sin(t*.4)*2+mx*4;camera.position.y=-my*3-Math.min(sc*.004,8);camera.lookAt(0,0,0);
+  }};
+}
+function buildSakura(scene,sprite,camera){
+  camera.position.set(0,0,90);
+  const N=170;
+  const P=makePoints(scene,sprite,N,2.0,'#ff9dbd','#ffd0e0',210,180);
+  const pos=P.geometry.attributes.position;
+  const meta=Array.from({length:N},()=>({vy:.025+Math.random()*.07,ph:Math.random()*6.28,sw:1+Math.random()*2}));
+  return {objects:[P],update(t,mx,my,sc){
+    for(let i=0;i<N;i++){
+      let y=pos.getY(i)-meta[i].vy;
+      if(y<-95){y=95;pos.setX(i,(Math.random()-.5)*210);}
+      pos.setY(i,y);
+      pos.setX(i,pos.getX(i)+Math.sin(t*1.1+meta[i].ph)*.045*meta[i].sw);
+    }
+    pos.needsUpdate=true;
+    P.material.opacity=.4+.12*Math.sin(t*.9);
+    camera.position.x=mx*4;camera.position.y=-my*3-Math.min(sc*.004,8);camera.lookAt(0,0,0);
+  }};
+}
+function buildCarbon(scene,sprite,camera){
+  camera.position.set(0,0,86);
+  const knot=new THREE.Mesh(
+    new THREE.TorusKnotGeometry(24,7,110,14),
+    new THREE.MeshBasicMaterial({wireframe:true,color:0xffffff,transparent:true,opacity:.07}));
+  knot.position.set(34,4,-30);scene.add(knot);
+  const dots=makePoints(scene,sprite,70,1.2,'#ffffff','#d8f021',240,160);
+  dots.material.opacity=.16;
+  return {objects:[knot,dots],update(t,mx,my,sc){
+    knot.rotation.x=t*.3;knot.rotation.y=t*.42;
+    dots.rotation.y=t*.03;
+    camera.position.x=mx*5;camera.position.y=-my*3-Math.min(sc*.004,7);camera.lookAt(0,0,0);
+  }};
+}
+function buildDune(scene,sprite,camera){
+  camera.position.set(0,0,90);
+  const N=220;
+  const S=makePoints(scene,sprite,N,1.3,'#e8b478','#ffd9a0',220,140);
+  const pos=S.geometry.attributes.position;
+  const meta=Array.from({length:N},()=>({vx:.12+Math.random()*.3,ph:Math.random()*6.28}));
+  const sun=makePoints(scene,sprite,1,120,'#ffb86b','#ffb86b',1,1);
+  sun.geometry.attributes.position.setXYZ(0,-70,42,-150);sun.geometry.attributes.position.needsUpdate=true;
+  sun.material.opacity=.4;
+  return {objects:[S,sun],update(t,mx,my,sc){
+    const gust=1+.5*Math.sin(t*1.3);
+    for(let i=0;i<N;i++){
+      let x=pos.getX(i)+meta[i].vx*gust;
+      if(x>120){x=-120;pos.setY(i,(Math.random()-.5)*140);}
+      pos.setX(i,x);
+      pos.setY(i,pos.getY(i)+Math.sin(t*2+meta[i].ph)*.012);
+    }
+    pos.needsUpdate=true;
+    S.material.opacity=.3+.12*Math.sin(t*1.1);
+    camera.position.x=mx*4;camera.position.y=-my*3-Math.min(sc*.004,7);camera.lookAt(0,0,0);
+  }};
+}
+const THREE_BUILDERS={aurora:buildAurora,ember:buildEmber,glacier:buildGlacier,topo:buildTopo,
+  nebula:buildNebula,synthwave:buildSynthwave,botanic:buildBotanic,abyss:buildAbyss,
+  sakura:buildSakura,carbon:buildCarbon,dune:buildDune};
 
 async function startThree(theme){
   const c=$('#fireflies');if(!c)return;
@@ -854,7 +1055,7 @@ async function startThree(theme){
     if(document.hidden){threeRAF=requestAnimationFrame(env.loop);return;}
     env.t+=.0016;
     env.mx+=(env.tx-env.mx)*.025;env.my+=(env.ty-env.my)*.025;
-    env.built.update(env.t,env.mx,env.my);
+    env.built.update(env.t,env.mx,env.my,(window.scrollY||0));
     env.renderer.render(env.scene,env.camera);
     threeRAF=requestAnimationFrame(env.loop);
   };
@@ -875,11 +1076,11 @@ function start2D(cfg,theme){
   const N=innerWidth<700?18:36;
   if(!ffParticles||ff2dTheme!==theme){
     ff2dTheme=theme;
-    const rise=cfg.drift==='rise',fall=cfg.drift==='fall';
+    const rise=cfg.drift==='rise',fall=cfg.drift==='fall',wind=cfg.drift==='wind';
     ffParticles=Array.from({length:N},()=>({
       x:Math.random()*c.width,y:Math.random()*c.height,
       r:(Math.random()*1.5+0.7)*DPR,
-      vx:(Math.random()-.5)*.14*DPR,
+      vx:wind?(.18+Math.random()*.4)*DPR:(Math.random()-.5)*.14*DPR,
       vy:rise?-(.08+Math.random()*.2)*DPR:fall?(.06+Math.random()*.16)*DPR:(Math.random()-.5)*.12*DPR,
       ph:Math.random()*6.28,sp:.006+Math.random()*.012,
       col:cfg.colors2d[Math.floor(Math.random()*cfg.colors2d.length)]
@@ -908,14 +1109,30 @@ function stop2D(){
 }
 
 /* ---------- GSAP entrance animations ---------- */
-function animatePanel(panel){
-  if(!window.gsap||!motionOn())return;
-  const kids=panel.querySelectorAll('.card,.icard,.site,.meal,.gear-item,.tl-item,.role,.quicklink,details.faq,.stop-row,.exp-row,.sec-title,.sec-desc');
-  if(!kids.length)return;
-  gsap.fromTo(Array.from(kids).slice(0,24),
-    {opacity:0,y:18},
-    {opacity:1,y:0,duration:.45,stagger:.035,ease:'power2.out',clearProps:'all'});
+let revObserver=null;
+function ensureObserver(){
+  if(revObserver)return revObserver;
+  revObserver=new IntersectionObserver(entries=>{
+    entries.forEach(en=>{if(en.isIntersecting){en.target.classList.add('in');revObserver.unobserve(en.target);}});
+  },{threshold:.06,rootMargin:'0px 0px -4% 0px'});
+  return revObserver;
 }
+function animatePanel(panel){
+  if(!motionOn()||getTheme()==='classic'){
+    panel.querySelectorAll('.rv').forEach(el=>el.classList.add('in'));
+    return;
+  }
+  const kids=panel.querySelectorAll('.card,.icard,.site,.meal,.gear-item,.tl-item,.role,.quicklink,details.faq,.stop-row,.exp-row');
+  const obs=ensureObserver();let i=0;
+  kids.forEach(el=>{
+    if(el.classList.contains('in'))return;
+    if(!el.classList.contains('rv')){
+      el.style.transitionDelay=((i%8)*45)+'ms';i++;
+      el.classList.add('rv');obs.observe(el);
+    }
+  });
+}
+function unlockReveals(){document.querySelectorAll('.rv').forEach(el=>el.classList.add('in'));}
 function animateBoot(){
   if(!window.gsap||!motionOn())return;
   gsap.fromTo('header .brand',{opacity:0,y:-16},{opacity:1,y:0,duration:.7,ease:'power3.out'});
@@ -1001,11 +1218,16 @@ function countdown(){
 function renderAll(){
   renderCrew();renderExpenses();renderFood();renderMeals();renderPrep();renderShop();
   renderTips();renderSituations();renderFAQ();renderActivities();renderStops();renderSites();renderProgress();
+  renderPresence();
+  const active=document.querySelector('.panel.active');if(active)animatePanel(active);
 }
 async function boot(){
   loadLocal();
   try{if(localStorage.getItem('ww_banner_hidden'))$('#help-banner').style.display='none';}catch(e){}
-  initTabs();countdown();renderAll();setSync('local','Local');
+  initTabs();countdown();
+  document.documentElement.classList.toggle('perf',perfOn());
+  document.documentElement.classList.toggle('compact',compactOn());
+  renderAll();setSync('local','Local');
   renderSettingsUI();
   startAmbient();
   animateBoot();
