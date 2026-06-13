@@ -154,6 +154,10 @@ To share state when Supabase isn't connected: **Export crew data** → send the 
 
 ## Version history
 
+### v8 — current
+- **Signed-in users get a monthly-rotating default theme.** On sign-in the app switches to that month's default, alternating every calendar month forever: **June 2026 → Botanic, July → Aurora, Aug → Botanic, …**. A manual theme pick still wins for the rest of that month, and the rotation re-applies when a new month begins.
+
+
 ### v7 — current
 - **Reworked Google sign-in for the iOS home-screen app.** Switched Supabase auth from the PKCE flow to the **implicit flow** and added explicit URL-hash session recovery (`setSession`) on return — a standalone iOS PWA can read the token from the URL hash even though it can't share PKCE storage with the separate Safari OAuth context.
 - **Added an email magic-link fallback** (✉ Email link), shown automatically when the app is launched from the home screen. This always works inside the PWA sandbox, bypassing the OAuth-popup limitation entirely.

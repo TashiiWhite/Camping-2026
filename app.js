@@ -84,6 +84,7 @@ async function initSupabase(){
 async function applyAccess(){
   renderAuth();
   enforceThemeAccess();
+  if(user){ applyMonthlyDefaultOnSignIn(); }
   renderSettingsUI();
   if(user){ await connectLive(); }
   else { disconnectLive(); setSync('local','Local — sign in for live'); }
@@ -749,6 +750,34 @@ function showBannerAgain(){try{localStorage.removeItem('ww_banner_hidden');}catc
 /* ---------- settings & theme (per-device, never synced) ---------- */
 const ALL_THEMES=['classic','aurora','ember','glacier','topo','nebula','synthwave','botanic','abyss','sakura','carbon','dune'];
 function getTheme(){try{return localStorage.getItem('ww_theme')||'classic';}catch(e){return 'classic';}}
+// Alternating monthly default for signed-in users: even calendar month -> Botanic,
+// odd month -> Aurora. Continues forever. Uses year*12+month so it never repeats wrongly.
+function monthlyDefaultTheme(d){
+  d=d||new Date();
+  const idx=d.getFullYear()*12+d.getMonth(); // months since year 0
+  return (idx%2===0)?'aurora':'botanic';
+}
+// Tag identifying which month-default a user has been auto-switched to, so we only
+// auto-switch once per month and never override a manual choice the user made.
+function applyMonthlyDefaultOnSignIn(){
+  if(!user)return;
+  const want=monthlyDefaultTheme();
+  let lastAuto=null, manual=false;
+  try{lastAuto=localStorage.getItem('ww_theme_auto');manual=localStorage.getItem('ww_theme_manual')==='1';}catch(e){}
+  const cur=getTheme();
+  // Apply the monthly default when: the user hasn't manually overridden this month,
+  // OR this is a new month than the last auto-switch (new month resets the rotation).
+  const monthKey=new Date().getFullYear()+'-'+new Date().getMonth();
+  if(lastAuto!==monthKey || (!manual && cur!==want)){
+    try{
+      localStorage.setItem('ww_theme',want);
+      localStorage.setItem('ww_theme_auto',monthKey);
+      localStorage.setItem('ww_theme_manual','0');
+    }catch(e){}
+    document.documentElement.dataset.theme=want;
+    stopAmbient();startAmbient();
+  }
+}
 function canUseTheme(t){return t==='classic'||!!user;}
 function enforceThemeAccess(){
   if(!canUseTheme(getTheme())){
@@ -760,7 +789,7 @@ function enforceThemeAccess(){
 function motionOn(){try{return localStorage.getItem('ww_motion')!=='0';}catch(e){return true;}}
 function setTheme(t){
   if(!canUseTheme(t)){toast('🔒 Sign in with Google to unlock this theme');return;}
-  try{localStorage.setItem('ww_theme',t);}catch(e){}
+  try{localStorage.setItem('ww_theme',t);localStorage.setItem('ww_theme_manual','1');}catch(e){}
   document.documentElement.dataset.theme=t;
   renderSettingsUI();
   stopAmbient();startAmbient();

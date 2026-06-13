@@ -1,6 +1,6 @@
 /* Camping 2026 service worker — NETWORK-FIRST for app files.
    New deploys always show immediately; cache is only the offline fallback. */
-const CACHE = 'camping2026-v7';
+const CACHE = 'camping2026-v8';
 const CORE = ['./','./index.html','./app.js','./config.js','./manifest.webmanifest',
   './icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png','./icons/favicon.png'];
 
