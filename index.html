@@ -525,6 +525,40 @@ html.compact .panel .kicker{margin:22px 0 9px}
 .progress-row .pv{width:46px;text-align:right;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--green)}
 /* simplify mode: hide non-essential sections within kept pages */
 html.simplify .simplify-hide{display:none !important}
+/* toggle ON/OFF state pill */
+.tg-state{display:inline-block;margin-left:8px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.08em;padding:2px 8px;border-radius:99px;background:var(--surface3);color:var(--faint);vertical-align:middle}
+.chk.done .tg-state{background:var(--green);color:var(--bg)}
+.tg-sub{font-size:11.5px;color:var(--faint);margin-top:3px;line-height:1.4;font-weight:400}
+.chk.locked-row{opacity:.45;pointer-events:none}
+/* signed-out gating: grey out crew-dependent controls + locked page panels */
+html.signed-out .gate-lock{opacity:.5;pointer-events:none;filter:grayscale(.35)}
+.gate-note{font-size:11px;color:var(--amber);font-family:var(--mono);letter-spacing:.02em;margin-top:6px;display:none}
+html.signed-out .gate-note{display:block}
+html.signed-in .gate-note{display:none}
+/* greyed locked tabs (food/gear/shop/money for signed-out) */
+html.signed-out .tab.locked-tab .tab-lock{display:inline}
+.tab .tab-lock{display:none;font-size:10px;margin-left:3px;opacity:.7}
+html.signed-out .tab.locked-tab{opacity:.6}
+/* page-level sign-in notice shown inside locked panels */
+.page-lock-note{display:none;align-items:center;gap:10px;background:linear-gradient(135deg,rgba(240,180,85,.14),rgba(240,180,85,.05));border:1px solid rgba(240,180,85,.34);border-radius:var(--radius);padding:12px 15px;margin-bottom:14px;font-size:13px;color:var(--amber)}
+html.signed-out .panel.gated .page-lock-note{display:flex}
+html.signed-out .panel.gated .gate-disable{opacity:.5;pointer-events:none;filter:grayscale(.4)}
+/* departure / announcement banner (admin-controlled, shown to all) */
+#departure-banner{margin-bottom:14px}
+.dep-inner{display:flex;gap:13px;align-items:flex-start;background:linear-gradient(135deg,rgba(240,180,85,.16),rgba(240,180,85,.06));border:1px solid rgba(240,180,85,.4);border-radius:var(--radius);padding:14px 16px}
+.dep-ico{font-size:20px;flex-shrink:0;margin-top:1px}
+.dep-title{font-family:var(--display);font-weight:700;font-size:16px;color:var(--amber);margin-bottom:3px}
+.dep-text{font-size:13px;color:var(--text);line-height:1.5}
+.dep-link{display:inline-block;margin-top:8px;font-family:var(--mono);font-size:12px;font-weight:700;color:var(--amber);text-decoration:none;border:1px solid rgba(240,180,85,.4);border-radius:7px;padding:5px 11px}
+.dep-link:hover{background:rgba(240,180,85,.12)}
+/* admin */
+.admin-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:12px}
+.admin-tabbtn{font-family:var(--mono);font-size:11px;letter-spacing:.03em;background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:7px 12px;border-radius:99px;cursor:pointer;transition:all .15s}
+.admin-tabbtn:hover{color:var(--text)}
+.admin-tabbtn.on{background:var(--green);border-color:var(--green);color:var(--bg);font-weight:700}
+.admin-row{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--border)}
+.admin-row:last-child{border-bottom:none}
+.admin-tab-badge{font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--river);background:rgba(108,182,212,.14);border:1px solid rgba(108,182,212,.28);border-radius:99px;padding:3px 9px;white-space:nowrap}
 /* map viewer */{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--bg);z-index:55}
 .map-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface)}
 .map-title{font-family:var(--display);font-weight:700;font-size:15px}
@@ -548,7 +582,7 @@ html.simplify .simplify-hide{display:none !important}
 /* PRINT / PDF EXPORT */
 @media print{
   body{background:#fff;color:#1a221a;font-size:11pt}
-  .topo,.glow,nav,.help-banner,.iconbtn,.auth-row,.btn,.toolbar,.modal-bg,.toast,input,select,.gear-x,.x,.hb-x,#aurora-blobs,#fireflies,.map-shell{display:none !important}
+  .topo,.glow,nav,.help-banner,.iconbtn,.auth-row,.btn,.toolbar,.modal-bg,.toast,input,select,.gear-x,.x,.hb-x,#aurora-blobs,#fireflies,.map-shell,#admin-modal{display:none !important}
   .panel{display:block !important;page-break-before:always}
   .panel:first-of-type{page-break-before:avoid}
   .card,.icard,.site,.meal,.gear-item,.exp-row,.stop-row,.transfer,details.faq{background:#fff;border-color:#ccc;color:#1a221a;break-inside:avoid}
@@ -599,6 +633,9 @@ html.simplify .simplify-hide{display:none !important}
   </div>
 </header>
 
+<!-- DEPARTURE / ANNOUNCEMENT BANNER (admin-controlled, shown to everyone) -->
+<div id="departure-banner" style="display:none"></div>
+
 <!-- HELP BANNER (dismissible, first thing visible) -->
 <div class="help-banner" id="help-banner">
   <div class="hb-ico">👋</div>
@@ -614,10 +651,10 @@ html.simplify .simplify-hide{display:none !important}
   <button class="tab active" data-p="dash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>Basecamp</button>
   <button class="tab" data-p="sites"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 22h20z"/></svg>Campsites</button>
   <button class="tab" data-p="plan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Itinerary</button>
-  <button class="tab" data-p="gear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Gear</button>
-  <button class="tab" data-p="food"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3v18M5 11h6V3M19 3c-2 0-3 2-3 5s1 4 3 4v9"/></svg>Food</button>
-  <button class="tab" data-p="shop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6h15l-1.5 9h-12zM6 6L5 3H2M9 20a1 1 0 100-2 1 1 0 000 2zM18 20a1 1 0 100-2 1 1 0 000 2z"/></svg>Shopping</button>
-  <button class="tab" data-p="money"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h4a1.5 1.5 0 010 3h-3a1.5 1.5 0 000 3h4"/></svg>Costs</button>
+  <button class="tab locked-tab" data-p="gear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Gear<span class="tab-lock">🔒</span></button>
+  <button class="tab locked-tab" data-p="food"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3v18M5 11h6V3M19 3c-2 0-3 2-3 5s1 4 3 4v9"/></svg>Food<span class="tab-lock">🔒</span></button>
+  <button class="tab locked-tab" data-p="shop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6h15l-1.5 9h-12zM6 6L5 3H2M9 20a1 1 0 100-2 1 1 0 000 2zM18 20a1 1 0 100-2 1 1 0 000 2z"/></svg>Shopping<span class="tab-lock">🔒</span></button>
+  <button class="tab locked-tab" data-p="money"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h4a1.5 1.5 0 010 3h-3a1.5 1.5 0 000 3h4"/></svg>Costs<span class="tab-lock">🔒</span></button>
   <button class="tab" data-p="fun"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg>Activities</button>
   <button class="tab" data-p="info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>Survival</button>
 </nav>
@@ -635,21 +672,23 @@ html.simplify .simplify-hide{display:none !important}
         <div class="stat"><div class="v">$90<small>–175</small></div><div class="k">est. / person</div></div>
       </div>
       <div class="kicker">◆ Trip readiness</div>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap" class="gate-lock">
         <span style="font-size:12px;color:var(--muted)">I'm:</span>
         <select id="whoami-select" onchange="setWhoAmI(this.value)" style="font-size:13px"></select>
         <span style="font-size:11px;color:var(--faint);font-family:var(--mono)">→ shows your packing progress</span>
       </div>
       <div class="progress-wrap" id="progress-wrap"></div>
+      <div class="gate-note">🔒 Sign in to pick yourself &amp; track your packing.</div>
       <div class="toolbar" style="margin-top:10px"><button class="btn ghost sm" onclick="shareSite()">🔗 Share this site with the crew</button></div>
     </div>
     <div class="card">
       <div class="kicker" style="margin-top:0">◆ The crew</div>
       <p style="color:var(--muted);font-size:12.5px;margin-bottom:12px">Add everyone first — names power gear claims, cost splits, votes &amp; roles.</p>
-      <div style="display:flex;gap:8px;margin-bottom:14px">
+      <div style="display:flex;gap:8px;margin-bottom:14px" class="gate-lock">
         <input id="crew-input" placeholder="Add a name…" style="flex:1" onkeydown="if(event.key==='Enter')addCrew()">
         <button class="btn" id="crew-add-btn" onclick="addCrew()">Add</button>
       </div>
+      <div class="gate-note" style="margin-bottom:12px">🔒 Sign in to add crew and edit the trip — the live roster appears once you're in.</div>
       <div class="crew-bar" id="crew-bar"></div>
     </div>
   </div>
@@ -713,7 +752,9 @@ html.simplify .simplify-hide{display:none !important}
 </section>
 
 <!-- GEAR -->
-<section class="panel" id="gear">
+<section class="panel gated" id="gear">
+  <div class="page-lock-note">🔒 <span>Sign in (top right) to view and edit this page.</span></div>
+  <div class="gate-disable">
   <div class="sec-title">Gear — claim, pack, archive</div>
   <div class="sec-desc">Assign one or more people per item (or <b>All</b> = everyone brings their own). Pick who you are to get your own packing checklist, then tick things off as you pack. Add custom gear for the team below, or personal items to your own list.</div>
 
@@ -738,10 +779,13 @@ html.simplify .simplify-hide{display:none !important}
     <div class="toolbar" style="margin-top:0"><button class="btn ghost sm" onclick="openArchive()">🗃 View archive (<span id="arch-count">0</span>)</button></div>
   </div>
   <div id="gear-list"></div>
+</div>
 </section>
 
 <!-- FOOD -->
-<section class="panel" id="food">
+<section class="panel gated" id="food">
+  <div class="page-lock-note">🔒 <span>Sign in (top right) to view and edit this page.</span></div>
+  <div class="gate-disable">
   <div class="sec-title">Food — easy to haul, easy to cook, fills you up</div>
   <div class="sec-desc">Filter the food matrix by how it stores or how it cooks. Below: the 9-meal plan and the expert prep playbook.</div>
   <div class="ffilter" id="ffilter">
@@ -752,10 +796,13 @@ html.simplify .simplify-hide{display:none !important}
   <div class="grid g3" id="meal-grid"></div>
   <div class="kicker simplify-hide">◆ Expert prep, packing &amp; storage</div>
   <div class="grid g2 simplify-hide" id="prep-grid"></div>
+</div>
 </section>
 
 <!-- SHOPPING -->
-<section class="panel" id="shop">
+<section class="panel gated" id="shop">
+  <div class="page-lock-note">🔒 <span>Sign in (top right) to view and edit this page.</span></div>
+  <div class="gate-disable">
   <div class="sec-title">Shopping — food &amp; gear, in 3 phases</div>
   <div class="sec-desc">Two categories: <b>Food</b> (groceries — Maxi/IGA at home, road stops en route) and <b>Gear &amp; essentials</b> (with Amazon / Canadian Tire / Decathlon links — the highlighted store is our best-value pick for that item). Checks sync for the whole crew.</div>
   <div class="ffilter">
@@ -765,10 +812,13 @@ html.simplify .simplify-hide{display:none !important}
   </div>
   <div class="grid g3" id="shop-grid"></div>
   <div class="note">Campground store prices run 30–50% above retail. On-site, only buy what must be local (firewood) or what you genuinely forgot. Store picks are general guidance — flyers change weekly, so a 10-second price check before buying never hurts.</div>
+</div>
 </section>
 
 <!-- COSTS -->
-<section class="panel" id="money">
+<section class="panel gated" id="money">
+  <div class="page-lock-note">🔒 <span>Sign in (top right) to view and edit this page.</span></div>
+  <div class="gate-disable">
   <div class="sec-title">Cost splitter</div>
   <div class="sec-desc">Log every shared expense with a category. You get per-person balances, totals by category, and the exact minimal transfers to settle up — synced for everyone.</div>
   <div class="card">
@@ -783,6 +833,7 @@ html.simplify .simplify-hide{display:none !important}
     <div class="cat-bars" id="cat-bars"></div>
   </div>
   <div class="settle"><h4 style="display:flex;align-items:center;gap:10px">Settle up <button class="btn ghost sm" style="margin-left:auto" onclick="copySettle()">📋 Copy for group chat</button></h4><div id="settle-body"><div class="empty">Add crew + expenses to see the split.</div></div></div>
+</div>
 </section>
 
 <!-- ACTIVITIES -->
@@ -824,6 +875,7 @@ html.simplify .simplify-hide{display:none !important}
   <div class="modal">
     <span class="close-x" onclick="closeHelp()">✕</span>
     <h3>How to use Camping 2026</h3>
+    <div class="gate-note" style="background:linear-gradient(135deg,rgba(240,180,85,.14),rgba(240,180,85,.05));border:1px solid rgba(240,180,85,.34);border-radius:10px;padding:11px 14px;margin-bottom:14px;font-size:12.5px;color:var(--amber)">🔒 You're browsing signed out — the trip is read-only and crew pages are locked. <b>Sign in (top right)</b> to add the crew, claim gear, sync live, and unlock every feature.</div>
     <p style="font-size:13px;color:var(--muted);margin-bottom:14px">One shared trip, every device, live. Here's the 60-second version:</p>
     <div class="help-step"><div class="hn">1</div><p><b>Add the crew</b> — Basecamp tab → type each person's name. Names power everything else.</p></div>
     <div class="help-step"><div class="hn">2</div><p><b>Say who you are</b> — Basecamp tab → pick yourself in the <b>"I'm:"</b> dropdown. This gives you a personal packing list and your own progress bar.</p></div>
@@ -916,24 +968,24 @@ html.simplify .simplify-hide{display:none !important}
       </div>
     </div>
     <p id="theme-lock-note">🔒 Sign in with Google (top right) to unlock all themes — without sign-in you're in local mode with the Classic look.</p>
-    <div class="kicker" style="margin:18px 0 4px">◆ Motion</div>
+    <div class="kicker" style="margin:18px 0 4px">◆ Motion &amp; display</div>
     <div class="chk" id="motion-toggle" onclick="toggleMotion()" style="border-bottom:none">
       <div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div>
-      <div class="ct">Enable animations (fireflies, transitions)</div>
+      <div class="ct">Animations <span class="tg-state">OFF</span><div class="tg-sub">Fireflies, ambient scenes &amp; transitions</div></div>
     </div>
-    <div class="kicker" style="margin:18px 0 4px">◆ Display</div>
     <div class="chk" id="perf-toggle" onclick="togglePerf()" style="border-bottom:none">
       <div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div>
-      <div class="ct">Performance mode — disables glass blur for older devices</div>
+      <div class="ct">Lite mode <span class="tg-state">OFF</span><div class="tg-sub">Trims visual effects (glass blur) for smoother performance on older devices</div></div>
     </div>
     <div class="chk" id="compact-toggle" onclick="toggleCompact()" style="border-bottom:none">
       <div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div>
-      <div class="ct">Compact mode — tighter spacing, more on screen</div>
+      <div class="ct">Compact mode <span class="tg-state">OFF</span><div class="tg-sub">Tighter spacing, more on screen</div></div>
     </div>
     <div class="chk" id="simplify-toggle" onclick="toggleSimplify()" style="border-bottom:none">
       <div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div>
-      <div class="ct">Simplify — hide extra tabs &amp; sections (keeps Basecamp, Campsites, Gear, Food, Survival). Great on mobile.</div>
+      <div class="ct">Simplify <span class="tg-state">OFF</span><div class="tg-sub">Hide extra tabs &amp; sections (keeps Basecamp, Campsites, Gear, Food, Survival). Great on mobile.</div></div>
     </div>
+    <p id="display-lock-note" style="font-size:12px;color:var(--amber);margin-top:10px;display:none">🔒 Sign in to customize motion &amp; display. Signed out uses a fast, lightweight setup.</p>
     <div class="kicker" style="margin:18px 0 4px">◆ Help</div>
     <div class="toolbar" style="margin-top:8px">
       <button class="btn sm ghost" onclick="closeSettings();openHelp()">Open the how-to guide</button>
@@ -957,6 +1009,77 @@ html.simplify .simplify-hide{display:none !important}
       <img id="map-img" src="" alt="" draggable="false">
     </div>
     <div class="map-hint">Pinch or scroll to zoom · drag to pan · double-tap to reset</div>
+  </div>
+</div>
+
+<!-- ADMIN MODAL (owner-only; never surfaced to other users) -->
+<div class="modal-bg" id="admin-modal" onclick="if(event.target===this)closeAdmin()">
+  <div class="modal" style="max-width:600px">
+    <span class="close-x" onclick="closeAdmin()">✕</span>
+    <h3>🛠 Admin</h3>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Private control panel — only you can see this.</p>
+    <div class="admin-tabs">
+      <button class="admin-tabbtn on" id="admin-tab-presence" onclick="adminTab('presence')">👁 Live</button>
+      <button class="admin-tabbtn" id="admin-tab-banner" onclick="adminTab('banner')">📣 Banner</button>
+      <button class="admin-tabbtn" id="admin-tab-users" onclick="adminTab('users')">👥 Users</button>
+      <button class="admin-tabbtn" id="admin-tab-reports" onclick="adminTab('reports')">📊 Reports</button>
+      <button class="admin-tabbtn" id="admin-tab-data" onclick="adminTab('data')">⚙ Data</button>
+    </div>
+
+    <!-- LIVE PRESENCE -->
+    <div id="admin-sec-presence" class="admin-sec">
+      <div class="kicker" style="margin-top:4px">◆ Who's online &amp; where</div>
+      <div id="admin-presence"></div>
+    </div>
+
+    <!-- BANNER -->
+    <div id="admin-sec-banner" class="admin-sec" style="display:none">
+      <div class="kicker" style="margin-top:4px">◆ Departure / announcement banner</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Shows at the top of Basecamp for everyone. Turn on, set the text, optionally add a link.</p>
+      <div class="chk" id="adm-banner-on" onclick="adminToggleBanner()" style="border-bottom:none;margin-bottom:8px">
+        <div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div>
+        <div class="ct">Banner is visible to everyone</div>
+      </div>
+      <input id="adm-banner-title" placeholder="Title (e.g. Departure day!)" style="width:100%;margin-bottom:8px">
+      <textarea id="adm-banner-text" placeholder="Message — e.g. Pack rain gear, charge power banks, grab ice, bring the speaker & camera. Leaving DDO at 8 AM sharp." style="width:100%;min-height:80px;margin-bottom:8px;font-family:var(--body);resize:vertical"></textarea>
+      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <input id="adm-banner-link" placeholder="Optional link URL" style="flex:2;min-width:160px">
+        <input id="adm-banner-linklabel" placeholder="Link label" style="flex:1;min-width:100px">
+      </div>
+      <button class="btn" style="width:100%" onclick="adminSaveBanner()">Save &amp; publish banner</button>
+      <p style="font-size:11px;color:var(--faint);margin-top:8px">Tip: a quick pre-departure checklist works great here — rain gear, weather check, ice, power banks, speaker, camera.</p>
+    </div>
+
+    <!-- USERS -->
+    <div id="admin-sec-users" class="admin-sec" style="display:none">
+      <div class="kicker" style="margin-top:4px">◆ Crew / user management</div>
+      <div id="admin-users"></div>
+      <div class="kicker" style="margin:16px 0 8px">◆ New sign-ups</div>
+      <div class="chk" id="adm-signup-on" onclick="adminToggleSignups()" style="border-bottom:none">
+        <div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div>
+        <div class="ct">Allow new people to sign up</div>
+      </div>
+      <button class="btn ghost sm" style="margin-top:8px" onclick="saveAdminConfig()">Save sign-up setting</button>
+      <p style="font-size:11px;color:var(--faint);margin-top:8px">For a hard lock, also toggle it in Supabase → Authentication → Sign In / Providers → “Allow new users to sign up”.</p>
+    </div>
+
+    <!-- REPORTS -->
+    <div id="admin-sec-reports" class="admin-sec" style="display:none">
+      <div class="kicker" style="margin-top:4px">◆ Trip dashboard</div>
+      <div id="admin-reports"></div>
+    </div>
+
+    <!-- DATA -->
+    <div id="admin-sec-data" class="admin-sec" style="display:none">
+      <div class="kicker" style="margin-top:4px">◆ Data tools</div>
+      <div class="toolbar">
+        <button class="btn ghost sm" onclick="exportJSON()">⬇ Export trip JSON</button>
+        <button class="btn ghost sm" onclick="document.getElementById('import-file').click()">⬆ Import trip JSON</button>
+        <button class="btn ghost sm" onclick="exportPDF()">🖨 Export site as PDF</button>
+        <button class="btn ghost sm" onclick="resetData()">↺ Reset all trip data</button>
+      </div>
+      <p style="font-size:11px;color:var(--faint);margin-top:10px">Reset wipes crew, gear, costs, votes, stops &amp; roles for everyone on the live trip — use with care.</p>
+    </div>
   </div>
 </div>
 
@@ -986,6 +1109,6 @@ html.simplify .simplify-hide{display:none !important}
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" onerror="window.__gsapFailed=1"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" onerror="window.__sbFailed=1"></script>
 <script src="config.js"></script>
-<script src="app.js?v=16"></script>
+<script src="app.js?v=18"></script>
 </body>
 </html>

@@ -2,7 +2,7 @@
    App files: network-first (always fresh on deploy), cache fallback offline.
    CDN libs: cache-first but only ever cache a valid 200 response (never a broken one).
    Never caches partial/error responses that could freeze the app. */
-const CACHE = 'camping2026-v16';
+const CACHE = 'camping2026-v18';
 const CORE = ['./','./index.html','./app.js','./config.js','./manifest.webmanifest',
   './icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png','./icons/favicon.png',
   './maps/plage.jpg','./maps/ivy.jpg'];

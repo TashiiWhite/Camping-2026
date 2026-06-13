@@ -136,9 +136,23 @@ Offline: the service worker caches the entire app shell. You can open it and rea
 
 ## 6. Access model
 
-- **Signed out** → Local mode: all features work, but data stays on that device. Theme locked to Classic. The status pill explains this on hover.
-- **Signed in (Google or email link)** → Live mode: shared realtime trip data, "N online" presence counter, all themes unlocked.
-- To enforce this server-side too (recommended), run the commented "lock writes" block at the bottom of `supabase-schema.sql` — otherwise gating is client-side only.
+- **Signed out** → clean, read-only site: no crew/trip data shows, crew features are greyed with sign-in notes, and the Food/Gear/Shopping/Costs tabs are viewable but locked. Theme is Classic; display is fast/lightweight (animations off, Lite + Compact on).
+- **Signed in (Google or email link)** → full access: the live shared trip data appears, everything is editable, all themes unlock, and display defaults to full (animations on, Lite + Compact off). Stays working offline once signed in.
+- **Roles:** `user` (full edit), `leader` (full edit + can reset the trip; granted by the owner in Admin → Users), `admin`/owner (everything + the admin panel).
+- **Writes are locked to signed-in users at the database level** (as of v8). Run `supabase-v8-admin.sql` to apply.
+
+## 6a. Admin setup (owner only)
+
+The admin panel is gated to the owner email (`tashiiwhite@gmail.com`) in two places: the app checks it to show the 🛠 Admin button, and the database `admin_config` policy only lets that email write app-wide settings (the departure banner + sign-up toggle).
+
+To enable everything:
+
+1. **Run the SQL.** Supabase → SQL Editor → paste `supabase-v8-admin.sql` → Run. This locks `trips` writes to authenticated users, creates the `admin_config` table with owner-only write access, adds it to Realtime, and seeds it.
+2. **(Optional) Hard-lock new sign-ups.** Supabase → Authentication → Sign In / Providers → turn off "Allow new users to sign up". The in-app toggle (Admin → Users) controls this softly; this makes it absolute.
+3. **Confirm auth URLs.** Supabase → Authentication → URL Configuration → Site URL `https://campingjune2026.netlify.app`, Redirect URLs include `https://campingjune2026.netlify.app/**`.
+4. **No Netlify changes needed** — it's still a static deploy.
+
+If you ever change the owner email, update it in `supabase-v8-admin.sql` (the two policy lines) **and** in `app.js` (`OWNER_EMAIL`), then re-run the SQL.
 
 ## 6b. Data & sharing
 
@@ -152,7 +166,31 @@ To share state when Supabase isn't connected: **Export crew data** → send the 
 
 ## Version history
 
-### v7 — June 13, 2026 (current)
+### v8 — June 13, 2026 (current)
+
+This release locked down writes, added a private admin control panel, and built a full signed-in/signed-out access model with roles.
+
+**Access model & roles**
+- **Signed-out = clean, read-only site.** No crew/trip data shows; signing in reveals the live shared data. Signed-out users can't edit anything.
+- **Roles:** `user` (any signed-in person — full edit access), `leader` (granted by the owner — same full access *plus* can reset the trip, but no admin panel), and `admin`/owner (`tashiiwhite@gmail.com` — everything, including the admin panel).
+- **Offline-resilient:** once signed in, a user keeps their access and data even if the connection drops; changes save locally and sync on reconnect.
+- **Crew features greyed out when signed-out** — the "who am I" selector and crew controls are dimmed with a small "🔒 Sign in to enable" note. The Food, Gear, Shopping and Costs tabs are greyed with a 🔒 and remain *viewable* (so people can look) but are disabled with a sign-in notice until you sign in. The "?" guide shows a sign-in nudge when signed-out.
+- **Display settings now gated like themes.** Signed-out defaults: animations **off**, Lite mode **on**, Compact **on** (fast & lightweight). Signed-in defaults: animations **on**, Lite **off**, Compact **off**.
+- Renamed "Performance mode" → **Lite mode** (clearer: it trims visual effects for smoother performance). All motion/display toggles now show an explicit **ON/OFF** pill instead of a strikethrough.
+
+**Security**
+- **Writes require sign-in at the database level** (via `supabase-v8-admin.sql`); reading stays open so the app loads for everyone.
+- **Reset is restricted** to admin/leader only.
+
+**Admin (owner-only — `tashiiwhite@gmail.com`)**
+- A hidden **🛠 Admin** panel, visible only to the owner; never surfaced or explained to other users.
+- **Live presence** — who's online and which tab each person is viewing ("Nick is on Gear"), via Supabase Presence.
+- **Departure / announcement banner** — compose a banner (title, message, optional link) shown at the top of Basecamp for everyone; toggle on/off and edit anytime.
+- **User management** — view crew with online status & role and remove members; **grant/revoke the Leader role by email**; toggle whether new sign-ups are allowed.
+- **Reports dashboard** — crew, online count, gear claimed, spend, stops, chosen site, per-member packing progress, vote tallies.
+- **Data tools** — export/import trip JSON, export PDF, reset trip.
+
+### v7 — June 13, 2026
 
 This release added per-person packing, dynamic site-aware links, the in-app campsite maps, and a Simplify mode.
 

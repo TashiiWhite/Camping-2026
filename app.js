@@ -24,8 +24,8 @@ function defaultState(){
 }
 
 /* "Who am I" — per device, never synced. Drives the personal packing list + progress. */
-function whoAmI(){ try{ return localStorage.getItem('ww_whoami')||''; }catch(e){ return ''; } }
-function setWhoAmI(name){ try{ localStorage.setItem('ww_whoami',name||''); }catch(e){} renderGear(); renderProgress(); renderMyPacking(); }
+function whoAmI(){ try{ return isSignedIn()?(localStorage.getItem('ww_whoami')||''):''; }catch(e){ return ''; } }
+function setWhoAmI(name){ if(!isSignedIn()){toast('🔒 Sign in to use the crew features');return;} try{ localStorage.setItem('ww_whoami',name||''); }catch(e){} renderGear(); renderProgress(); renderMyPacking(); }
 
 /* Build the packing list for a given crew member:
    - every gear item assigned to them specifically
@@ -68,6 +68,10 @@ function saveLocal(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); 
 function loadLocal(){ try{ const r=localStorage.getItem(LS_KEY); if(r) state=Object.assign(defaultState(), JSON.parse(r)); }catch(e){} }
 
 function persist(){
+  if(!isSignedIn()){ // signed-out is read-only; never save the clean state over cached data
+    try{renderProgress();}catch(e){}
+    return;
+  }
   state.rev=(state.rev||0)+1; state.by=CLIENT_ID; lastRev=state.rev;
   saveLocal();
   try{renderProgress();}catch(e){}
@@ -80,6 +84,9 @@ function persist(){
         else setSync('live','Live');
       }catch(e){ setSync('local','Offline — will retry'); }
     },700);
+  } else if(sb&&user){
+    // signed in but no live channel (offline): keep working locally, will sync on reconnect
+    setSync('off','Offline — changes saved locally');
   }
 }
 
@@ -99,6 +106,37 @@ function setSync(mode,text,tip){
 }
 
 let liveChannel=null,liveReady=false,onlineCount=0;
+let presenceList=[];           // [{name,email,tab,at}] of everyone currently online
+let adminConfig={};            // app-wide admin settings (banner, signups)
+let adminChannel=null;
+const OWNER_EMAIL='tashiiwhite@gmail.com';
+function isOwner(){ return !!(user && (user.email||'').toLowerCase()===OWNER_EMAIL); }
+function isSignedIn(){ return !!user; }
+// Leaders are emails the owner grants full-site access (same as admin, minus the admin panel).
+function leaderEmails(){ return (adminConfig.leaders||[]).map(e=>(e||'').toLowerCase()); }
+function isLeader(){ return !!(user && leaderEmails().includes((user.email||'').toLowerCase())); }
+// Access levels: 'none' (signed out), 'user' (signed in), 'leader', 'admin'(owner)
+function accessLevel(){
+  if(!user) return 'none';
+  if(isOwner()) return 'admin';
+  if(isLeader()) return 'leader';
+  return 'user';
+}
+// Anyone signed in can edit/interact. Signed-out = read-only/locked.
+function canEdit(){ return isSignedIn(); }
+// Only admin or leader can reset the shared trip data.
+function canReset(){ return isOwner()||isLeader(); }
+function currentTabName(){
+  const t=document.querySelector('.tab.active');
+  return t?(t.textContent||'').trim():'Basecamp';
+}
+// Reflect access on <html> so CSS can gate the UI for signed-out users.
+function applyGateClasses(){
+  const h=document.documentElement;
+  h.classList.toggle('signed-out', !isSignedIn());
+  h.classList.toggle('signed-in', isSignedIn());
+  h.dataset.access=accessLevel();
+}
 
 async function initSupabase(){
   const url=CFG.SUPABASE_URL||'', key=CFG.SUPABASE_ANON_KEY||'';
@@ -115,12 +153,21 @@ async function initSupabase(){
 
 async function applyAccess(){
   if(user){ try{closeSignin();}catch(e){} }
+  applyGateClasses();
   renderAuth();
   enforceThemeAccess();
+  enforceDisplayDefaults();
   if(user){ applyMonthlyDefaultOnSignIn(); }
   renderSettingsUI();
-  if(user){ await connectLive(); }
-  else { disconnectLive(); setSync('local','Local — sign in for live'); }
+  if(user){
+    await connectLive();
+  } else {
+    disconnectLive();
+    setSync('local','Local — sign in for live');
+    // Signed-out = clean site: show no crew/trip data. Real data loads on sign-in.
+    state=defaultState();
+    try{ await loadAdminConfig(); }catch(e){}
+  }
   renderAll();
 }
 
@@ -144,21 +191,67 @@ async function connectLive(){
         state=Object.assign(defaultState(),d); saveLocal(); renderAll();
       })
       .on('presence',{event:'sync'},()=>{
-        try{onlineCount=Object.keys(liveChannel.presenceState()).length;}catch(e){onlineCount=1;}
-        renderPresence();
+        try{
+          const st=liveChannel.presenceState();
+          presenceList=[];
+          Object.values(st).forEach(arr=>{ if(arr&&arr[0]) presenceList.push(arr[0]); });
+          onlineCount=presenceList.length;
+        }catch(e){ onlineCount=1; presenceList=[]; }
+        renderPresence(); if(isOwner()) renderAdminPresence();
       })
       .subscribe(async status=>{
         if(status==='SUBSCRIBED'){
           liveReady=true; setSync('live','Live');
-          try{await liveChannel.track({name:user?.user_metadata?.full_name||user?.email||'crew',at:Date.now()});}catch(e){}
+          try{await trackPresence();}catch(e){}
         }
       });
+    // admin config (banner + signup flag) — load + subscribe for everyone
+    await loadAdminConfig();
+    subscribeAdminConfig();
     setSync('live','Live');
   }catch(e){ console.warn('connectLive:',e.message||e); liveReady=false; setSync('local','Local (no connection)'); }
 }
 function disconnectLive(){
-  liveReady=false;onlineCount=0;renderPresence();
+  liveReady=false;onlineCount=0;presenceList=[];renderPresence();
   if(liveChannel&&sb){try{sb.removeChannel(liveChannel);}catch(e){} liveChannel=null;}
+  if(adminChannel&&sb){try{sb.removeChannel(adminChannel);}catch(e){} adminChannel=null;}
+}
+async function trackPresence(){
+  if(!liveChannel||!liveReady)return;
+  try{
+    await liveChannel.track({
+      name:user?.user_metadata?.full_name||user?.email||'crew',
+      email:user?.email||'',
+      tab:currentTabName(),
+      at:Date.now()
+    });
+  }catch(e){}
+}
+async function loadAdminConfig(){
+  if(!sb)return;
+  try{
+    const {data,error}=await sb.from('admin_config').select('data').eq('id','global').maybeSingle();
+    if(!error && data && data.data){ adminConfig=data.data; renderDepartureBanner(); }
+  }catch(e){ console.warn('loadAdminConfig',e.message||e); }
+}
+function subscribeAdminConfig(){
+  if(!sb||adminChannel)return;
+  try{
+    adminChannel=sb.channel('admin-'+TRIP_ID)
+      .on('postgres_changes',{event:'*',schema:'public',table:'admin_config',filter:'id=eq.global'},payload=>{
+        const d=payload.new?.data; if(d){ adminConfig=d; renderDepartureBanner(); if(isOwner())renderAdminConfigUI(); }
+      })
+      .subscribe();
+  }catch(e){ console.warn('subscribeAdminConfig',e.message||e); }
+}
+async function saveAdminConfig(){
+  if(!sb||!isOwner()){toast('Owner only');return;}
+  try{
+    const {error}=await sb.from('admin_config').upsert({id:'global',data:adminConfig,updated_at:new Date().toISOString()});
+    if(error)throw error;
+    toast('Admin settings saved');
+    renderDepartureBanner();
+  }catch(e){ toast('Save failed: '+(e.message||e)); }
 }
 function renderPresence(){
   const p=$('#presence-pill');if(!p)return;
@@ -168,13 +261,168 @@ function renderPresence(){
   } else p.style.display='none';
 }
 
+/* ============================================================
+   ADMIN (owner-only: tashiiwhite@gmail.com)
+   Not referenced anywhere visible to other users.
+   ============================================================ */
+function openAdmin(){
+  if(!isOwner()){return;}
+  renderAdminPresence();
+  renderAdminConfigUI();
+  renderAdminStats();
+  renderAdminUsers();
+  adminTab('presence');
+  $('#admin-modal').classList.add('open');
+}
+function closeAdmin(){ $('#admin-modal').classList.remove('open'); }
+
+function adminTab(name){
+  ['presence','banner','users','reports','data'].forEach(t=>{
+    const sec=$('#admin-sec-'+t), btn=$('#admin-tab-'+t);
+    if(sec)sec.style.display=(t===name)?'block':'none';
+    if(btn)btn.classList.toggle('on',t===name);
+  });
+}
+
+/* --- live presence: who's online + what tab they're viewing --- */
+function renderAdminPresence(){
+  const w=$('#admin-presence');if(!w)return;
+  if(!presenceList.length){w.innerHTML='<div class="empty">Nobody else is online right now.</div>';return;}
+  const rows=presenceList.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  w.innerHTML=rows.map(p=>{
+    const nm=p.name||p.email||'crew';
+    const me=(p.email&&user&&p.email===user.email)?' <span style="color:var(--faint)">(you)</span>':'';
+    return `<div class="admin-row"><span class="avatar" style="width:26px;height:26px;font-size:11px;background:${colorFor(nm)}">${initials(nm)}</span>
+      <div style="flex:1"><div style="font-size:13px;font-weight:600">${esc(nm)}${me}</div><div style="font-size:11px;color:var(--faint);font-family:var(--mono)">${esc(p.email||'')}</div></div>
+      <span class="admin-tab-badge">👁 ${esc(p.tab||'—')}</span></div>`;
+  }).join('');
+}
+
+/* --- departure banner config (shown to ALL users) --- */
+function renderAdminConfigUI(){
+  if(!isOwner())return;
+  const b=adminConfig.banner||{};
+  const set=(id,val)=>{const el=$(id);if(el&&el.value!==val)el.value=val||'';};
+  const tog=$('#adm-banner-on'); if(tog)tog.classList.toggle('done',!!b.on);
+  set('#adm-banner-title',b.title);
+  set('#adm-banner-text',b.text);
+  set('#adm-banner-link',b.link);
+  set('#adm-banner-linklabel',b.linkLabel);
+  const su=$('#adm-signup-on'); if(su)su.classList.toggle('done', adminConfig.signupsOpen!==false);
+}
+function adminToggleBanner(){ if(!adminConfig.banner)adminConfig.banner={}; adminConfig.banner.on=!adminConfig.banner.on; renderAdminConfigUI(); }
+function adminToggleSignups(){ adminConfig.signupsOpen=(adminConfig.signupsOpen===false)?true:false; renderAdminConfigUI(); }
+async function adminSaveBanner(){
+  if(!adminConfig.banner)adminConfig.banner={};
+  adminConfig.banner.title=$('#adm-banner-title').value.trim();
+  adminConfig.banner.text=$('#adm-banner-text').value.trim();
+  adminConfig.banner.link=$('#adm-banner-link').value.trim();
+  adminConfig.banner.linkLabel=$('#adm-banner-linklabel').value.trim();
+  await saveAdminConfig();
+}
+
+/* --- the departure banner shown to everyone (top of Basecamp) --- */
+function renderDepartureBanner(){
+  const host=$('#departure-banner');if(!host)return;
+  const b=adminConfig.banner||{};
+  if(!b.on||(!b.title&&!b.text)){ host.style.display='none'; host.innerHTML=''; return; }
+  const link=b.link?`<a href="${esc(b.link)}" target="_blank" rel="noopener" class="dep-link">${esc(b.linkLabel||'Open link')} ↗</a>`:'';
+  host.style.display='block';
+  host.innerHTML=`<div class="dep-inner"><div class="dep-ico">📣</div><div class="dep-body">
+    ${b.title?`<div class="dep-title">${esc(b.title)}</div>`:''}
+    ${b.text?`<div class="dep-text">${esc(b.text).replace(/\n/g,'<br>')}</div>`:''}
+    ${link}</div></div>`;
+}
+
+/* --- reports / stats dashboard --- */
+function renderAdminStats(){
+  const w=$('#admin-reports');if(!w)return;
+  const crew=state.crew.length;
+  // gear stats
+  let gearTotal=0,claimed=0;
+  gearData().forEach(c=>c.items.forEach(it=>{gearTotal++;if((state.gearClaims[it.id]||[]).length)claimed++;}));
+  // packing per person
+  const packRows=state.crew.map(n=>{const s=packStatsFor(n);return {n,...s};});
+  // costs
+  const total=state.expenses.reduce((s,e)=>s+e.amt,0);
+  // votes
+  const votes={};Object.values(state.votes).forEach(v=>votes[v]=(votes[v]||0)+1);
+  const stat=(v,k)=>`<div class="stat"><div class="v">${v}</div><div class="k">${k}</div></div>`;
+  let html=`<div class="dash-stats" style="grid-template-columns:repeat(3,1fr)">
+    ${stat(crew,'crew')}
+    ${stat(onlineCount,'online now')}
+    ${stat(claimed+'/'+gearTotal,'gear claimed')}
+    ${stat('$'+total.toFixed(0),'logged spend')}
+    ${stat(state.stops.length,'route stops')}
+    ${stat(state.chosenSite?(state.chosenSite==='ivy'?'Ivy Lea':'Plage'):'—','site')}
+  </div>`;
+  // packing progress per crew
+  if(packRows.length){
+    html+='<div class="kicker" style="margin:16px 0 8px">◆ Packing by crew member</div>';
+    html+=packRows.map(r=>{const pct=r.total?Math.round(r.packed/r.total*100):0;
+      return `<div class="progress-row"><span class="pl">${esc(r.n.split(' ')[0])}</span><div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div><span class="pv">${r.packed}/${r.total}</span></div>`;
+    }).join('');
+  }
+  // votes
+  if(Object.keys(votes).length){
+    html+='<div class="kicker" style="margin:16px 0 8px">◆ Campsite votes</div>';
+    html+=Object.entries(votes).map(([k,v])=>`<div class="settle-row"><span>${k==='ivy'?'Ivy Lea':'Camping de la Plage'}</span><span class="owe pos">${v} vote${v===1?'':'s'}</span></div>`).join('');
+  }
+  w.innerHTML=html;
+}
+
+/* --- user / crew management (within the trip) --- */
+function renderAdminUsers(){
+  const w=$('#admin-users');if(!w)return;
+  let html='';
+  // crew (trip members)
+  if(!state.crew.length){html+='<div class="empty">No crew members yet.</div>';}
+  else html+=state.crew.map(c=>{
+    const role=Object.entries(state.roles).filter(([,n])=>n===c).map(([r])=>r).join(', ')||'—';
+    const onlineP=presenceList.find(p=>(p.name||'')===c||(p.email||'')===c);
+    const dot=onlineP?'<span style="color:var(--green);font-size:10px">● online</span>':'<span style="color:var(--faint);font-size:10px">offline</span>';
+    return `<div class="admin-row"><span class="avatar" style="width:26px;height:26px;font-size:11px;background:${colorFor(c)}">${initials(c)}</span>
+      <div style="flex:1"><div style="font-size:13px;font-weight:600">${esc(c)} ${dot}</div><div style="font-size:11px;color:var(--faint);font-family:var(--mono)">role: ${esc(role)}</div></div>
+      <button class="btn ghost sm" onclick="adminRemoveCrew('${esc(c).replace(/'/g,"\\'")}')">Remove</button></div>`;
+  }).join('');
+  // leaders
+  html+='<div class="kicker" style="margin:16px 0 8px">◆ Leaders — full access (no admin panel)</div>';
+  const leaders=adminConfig.leaders||[];
+  if(!leaders.length) html+='<div class="empty" style="margin-bottom:8px">No leaders yet. Grant by email below — that person gets full edit access and can reset the trip.</div>';
+  else html+=leaders.map(e=>`<div class="admin-row"><span class="admin-tab-badge" style="color:var(--amber);background:rgba(240,180,85,.14);border-color:rgba(240,180,85,.3)">★ Leader</span><div style="flex:1;font-size:13px;font-family:var(--mono)">${esc(e)}</div><button class="btn ghost sm" onclick="adminRemoveLeader('${esc(e).replace(/'/g,"\\'")}')">Revoke</button></div>`).join('');
+  html+=`<div style="display:flex;gap:6px;margin-top:10px"><input id="adm-leader-in" type="email" placeholder="leader@email.com" style="flex:1" onkeydown="if(event.key==='Enter')adminAddLeader()"><button class="btn sm" onclick="adminAddLeader()">Grant</button></div>`;
+  w.innerHTML=html;
+}
+function adminRemoveCrew(name){
+  if(!isOwner())return;
+  if(!confirm('Remove '+name+' from the trip? This clears their gear claims, votes, role and expenses.'))return;
+  removeCrew(name);
+  renderAdminUsers();renderAdminPresence();
+}
+// Leaders: emails granted full-site access (same as admin minus the admin panel).
+function adminAddLeader(){
+  if(!isOwner())return;
+  const inp=$('#adm-leader-in'); const email=(inp&&inp.value||'').trim().toLowerCase();
+  if(!email||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){toast('Enter a valid email');return;}
+  if(!adminConfig.leaders)adminConfig.leaders=[];
+  if(!adminConfig.leaders.map(e=>e.toLowerCase()).includes(email)){ adminConfig.leaders.push(email); }
+  if(inp)inp.value='';
+  saveAdminConfig(); renderAdminUsers();
+}
+function adminRemoveLeader(email){
+  if(!isOwner())return;
+  adminConfig.leaders=(adminConfig.leaders||[]).filter(e=>e.toLowerCase()!==email.toLowerCase());
+  saveAdminConfig(); renderAdminUsers();
+}
+
 function renderAuth(){
   const area=$('#auth-area'); if(!area)return;
   if(!sb){ area.innerHTML=''; return; }
   if(user){
     const name=user.user_metadata?.full_name||user.email||'Signed in';
     const pic=user.user_metadata?.avatar_url;
-    area.innerHTML=`<span class="user-chip">${pic?`<img src="${esc(pic)}" alt="">`:''}${esc(name.split(' ')[0])} <span class="x" style="cursor:pointer;color:var(--faint)" onclick="signOut()" title="Sign out">⎋</span></span>`;
+    const adminBtn=isOwner()?`<button class="btn ghost sm" style="margin-left:6px" onclick="openAdmin()" title="Admin">🛠 Admin</button>`:'';
+    area.innerHTML=`<span class="user-chip">${pic?`<img src="${esc(pic)}" alt="">`:''}${esc(name.split(' ')[0])} <span class="x" style="cursor:pointer;color:var(--faint)" onclick="signOut()" title="Sign out">⎋</span></span>${adminBtn}`;
   } else {
     area.innerHTML=`<button class="btn ghost sm" onclick="openSignin()">Sign in</button>`;
   }
@@ -232,11 +480,13 @@ async function sendEmailLink(){
     return;
   }
   try{
-    const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+location.pathname}});
+    const allowNew = adminConfig.signupsOpen!==false; // default open unless admin turned off
+    const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+location.pathname,shouldCreateUser:allowNew}});
     if(error) throw error;
     if(status){status.style.display='block';status.style.color='var(--green)';status.textContent='✓ Link sent! Check your email and tap it on this device.';}
   }catch(e){
-    if(status){status.style.display='block';status.style.color='var(--danger)';status.textContent='Could not send: '+(e.message||e);}
+    const msg=(e.message||e)+'';
+    if(status){status.style.display='block';status.style.color='var(--danger)';status.textContent=/Signups not allowed|not allowed for otp/i.test(msg)?'New sign-ups are currently closed. Ask the organizer for access.':'Could not send: '+msg;}
   }
 }
 async function signOut(){ if(sb){await sb.auth.signOut(); user=null; await applyAccess();} }
@@ -502,7 +752,7 @@ function renderSites(){
   });
   renderRouteEndpoints();
 }
-function castVote(site,name){if(!name)return;state.votes[name]=site;persist();renderSites();}
+function castVote(site,name){if(!requireEdit())return;if(!name)return;state.votes[name]=site;persist();renderSites();}
 function chooseSite(key){state.chosenSite=state.chosenSite===key?'':key;persist();renderSites();renderQuickLinks();toast(state.chosenSite?'Site locked in — links & route updated':'Site un-chosen');}
 
 /* ---------- dynamic quick links (follow the chosen site) ---------- */
@@ -633,6 +883,7 @@ function renderStops(){
   renderRouteEndpoints();
 }
 function addStop(){
+  if(!requireEdit())return;
   const n=$('#stop-name').value.trim(), a=$('#stop-addr').value.trim();
   if(!n||!a){toast('Stop needs a name and an address');return;}
   state.stops.push({name:n,addr:a});$('#stop-name').value='';$('#stop-addr').value='';persist();renderStops();
@@ -718,6 +969,7 @@ function renderGear(){
   });
 }
 function assign(id,name){
+  if(!requireEdit())return;
   if(!name)return;
   const arr=state.gearClaims[id]||(state.gearClaims[id]=[]);
   if(name==='ALL'){state.gearClaims[id]=['ALL'];}
@@ -732,6 +984,7 @@ function unassign(id,name){
 // Toggle packed for a gear item. If the item is assigned to "All crew", track per-person
 // (each person packs their own); otherwise a single shared flag.
 function togglePacked(id, person){
+  if(!requireEdit())return;
   if(!state.gearPacked)state.gearPacked={};
   const claims=state.gearClaims[id]||[];
   const isAll=claims.includes('ALL');
@@ -762,6 +1015,7 @@ function toggleMyPack(key){
   }
 }
 function addPersonalItem(){
+  if(!requireEdit())return;
   const me=whoAmI();if(!me){toast('Pick who you are first');return;}
   const inp=$('#my-item-in');const v=(inp.value||'').trim();if(!v)return;
   if(!state.personalItems[me])state.personalItems[me]=[];
@@ -814,6 +1068,7 @@ function renderMyPacking(){
   wrap.innerHTML=html;
 }
 function addGear(){
+  if(!requireEdit())return;
   const n=$('#gear-name-in').value.trim(),note=$('#gear-note-in').value.trim(),t=$('#gear-type-in').value;
   if(!n){toast('Give the gear a name');return;}
   const g=gearData();let cat=g.find(c=>c.cat==='Crew additions');
@@ -897,7 +1152,7 @@ function renderShop(){
     card.innerHTML=html;w.appendChild(card);
   });
 }
-function toggleCheck(k){state.checks[k]=!state.checks[k];persist();renderShop();}
+function toggleCheck(k){if(!requireEdit())return;state.checks[k]=!state.checks[k];persist();renderShop();}
 
 /* ---------- crew / roles ---------- */
 function renderCrew(){
@@ -907,7 +1162,9 @@ function renderCrew(){
     chip.innerHTML=`<span class="avatar" style="background:${colorFor(c)}">${initials(c)}</span>${esc(c)}<span class="x" onclick="removeCrew('${esc(c).replace(/&#39;/g,"\\'")}')">✕</span>`;bar.appendChild(chip);});
   refreshCrewSelects();renderGear();renderRoles();renderSites();renderSettle();renderMyPacking();
 }
+function requireEdit(){ if(!isSignedIn()){ toast('🔒 Sign in to edit the trip'); return false; } return true; }
 function addCrew(){
+  if(!requireEdit())return;
   const i=$('#crew-input');const v=i.value.trim();
   if(!v||state.crew.includes(v))return;state.crew.push(v);i.value='';persist();renderCrew();
 }
@@ -929,10 +1186,11 @@ function renderRoles(){
     const d=document.createElement('div');d.className='role';
     d.innerHTML=`<div class="rn">${r}</div><select onchange="setRole('${r.replace(/'/g,"\\'")}',this.value)"><option value="">${state.crew.length?'Assign…':'Add crew first'}</option>${opts}</select>`;w.appendChild(d);});
 }
-function setRole(r,n){if(n)state.roles[r]=n;else delete state.roles[r];persist();}
+function setRole(r,n){if(!requireEdit())return;if(n)state.roles[r]=n;else delete state.roles[r];persist();}
 
 /* ---------- expenses ---------- */
 function addExpense(){
+  if(!requireEdit())return;
   const d=$('#exp-desc'),a=$('#exp-amt'),c=$('#exp-cat'),w=$('#exp-who');
   const desc=d.value.trim(),amt=parseFloat(a.value),who=w.value,cat=c.value;
   if(!desc||!amt||amt<=0||!who){toast('Need a description, amount & payer');return;}
@@ -1071,7 +1329,39 @@ function applyMonthlyDefaultOnSignIn(){
     stopAmbient();startAmbient();
   }
 }
+// Display/motion settings are gated like themes: signed-out users can't change them.
+// Defaults differ by sign-in state and are applied once per state via a marker key.
+function motionOn(){
+  try{ const v=localStorage.getItem('ww_motion'); if(v===null) return isSignedIn(); return v!=='0'; }catch(e){ return isSignedIn(); }
+}
+function liteOn(){ // formerly "performance mode": trims visual features for smoother performance
+  try{ const v=localStorage.getItem('ww_lite'); if(v===null) return !isSignedIn(); return v==='1'; }catch(e){ return !isSignedIn(); }
+}
+function compactOn(){
+  try{ const v=localStorage.getItem('ww_compact'); if(v===null) return !isSignedIn(); return v==='1'; }catch(e){ return !isSignedIn(); }
+}
+function simplifyOn(){try{return localStorage.getItem('ww_simplify')==='1';}catch(e){return false;}}
+
+// Apply the correct DEFAULTS for the current sign-in state, once, unless the user has chosen.
+// Signed-out: motion OFF, lite ON, compact ON.  Signed-in: motion ON, lite OFF, compact OFF.
+function enforceDisplayDefaults(){
+  const signed=isSignedIn();
+  const marker = signed?'signed-in':'signed-out';
+  let last=null; try{last=localStorage.getItem('ww_display_state');}catch(e){}
+  if(last!==marker){
+    // new state: reset display prefs to that state's defaults (clears any prior manual choices)
+    try{
+      localStorage.removeItem('ww_motion');
+      localStorage.removeItem('ww_lite');
+      localStorage.removeItem('ww_compact');
+      localStorage.setItem('ww_display_state',marker);
+    }catch(e){}
+  }
+  document.documentElement.classList.toggle('perf', liteOn());
+  document.documentElement.classList.toggle('compact', compactOn());
+}
 function canUseTheme(t){return t==='classic'||!!user;}
+function canUseDisplay(){ return isSignedIn(); }
 function enforceThemeAccess(){
   if(!canUseTheme(getTheme())){
     try{localStorage.setItem('ww_theme','classic');}catch(e){}
@@ -1079,9 +1369,8 @@ function enforceThemeAccess(){
     stopAmbient();
   }
 }
-function motionOn(){try{return localStorage.getItem('ww_motion')!=='0';}catch(e){return true;}}
 function setTheme(t){
-  if(!canUseTheme(t)){toast('🔒 Sign in with Google to unlock this theme');return;}
+  if(!canUseTheme(t)){toast('🔒 Sign in to unlock this theme');return;}
   try{localStorage.setItem('ww_theme',t);localStorage.setItem('ww_theme_manual','1');}catch(e){}
   document.documentElement.dataset.theme=t;
   renderSettingsUI();
@@ -1122,6 +1411,7 @@ function togglePin(){
   renderPinUI();
 }
 function toggleMotion(){
+  if(!canUseDisplay()){toast('🔒 Sign in to change display settings');return;}
   const on=!motionOn();
   try{localStorage.setItem('ww_motion',on?'1':'0');}catch(e){}
   renderSettingsUI();
@@ -1137,17 +1427,30 @@ function renderSettingsUI(){
   });
   const note=$('#theme-lock-note');if(note)note.style.display=user?'none':'block';
   renderPinUI();
-  $('#motion-toggle')?.classList.toggle('done',motionOn());
-  $('#perf-toggle')?.classList.toggle('done',perfOn());
-  $('#compact-toggle')?.classList.toggle('done',compactOn());
-  $('#simplify-toggle')?.classList.toggle('done',simplifyOn());
+  // display toggles: show ON/OFF state, lock for signed-out
+  const lockDisp=!canUseDisplay();
+  [['#motion-toggle',motionOn()],['#perf-toggle',liteOn()],['#compact-toggle',compactOn()],['#simplify-toggle',simplifyOn()]].forEach(([id,on])=>{
+    const el=$(id);if(!el)return;
+    el.classList.toggle('done',on);
+    el.classList.toggle('locked-row',lockDisp);
+    const st=el.querySelector('.tg-state');
+    if(st)st.textContent=on?'ON':'OFF';
+  });
+  const dnote=$('#display-lock-note');if(dnote)dnote.style.display=lockDisp?'block':'none';
 }
-function perfOn(){try{return localStorage.getItem('ww_perf')==='1';}catch(e){return false;}}
-function compactOn(){try{return localStorage.getItem('ww_compact')==='1';}catch(e){return false;}}
-function simplifyOn(){try{return localStorage.getItem('ww_simplify')==='1';}catch(e){return false;}}
-function togglePerf(){const v=!perfOn();try{localStorage.setItem('ww_perf',v?'1':'0');}catch(e){}document.documentElement.classList.toggle('perf',v);renderSettingsUI();}
-function toggleCompact(){const v=!compactOn();try{localStorage.setItem('ww_compact',v?'1':'0');}catch(e){}document.documentElement.classList.toggle('compact',v);renderSettingsUI();}
-function toggleSimplify(){const v=!simplifyOn();try{localStorage.setItem('ww_simplify',v?'1':'0');}catch(e){}applySimplify(v);renderSettingsUI();toast(v?'Simplified — extra tabs & sections hidden':'Full mode — everything shown');}
+function liteOnSet(v){try{localStorage.setItem('ww_lite',v?'1':'0');}catch(e){}}
+function togglePerf(){
+  if(!canUseDisplay()){toast('🔒 Sign in to change display settings');return;}
+  const v=!liteOn();liteOnSet(v);document.documentElement.classList.toggle('perf',v);renderSettingsUI();
+}
+function toggleCompact(){
+  if(!canUseDisplay()){toast('🔒 Sign in to change display settings');return;}
+  const v=!compactOn();try{localStorage.setItem('ww_compact',v?'1':'0');}catch(e){}document.documentElement.classList.toggle('compact',v);renderSettingsUI();
+}
+function toggleSimplify(){
+  if(!canUseDisplay()){toast('🔒 Sign in to change display settings');return;}
+  const v=!simplifyOn();try{localStorage.setItem('ww_simplify',v?'1':'0');}catch(e){}applySimplify(v);renderSettingsUI();toast(v?'Simplified — extra tabs & sections hidden':'Full mode — everything shown');
+}
 // Simplify mode: hide non-essential tabs & sections to de-clutter (esp. mobile).
 // Keeps the essentials: Basecamp, Campsites, Gear, Food, Survival. Hides Itinerary,
 // Shopping, Costs, Activities, and trims secondary sections within kept pages.
@@ -1620,7 +1923,10 @@ function importJSON(input){
   r.readAsText(file);input.value='';
 }
 function exportPDF(){window.print();}
-function resetData(){if(confirm('Reset everything? This clears crew, gear, costs, votes, stops, roles & checklists for EVERYONE (live mode) or this device (local mode).')){state=defaultState();persist();renderAll();}}
+function resetData(){
+  if(!canReset()){toast('🔒 Only an admin or leader can reset the trip');return;}
+  if(confirm('Reset everything? This clears crew, gear, costs, votes, stops, roles & checklists for EVERYONE on the live trip.')){state=defaultState();persist();renderAll();}
+}
 
 /* ---------- tabs / boot ---------- */
 function initTabs(){
@@ -1629,6 +1935,7 @@ function initTabs(){
     $$('.panel').forEach(x=>x.classList.remove('active'));
     t.classList.add('active');const panel=document.getElementById(t.dataset.p);panel.classList.add('active');
     animatePanel(panel);
+    try{ trackPresence(); }catch(e){}
     window.scrollTo({top:0,behavior:'smooth'});
   }));
   $$('.fbtn[data-f]').forEach(b=>b.addEventListener('click',()=>{
@@ -1646,7 +1953,7 @@ function countdown(){
 function renderAll(){
   renderCrew();renderExpenses();renderFood();renderMeals();renderPrep();renderShop();
   renderTips();renderSituations();renderFAQ();renderActivities();renderStops();renderSites();renderProgress();
-  renderQuickLinks();renderPresence();renderMyPacking();
+  renderQuickLinks();renderPresence();renderMyPacking();renderDepartureBanner();
   const active=document.querySelector('.panel.active');if(active)animatePanel(active);
 }
 async function boot(){
@@ -1657,8 +1964,8 @@ async function boot(){
   try{ initMapViewer(); }catch(e){ console.warn('initMapViewer',e); }
   try{ countdown(); }catch(e){}
   try{
-    document.documentElement.classList.toggle('perf',perfOn());
-    document.documentElement.classList.toggle('compact',compactOn());
+    applyGateClasses();
+    enforceDisplayDefaults();
     applySimplify(simplifyOn());
   }catch(e){}
   try{ renderAll(); }catch(e){ console.warn('renderAll',e); }
