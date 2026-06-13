@@ -904,33 +904,22 @@ html.compact .panel .kicker{margin:22px 0 9px}
 <!-- SESSION TRANSFER MODAL -->
 <!-- SIGN-IN MODAL -->
 <div class="modal-bg" id="signin-modal" onclick="if(event.target===this)closeSignin()">
-  <div class="modal" style="max-width:420px">
+  <div class="modal" style="max-width:330px;padding:18px">
     <span class="close-x" onclick="closeSignin()">✕</span>
-    <h3>Sign in to go live</h3>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Signing in syncs the trip live with the crew and unlocks every theme.</p>
+    <h3 style="margin-bottom:2px;font-size:18px">Sign in to go live</h3>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Syncs the trip &amp; unlocks all themes.</p>
 
-    <button class="btn" style="width:100%;margin-bottom:8px" onclick="signIn()">
-      <span style="display:inline-flex;align-items:center;gap:8px;justify-content:center">Continue with Google</span>
-    </button>
-    <p id="signin-google-note" style="display:none;font-size:11.5px;color:var(--amber);margin:-2px 0 14px;line-height:1.45">
-      ⚠️ On an iPhone home-screen app, Google may not let you type. If it doesn't work, use the email link below instead — it always works.
-    </p>
+    <button class="btn" style="width:100%" onclick="signIn()">Continue with Google</button>
 
-    <div style="display:flex;align-items:center;gap:10px;margin:14px 0;color:var(--faint);font-size:11px;font-family:var(--mono)">
+    <div style="display:flex;align-items:center;gap:8px;margin:10px 0;color:var(--faint);font-size:10px;font-family:var(--mono)">
       <span style="flex:1;height:1px;background:var(--border)"></span>OR<span style="flex:1;height:1px;background:var(--border)"></span>
     </div>
 
-    <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Email me a one-tap sign-in link</label>
-    <input id="signin-email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="you@example.com" style="width:100%;margin-bottom:8px" onkeydown="if(event.key==='Enter')sendEmailLink()">
-    <button class="btn ghost" style="width:100%" onclick="sendEmailLink()">✉ Send me the link</button>
-    <p id="signin-email-status" style="font-size:12px;color:var(--green);margin-top:10px;display:none"></p>
-
-    <div style="display:flex;align-items:center;gap:10px;margin:14px 0;color:var(--faint);font-size:11px;font-family:var(--mono)">
-      <span style="flex:1;height:1px;background:var(--border)"></span>ALREADY SIGNED IN ON SAFARI?<span style="flex:1;height:1px;background:var(--border)"></span>
+    <div style="display:flex;gap:6px">
+      <input id="signin-email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="you@example.com" style="flex:1;min-width:0" onkeydown="if(event.key==='Enter')sendEmailLink()">
+      <button class="btn ghost" style="white-space:nowrap" onclick="sendEmailLink()">✉ Link</button>
     </div>
-    <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Paste the sync link from Safari ("📲 Sync to app")</label>
-    <input id="paste-xfer" type="text" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Paste sync link here" style="width:100%;margin-bottom:8px" onkeydown="if(event.key==='Enter')usePastedTransfer()">
-    <button class="btn ghost" style="width:100%" onclick="usePastedTransfer()">Sign in with sync link</button>
+    <p id="signin-email-status" style="font-size:11.5px;color:var(--green);margin-top:8px;display:none"></p>
   </div>
 </div>
 
@@ -939,6 +928,6 @@ html.compact .panel .kicker{margin:22px 0 9px}
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" onerror="window.__gsapFailed=1"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" onerror="window.__sbFailed=1"></script>
 <script src="config.js"></script>
-<script src="app.js?v=12"></script>
+<script src="app.js?v=14"></script>
 </body>
 </html>

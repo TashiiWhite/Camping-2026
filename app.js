@@ -143,8 +143,7 @@ function renderAuth(){
   if(user){
     const name=user.user_metadata?.full_name||user.email||'Signed in';
     const pic=user.user_metadata?.avatar_url;
-    const xferBtn = !isStandalonePWA() ? `<button class="btn ghost sm" style="margin-left:6px" onclick="openTransfer()" title="Stay signed in inside your home-screen app">📲 Sync to app</button>` : '';
-    area.innerHTML=`<span class="user-chip">${pic?`<img src="${esc(pic)}" alt="">`:''}${esc(name.split(' ')[0])} <span class="x" style="cursor:pointer;color:var(--faint)" onclick="signOut()" title="Sign out">⎋</span></span>${xferBtn}`;
+    area.innerHTML=`<span class="user-chip">${pic?`<img src="${esc(pic)}" alt="">`:''}${esc(name.split(' ')[0])} <span class="x" style="cursor:pointer;color:var(--faint)" onclick="signOut()" title="Sign out">⎋</span></span>`;
   } else {
     area.innerHTML=`<button class="btn ghost sm" onclick="openSignin()">Sign in</button>`;
   }
@@ -158,19 +157,6 @@ function isStandalonePWA(){
 async function recoverSessionFromUrl(){
   try{
     const h=window.location.hash||'';
-    // Session-transfer link (Safari -> home-screen app)
-    if(h.includes('ww_xfer=')){
-      try{
-        const raw=decodeURIComponent(h.split('ww_xfer=')[1].split('&')[0]);
-        const tok=JSON.parse(atob(raw));
-        if(tok.access_token&&tok.refresh_token){
-          const {error}=await sb.auth.setSession({access_token:tok.access_token,refresh_token:tok.refresh_token});
-          if(error) console.warn('xfer setSession:',error.message); else toast('Signed in — synced from your browser ✓');
-        }
-      }catch(e){ console.warn('xfer parse:',e.message||e); }
-      history.replaceState(null,'',location.origin+location.pathname);
-      return;
-    }
     if(h.includes('access_token')){
       const p=new URLSearchParams(h.replace(/^#/,''));
       const access_token=p.get('access_token'), refresh_token=p.get('refresh_token');
@@ -200,49 +186,11 @@ async function signIn(){
 }
 function openSignin(){
   if(!sb){toast('Connect Supabase first (see README)');return;}
-  const note=document.getElementById('signin-google-note');
-  if(note) note.style.display=isStandalonePWA()?'block':'none';
   const st=document.getElementById('signin-email-status'); if(st) st.style.display='none';
   const inp=document.getElementById('signin-email'); if(inp) inp.value='';
   document.getElementById('signin-modal').classList.add('open');
-  // focus the email field shortly after open (helps mobile keyboards appear)
-  setTimeout(()=>{ if(inp&&isStandalonePWA()) inp.focus(); },200);
 }
 function closeSignin(){ document.getElementById('signin-modal').classList.remove('open'); }
-
-// Copy a link that carries the current session into the home-screen app.
-async function openTransfer(){
-  if(!sb){toast('Not connected');return;}
-  try{
-    const {data:{session}}=await sb.auth.getSession();
-    if(!session){toast('Sign in first');return;}
-    const payload=btoa(JSON.stringify({access_token:session.access_token,refresh_token:session.refresh_token}));
-    const link=location.origin+location.pathname+'#ww_xfer='+encodeURIComponent(payload);
-    try{
-      await navigator.clipboard.writeText(link);
-      toast('Sync link copied — open your home-screen app, tap Sign in, and paste it');
-    }catch(e){
-      // clipboard blocked: fall back to a prompt so the link is still selectable
-      window.prompt('Copy this sync link, then paste it in your home-screen app (Sign in → paste):', link);
-    }
-  }catch(e){ toast('Could not build transfer link: '+(e.message||e)); }
-}
-
-async function usePastedTransfer(){
-  if(!sb){toast('Not connected');return;}
-  const inp=document.getElementById('paste-xfer');
-  const val=(inp&&inp.value||'').trim();
-  const m=val.match(/ww_xfer=([^&\s]+)/);
-  if(!m){toast('That doesn\'t look like a sync link');return;}
-  try{
-    const tok=JSON.parse(atob(decodeURIComponent(m[1])));
-    if(tok.access_token&&tok.refresh_token){
-      const {error}=await sb.auth.setSession({access_token:tok.access_token,refresh_token:tok.refresh_token});
-      if(error) throw error;
-      toast('Signed in — synced ✓'); closeSignin();
-    } else toast('Link missing tokens');
-  }catch(e){ toast('Could not use that link: '+(e.message||e)); }
-}
 async function sendEmailLink(){
   if(!sb){toast('Connect Supabase first');return;}
   const inp=document.getElementById('signin-email');

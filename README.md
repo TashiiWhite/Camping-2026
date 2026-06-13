@@ -137,7 +137,7 @@ Offline: the service worker caches the entire app shell. You can open it and rea
 ## 6. Access model
 
 - **Signed out** → Local mode: all features work, but data stays on that device. Theme locked to Classic. The status pill explains this on hover.
-- **Signed in with Google** → Live mode: shared realtime trip data, "N online" presence counter, all themes unlocked.
+- **Signed in (Google or email link)** → Live mode: shared realtime trip data, "N online" presence counter, all themes unlocked.
 - To enforce this server-side too (recommended), run the commented "lock writes" block at the bottom of `supabase-schema.sql` — otherwise gating is client-side only.
 
 ## 6b. Data & sharing
@@ -150,41 +150,28 @@ To share state when Supabase isn't connected: **Export crew data** → send the 
 
 ---
 
----
-
 ## Version history
 
-### v11 — June 12, 2026 (current)
-- **Critical fix: couldn't type anything in the home-screen app.** Root cause was the service-worker `controllerchange` handler calling `location.reload()` — on a standalone PWA a brand-new worker takes control on first launch and fired an immediate mid-boot reload, leaving the page frozen and unresponsive (no inputs, no taps). Removed that reload loop.
-- **Hardened the entire boot sequence.** Core UI now initialises first inside guarded try/catch blocks, so the app is always usable and typeable even if GSAP, Three.js, or the Supabase script fail to load. Animations and auth are now strictly optional enhancements that can never freeze the page.
-- **Service worker no longer caches broken responses** (only clean 200s), and CDN script tags have `onerror` guards. This prevents a corrupt cached library from bricking the app on later launches.
-- **Removed the QR code + copy-link UI** from the Safari→app session transfer. The "📲 Sync to app" button now simply copies the sync link to your clipboard in one tap (with a plain-text prompt fallback), and you paste it into the home-screen app's Sign in screen. One less third-party library (the QR script is gone entirely), which also reduces what can ever go wrong at boot.
-- Verified by simulating both standalone-PWA mode and a total CDN failure: the app boots, every input field accepts typing, and it runs in local mode with zero errors.
+### v6 — June 12, 2026 (current)
 
+This release focused on sign-in and the iOS home-screen (PWA) experience, plus a round of polish.
 
-### v10 — June 12, 2026
-- **Stay-signed-in bridge for the home-screen app.** iOS keeps Safari and installed PWAs in separate storage, so a Safari sign-in doesn't carry into the home-screen app on its own. New flow: sign in normally in Safari, tap **📲 Sync to app** (copies a sync link), then in the home-screen app open **Sign in → paste the sync link**. The app restores the session and stays signed in with live sync. The sync link carries the session tokens, so it's private — for your own device only.
-- The sign-in modal now has three paths: Continue with Google, email magic-link, and "paste sync link from Safari".
+**Sign-in & accounts**
+- **Google sign-in gates live access.** Signed-out visitors run in local mode (device-only data, Classic theme); signing in unlocks live sync, the online-presence counter, and all 12 themes. Signing out reverts automatically.
+- **Email magic-link sign-in** as an alternative to Google — enter your email in the sign-in modal and tap the link we send. Works reliably everywhere, including inside the installed app.
+- Supabase auth uses the implicit flow with URL-hash session recovery, so the session is restored correctly on return from the provider and persists across launches.
+- **Compact sign-in modal** — Google + email link in a tight, low-footprint layout.
 
+**iOS home-screen app (PWA)**
+- **Hardened boot sequence** so the app is always responsive and typeable. Core UI initialises first inside guarded blocks; GSAP, Three.js, and Supabase are optional enhancements that can never freeze the page. Verified to still boot and accept input even if every CDN is unavailable.
+- **Service worker** caches only clean responses and never serves a broken/partial file; CDN scripts have `onerror` guards.
 
-### v9 — June 12, 2026
-- **Fixed: couldn't type the email in the home-screen app.** The email sign-in used a JavaScript `prompt()` dialog, which iOS standalone PWAs block/ignore. Replaced it with a proper in-page **sign-in modal** containing a real `<input>` field that accepts typing inside the installed app. Both Google and the email magic-link now live in one clean modal, with an inline warning that explains the iOS Google-typing limitation and points to the email link as the reliable path.
+**Monthly themes**
+- **Signed-in users get a monthly-rotating default theme**, alternating every calendar month forever: June 2026 → Botanic, July → Aurora, August → Botanic, and so on. A manual theme pick wins for the rest of that month; the rotation re-applies when a new month begins.
 
-
-### v8 — June 12, 2026
-- **Signed-in users get a monthly-rotating default theme.** On sign-in the app switches to that month's default, alternating every calendar month forever: **June 2026 → Botanic, July → Aurora, Aug → Botanic, …**. A manual theme pick still wins for the rest of that month, and the rotation re-applies when a new month begins.
-
-
-### v7 — June 12, 2026
-- **Reworked Google sign-in for the iOS home-screen app.** Switched Supabase auth from the PKCE flow to the **implicit flow** and added explicit URL-hash session recovery (`setSession`) on return — a standalone iOS PWA can read the token from the URL hash even though it can't share PKCE storage with the separate Safari OAuth context.
-- **Added an email magic-link fallback** (✉ Email link), shown automatically when the app is launched from the home screen. This always works inside the PWA sandbox, bypassing the OAuth-popup limitation entirely.
-- Sign-in errors now surface as toasts instead of failing silently.
-
-
-### v6 — June 11, 2026
-
-- **Fixed: Google sign-in from the iOS home-screen app.** Standalone PWAs on iOS couldn't type into the embedded Google sheet. Sign-in now does a full top-level redirect in the PWA window (a real, typeable Google page) and returns the session automatically. Also switched Supabase auth to the PKCE flow with `detectSessionInUrl`.
-- Added this version history to the README.
+**Polish**
+- Sign-in and sync errors surface as on-screen toasts.
+- README now carries a dated version history.
 
 ### v5 — June 11, 2026
 - **Google sign-in now gates live access.** Signed-out visitors run in local mode (device-only data) with the **Classic theme forced**; all other themes show a 🔒 lock. Signing in unlocks live sync + every theme; signing out reverts automatically.
