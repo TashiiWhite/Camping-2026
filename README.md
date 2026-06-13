@@ -154,6 +154,10 @@ To share state when Supabase isn't connected: **Export crew data** → send the 
 
 ## Version history
 
+### v9 — current
+- **Fixed: couldn't type the email in the home-screen app.** The email sign-in used a JavaScript `prompt()` dialog, which iOS standalone PWAs block/ignore. Replaced it with a proper in-page **sign-in modal** containing a real `<input>` field that accepts typing inside the installed app. Both Google and the email magic-link now live in one clean modal, with an inline warning that explains the iOS Google-typing limitation and points to the email link as the reliable path.
+
+
 ### v8 — current
 - **Signed-in users get a monthly-rotating default theme.** On sign-in the app switches to that month's default, alternating every calendar month forever: **June 2026 → Botanic, July → Aurora, Aug → Botanic, …**. A manual theme pick still wins for the rest of that month, and the rotation re-applies when a new month begins.
 

@@ -82,6 +82,7 @@ async function initSupabase(){
 }
 
 async function applyAccess(){
+  if(user){ try{closeSignin();}catch(e){} }
   renderAuth();
   enforceThemeAccess();
   if(user){ applyMonthlyDefaultOnSignIn(); }
@@ -143,12 +144,7 @@ function renderAuth(){
     const pic=user.user_metadata?.avatar_url;
     area.innerHTML=`<span class="user-chip">${pic?`<img src="${esc(pic)}" alt="">`:''}${esc(name.split(' ')[0])} <span class="x" style="cursor:pointer;color:var(--faint)" onclick="signOut()" title="Sign out">⎋</span></span>`;
   } else {
-    area.innerHTML=`<button class="btn ghost sm" onclick="signIn()">Sign in with Google</button>`;
-    // If launched as an installed app on iOS, surface the email fallback right away,
-    // since Google OAuth can misbehave inside the standalone webview.
-    if(isStandalonePWA()){
-      area.innerHTML+=`<button class="btn ghost sm" style="margin-left:6px" onclick="signInEmail()" title="Most reliable inside the home-screen app">✉ Email link</button>`;
-    }
+    area.innerHTML=`<button class="btn ghost sm" onclick="openSignin()">Sign in</button>`;
   }
 }
 function isStandalonePWA(){
@@ -187,15 +183,34 @@ async function signIn(){
     if(error) throw error;
   }catch(e){ toast('Sign-in failed: '+(e.message||e)); }
 }
-async function signInEmail(){
+function openSignin(){
+  if(!sb){toast('Connect Supabase first (see README)');return;}
+  const note=document.getElementById('signin-google-note');
+  if(note) note.style.display=isStandalonePWA()?'block':'none';
+  const st=document.getElementById('signin-email-status'); if(st) st.style.display='none';
+  const inp=document.getElementById('signin-email'); if(inp) inp.value='';
+  document.getElementById('signin-modal').classList.add('open');
+  // focus the email field shortly after open (helps mobile keyboards appear)
+  setTimeout(()=>{ if(inp&&isStandalonePWA()) inp.focus(); },200);
+}
+function closeSignin(){ document.getElementById('signin-modal').classList.remove('open'); }
+
+async function sendEmailLink(){
   if(!sb){toast('Connect Supabase first');return;}
-  const email=prompt('Enter your email — we\'ll send you a one-tap sign-in link:');
-  if(!email)return;
+  const inp=document.getElementById('signin-email');
+  const status=document.getElementById('signin-email-status');
+  const email=(inp&&inp.value||'').trim();
+  if(!email||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){
+    if(status){status.style.display='block';status.style.color='var(--danger)';status.textContent='Please enter a valid email address.';}
+    return;
+  }
   try{
     const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+location.pathname}});
     if(error) throw error;
-    toast('Check your email for the sign-in link 📧');
-  }catch(e){ toast('Could not send link: '+(e.message||e)); }
+    if(status){status.style.display='block';status.style.color='var(--green)';status.textContent='✓ Link sent! Check your email and tap it on this device.';}
+  }catch(e){
+    if(status){status.style.display='block';status.style.color='var(--danger)';status.textContent='Could not send: '+(e.message||e);}
+  }
 }
 async function signOut(){ if(sb){await sb.auth.signOut(); user=null; await applyAccess();} }
 
@@ -759,14 +774,29 @@ function monthlyDefaultTheme(d){
 }
 // Tag identifying which month-default a user has been auto-switched to, so we only
 // auto-switch once per month and never override a manual choice the user made.
+function getPinnedTheme(){try{return localStorage.getItem('ww_theme_pin')||'';}catch(e){return '';}}
+function setPinnedTheme(t){
+  try{
+    if(t){localStorage.setItem('ww_theme_pin',t);}
+    else{localStorage.removeItem('ww_theme_pin');}
+  }catch(e){}
+}
 function applyMonthlyDefaultOnSignIn(){
   if(!user)return;
+  // A pinned default always wins over the monthly rotation.
+  const pin=getPinnedTheme();
+  if(pin && canUseTheme(pin)){
+    if(getTheme()!==pin){
+      try{localStorage.setItem('ww_theme',pin);}catch(e){}
+      document.documentElement.dataset.theme=pin;
+      stopAmbient();startAmbient();
+    }
+    return;
+  }
   const want=monthlyDefaultTheme();
   let lastAuto=null, manual=false;
   try{lastAuto=localStorage.getItem('ww_theme_auto');manual=localStorage.getItem('ww_theme_manual')==='1';}catch(e){}
   const cur=getTheme();
-  // Apply the monthly default when: the user hasn't manually overridden this month,
-  // OR this is a new month than the last auto-switch (new month resets the rotation).
   const monthKey=new Date().getFullYear()+'-'+new Date().getMonth();
   if(lastAuto!==monthKey || (!manual && cur!==want)){
     try{
@@ -797,6 +827,37 @@ function setTheme(t){
   const names={aurora:'Aurora',ember:'Ember 🔥',glacier:'Glacier',topo:'Topo',classic:'Classic',nebula:'Nebula',synthwave:'Synthwave',botanic:'Botanic ☀',abyss:'Abyss',sakura:'Sakura',carbon:'Carbon',dune:'Dune'};
   toast((names[t]||t)+' theme — just for you, not the crew');
 }
+function renderPinUI(){
+  const row=$('#pin-row'); if(!row) return;
+  // only meaningful for signed-in users (themes locked otherwise)
+  row.style.display=user?'flex':'none';
+  const pin=getPinnedTheme();
+  const cur=getTheme();
+  const names={aurora:'Aurora',ember:'Ember',glacier:'Glacier',topo:'Topo',classic:'Classic',nebula:'Nebula',synthwave:'Synthwave',botanic:'Botanic',abyss:'Abyss',sakura:'Sakura',carbon:'Carbon',dune:'Dune'};
+  const lbl=$('#pin-label'); const btn=$('#pin-btn');
+  if(pin){
+    if(lbl) lbl.innerHTML='📌 Pinned default: <b>'+(names[pin]||pin)+'</b> — overrides the monthly rotation.';
+    if(btn) btn.textContent='Unpin (use monthly rotation)';
+  } else {
+    if(lbl) lbl.innerHTML='Monthly rotation is on (this month: <b>'+(names[monthlyDefaultTheme()]||'')+'</b>). Pin <b>'+(names[cur]||cur)+'</b> as your permanent default?';
+    if(btn) btn.textContent='📌 Pin '+(names[cur]||cur)+' as my default';
+  }
+}
+function togglePin(){
+  if(!user){toast('Sign in to set a default theme');return;}
+  if(getPinnedTheme()){
+    setPinnedTheme('');
+    toast('Unpinned — monthly rotation restored');
+  } else {
+    const cur=getTheme();
+    if(cur==='classic'){toast('Pick a theme first, then pin it');return;}
+    setPinnedTheme(cur);
+    // pinning also clears the per-month manual flag so it's clean
+    try{localStorage.setItem('ww_theme_manual','1');}catch(e){}
+    toast('Pinned as your default theme 📌');
+  }
+  renderPinUI();
+}
 function toggleMotion(){
   const on=!motionOn();
   try{localStorage.setItem('ww_motion',on?'1':'0');}catch(e){}
@@ -812,6 +873,7 @@ function renderSettingsUI(){
     card.classList.toggle('locked',!canUseTheme(k));
   });
   const note=$('#theme-lock-note');if(note)note.style.display=user?'none':'block';
+  renderPinUI();
   $('#motion-toggle')?.classList.toggle('done',motionOn());
   $('#perf-toggle')?.classList.toggle('done',perfOn());
   $('#compact-toggle')?.classList.toggle('done',compactOn());
