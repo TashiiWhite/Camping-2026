@@ -19,8 +19,39 @@ let lastRev = 0;
 
 let state = defaultState();
 function defaultState(){
-  return { rev:0, by:'', crew:[], gear:null, gearArchive:[], gearClaims:{},
+  return { rev:0, by:'', crew:[], gear:null, gearArchive:[], gearClaims:{}, gearPacked:{}, personalItems:{},
     expenses:[], votes:{}, roles:{}, checks:{}, stops:[], chosenSite:'' };
+}
+
+/* "Who am I" — per device, never synced. Drives the personal packing list + progress. */
+function whoAmI(){ try{ return localStorage.getItem('ww_whoami')||''; }catch(e){ return ''; } }
+function setWhoAmI(name){ try{ localStorage.setItem('ww_whoami',name||''); }catch(e){} renderGear(); renderProgress(); renderMyPacking(); }
+
+/* Build the packing list for a given crew member:
+   - every gear item assigned to them specifically
+   - every gear item assigned to "All crew" (everyone needs their own)
+   - their personal custom items
+   Returns [{key, name, note, packed, kind}] where key is unique per person+item. */
+function packingListFor(name){
+  if(!name) return [];
+  const out=[];
+  gearData().forEach(cat=>cat.items.forEach(it=>{
+    const claims=state.gearClaims[it.id]||[];
+    const mine = claims.includes(name) || claims.includes('ALL');
+    if(mine){
+      const pk = state.gearPacked[it.id];
+      const packed = (pk && typeof pk==='object') ? !!pk[name] : (claims.includes('ALL') ? false : !!pk);
+      out.push({key:it.id, name:it.n, note:it.note||'', packed, kind:claims.includes('ALL')?'all':'assigned', cat:cat.cat});
+    }
+  }));
+  (state.personalItems[name]||[]).forEach(pi=>{
+    out.push({key:'personal:'+pi.id, name:pi.name, note:'personal', packed:!!pi.packed, kind:'personal'});
+  });
+  return out;
+}
+function packStatsFor(name){
+  const list=packingListFor(name);
+  return {total:list.length, packed:list.filter(x=>x.packed).length};
 }
 
 /* ---------- utils ---------- */
@@ -216,6 +247,8 @@ async function signOut(){ if(sb){await sb.auth.signOut(); user=null; await apply
 const SITES=[
  {key:'plage',flag:'🇨🇦 Quebec · Laurentians',name:'Camping de la Plage',meta:'Rivière-Rouge, QC · Route 117',
   mapsQ:'Camping de la Plage, Riviere-Rouge, QC', weatherUrl:'https://www.theweathernetwork.com/en/city/ca/quebec/riviere-rouge/14-days',
+  mapImg:'maps/plage.jpg', phone:'819-275-7757',
+  bookUrl:'http://www.campingdelaplage-qc.ca/plan-eng.html', fireUrl:'https://sopfeu.qc.ca/', fireLabel:'QC fire ban (SOPFEU)',
   facilities:['🚿 Showers','🧺 Laundry','🏪 Store','📶 Wi-Fi','🛶 Canoe/kayak','🏖 River beach','🔥 Firewood'],
   rows:[['Drive from DDO','~2 h · 170 km'],['Setting','Rivière Rouge bank'],['Tent site','~$40–55 · call'],['Open','May 10–Sep 22'],['Curfew','11:00 PM'],['Checkout','11:00 AM']],
   pros:['Closest — only ~2 hrs north of DDO','River beach + canoe/kayak rentals','Showers, laundry, store, Wi-Fi, firewood','Live music weekends · ~25 min to Mont-Tremblant'],
@@ -223,11 +256,13 @@ const SITES=[
   url:'http://www.campingdelaplage-qc.ca/plan-eng.html'},
  {key:'ivy',flag:'🇨🇦 Ontario · 1000 Islands',name:'Ivy Lea Campground',meta:'Lansdowne, ON · Thousand Islands Pkwy',
   mapsQ:'Ivy Lea Campground, 649 Thousand Islands Parkway, Lansdowne, ON', weatherUrl:'https://www.theweathernetwork.com/en/city/ca/ontario/gananoque/14-days',
+  mapImg:'maps/ivy.jpg', phone:'613-659-3057',
+  bookUrl:'https://reservations.parks.on.ca/', infoUrl:'https://www.stlawrenceparks.com/to-do/camping/ivy-lea-campground/', fireUrl:'https://www.ontario.ca/page/forest-fires', fireLabel:'ON fire ban status',
   facilities:['🚿 Showers','🧺 Laundromat','🏪 Store','⛵ Boat launch','🤿 Scuba','🥾 Trails','🌉 Suspension bridge'],
   rows:[['Drive from DDO','~3–3.5 h'],['Basic site','$47.32 +HST'],['Waterfront','$55.30 +HST'],['Premium WF','$63.08 +HST'],['Extra vehicle','$13.00 / night'],['Reservation fee','$13.25 (n/r)'],['Checkout','1:00 PM']],
   pros:['Stunning 1000 Islands / St. Lawrence setting','Boat launch, scuba, trails, suspension bridge','Near Gananoque cruises + Boldt Castle','Premium waterfront sites available'],
   cons:['~1 hr farther than Rivière-Rouge','HST adds ~13% · some sites under the bridge'],
-  url:'https://reservations.parks.on.ca/'},
+  url:'https://www.stlawrenceparks.com/to-do/camping/ivy-lea-campground/'},
 ];
 const ORIGIN='Dollard-des-Ormeaux, QC';
 
@@ -456,7 +491,8 @@ function renderSites(){
       </div>
       <div class="site-foot">
         <button class="btn sm ghost" onclick="window.open('${s.url}','_blank')">Visit ↗</button>
-        <button class="btn sm ghost" onclick="window.open('https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.mapsQ)}','_blank')">📍 Map</button>
+        <button class="btn sm ghost" onclick="window.open('https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.mapsQ)}','_blank')">📍 Directions</button>
+        ${s.mapImg?`<button class="btn sm ghost" onclick="openSiteMap('${s.key}')">🗺 Site map</button>`:''}
         <button class="btn sm ghost" onclick="window.open('${s.weatherUrl}','_blank')">⛅ Weather</button>
         <select onchange="castVote('${s.key}',this.value)"><option value="">Vote as…</option>${opts}</select>
         <button class="btn sm ${isChosen?'amber':''}" onclick="chooseSite('${s.key}')">${isChosen?'✓ Chosen':'Choose this site'}</button>
@@ -467,7 +503,115 @@ function renderSites(){
   renderRouteEndpoints();
 }
 function castVote(site,name){if(!name)return;state.votes[name]=site;persist();renderSites();}
-function chooseSite(key){state.chosenSite=state.chosenSite===key?'':key;persist();renderSites();toast(state.chosenSite?'Site locked in — route planner updated':'Site un-chosen');}
+function chooseSite(key){state.chosenSite=state.chosenSite===key?'':key;persist();renderSites();renderQuickLinks();toast(state.chosenSite?'Site locked in — links & route updated':'Site un-chosen');}
+
+/* ---------- dynamic quick links (follow the chosen site) ---------- */
+function renderQuickLinks(){
+  const w=$('#quicklinks');if(!w)return;
+  const chosen=SITES.find(s=>s.key===state.chosenSite);
+  const link=(href,ico,title,desc)=>`<a class="quicklink" href="${href}" target="_blank" rel="noopener"><div class="ico">${ico}</div><div><div class="qt">${title}</div><div class="qd">${desc}</div></div><div class="arr">↗</div></a>`;
+  let html='';
+  if(chosen){
+    // chosen-site-specific links first
+    html+=link(chosen.bookUrl||chosen.url,'🏕',(chosen.key==='ivy'?'Ivy Lea — Book now':'Camping de la Plage'),(chosen.key==='ivy'?'reservations.parks.on.ca':'campingdelaplage-qc.ca')+(chosen.phone?' · '+chosen.phone:''));
+    if(chosen.infoUrl) html+=link(chosen.infoUrl,'ℹ️',chosen.name+' — info & rates','stlawrenceparks.com');
+    html+=link('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(chosen.mapsQ),'📍','Directions to '+chosen.name,'Google Maps');
+    html+=link(chosen.weatherUrl,'⛅','14-day weather','theweathernetwork.com · '+(chosen.key==='ivy'?'Gananoque':'Rivière-Rouge'));
+    html+=link(chosen.fireUrl,'🔥',chosen.fireLabel,'check before you leave');
+    html+=link('https://weather.gc.ca/','🌡','Environment Canada','weather.gc.ca');
+  } else {
+    // no site chosen yet -> show both options + general links
+    html+=link('http://www.campingdelaplage-qc.ca/plan-eng.html','🏞️','Camping de la Plage','campingdelaplage-qc.ca · 819-275-7757');
+    html+=link('https://reservations.parks.on.ca/','🛶','Ivy Lea — Book now','reservations.parks.on.ca · 613-659-3057');
+    html+=link('https://www.stlawrenceparks.com/to-do/camping/ivy-lea-campground/','ℹ️','Ivy Lea — info & rates','stlawrenceparks.com');
+    html+=link('https://sopfeu.qc.ca/','🔥','QC fire ban (SOPFEU)','sopfeu.qc.ca');
+    html+=link('https://www.ontario.ca/page/forest-fires','🔥','ON fire ban status','ontario.ca');
+    html+=link('https://weather.gc.ca/','⛅','Weather','weather.gc.ca · pick your site first for direct links');
+  }
+  w.innerHTML=html;
+}
+
+/* ---------- zoomable / pannable site map viewer ---------- */
+let _mapState=null;
+function openSiteMap(key){
+  const s=SITES.find(x=>x.key===key);if(!s||!s.mapImg)return;
+  const m=$('#map-modal');
+  $('#map-title').textContent=s.name+' — site map';
+  const img=$('#map-img');
+  img.src=s.mapImg; img.alt=s.name+' campground map';
+  _mapState={scale:1,x:0,y:0,key};
+  applyMapTransform();
+  m.classList.add('open');
+}
+function closeSiteMap(){ $('#map-modal').classList.remove('open'); }
+function applyMapTransform(){
+  const img=$('#map-img');if(!img||!_mapState)return;
+  img.style.transform=`translate(${_mapState.x}px,${_mapState.y}px) scale(${_mapState.scale})`;
+}
+function mapZoom(delta,cx,cy){
+  if(!_mapState)return;
+  const old=_mapState.scale;
+  let ns=Math.min(6,Math.max(1,old*(delta>0?1.2:1/1.2)));
+  _mapState.scale=ns;
+  if(ns===1){_mapState.x=0;_mapState.y=0;}
+  applyMapTransform();
+}
+async function saveMap(){
+  if(!_mapState)return;
+  const s=SITES.find(x=>x.key===_mapState.key);if(!s)return;
+  try{
+    const res=await fetch(s.mapImg); const blob=await res.blob();
+    const fname=(s.key==='ivy'?'ivy-lea':'camping-de-la-plage')+'-map.jpg';
+    // Use Web Share with files if available (best on iOS — lets you save to Photos)
+    if(navigator.canShare){
+      const file=new File([blob],fname,{type:blob.type});
+      if(navigator.canShare({files:[file]})){
+        try{ await navigator.share({files:[file],title:s.name+' map'}); return; }catch(e){ if(e&&e.name==='AbortError') return; }
+      }
+    }
+    // Fallback: trigger a download
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=fname;document.body.appendChild(a);a.click();a.remove();
+    URL.revokeObjectURL(url);
+    toast('Map saved');
+  }catch(e){
+    // last resort: open in new tab so user can long-press to save
+    window.open(s.mapImg,'_blank');
+  }
+}
+function initMapViewer(){
+  const img=$('#map-img'), stage=$('#map-stage');
+  if(!img||!stage)return;
+  // wheel zoom (desktop)
+  stage.addEventListener('wheel',e=>{e.preventDefault();mapZoom(-e.deltaY,e.clientX,e.clientY);},{passive:false});
+  // drag to pan
+  let dragging=false,sx=0,sy=0,ox=0,oy=0;
+  const start=(x,y)=>{if(!_mapState||_mapState.scale<=1)return;dragging=true;sx=x;sy=y;ox=_mapState.x;oy=_mapState.y;};
+  const move=(x,y)=>{if(!dragging||!_mapState)return;_mapState.x=ox+(x-sx);_mapState.y=oy+(y-sy);applyMapTransform();};
+  const end=()=>{dragging=false;};
+  stage.addEventListener('mousedown',e=>start(e.clientX,e.clientY));
+  window.addEventListener('mousemove',e=>move(e.clientX,e.clientY));
+  window.addEventListener('mouseup',end);
+  // touch: drag + pinch
+  let pinchDist=0,pinchScale=1;
+  stage.addEventListener('touchstart',e=>{
+    if(e.touches.length===1)start(e.touches[0].clientX,e.touches[0].clientY);
+    else if(e.touches.length===2){pinchDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);pinchScale=_mapState?_mapState.scale:1;}
+  },{passive:true});
+  stage.addEventListener('touchmove',e=>{
+    if(e.touches.length===1)move(e.touches[0].clientX,e.touches[0].clientY);
+    else if(e.touches.length===2&&_mapState){
+      e.preventDefault();
+      const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+      _mapState.scale=Math.min(6,Math.max(1,pinchScale*(d/pinchDist)));
+      if(_mapState.scale===1){_mapState.x=0;_mapState.y=0;}
+      applyMapTransform();
+    }
+  },{passive:false});
+  stage.addEventListener('touchend',end);
+  // double-tap / double-click to toggle zoom
+  stage.addEventListener('dblclick',()=>{if(!_mapState)return;_mapState.scale=_mapState.scale>1?1:2.5;if(_mapState.scale===1){_mapState.x=0;_mapState.y=0;}applyMapTransform();});
+}
 
 /* ---------- route planner ---------- */
 function chosenSiteObj(){ return SITES.find(s=>s.key===state.chosenSite)||null; }
@@ -509,6 +653,29 @@ function openRoute(reverse){
 function renderGear(){
   const wrap=$('#gear-list');wrap.innerHTML='';
   $('#arch-count').textContent=state.gearArchive.length;
+  // team packing overview (counts each "All crew" item once per crew member)
+  let claimedUnits=0,packedUnits=0;
+  gearData().forEach(cat=>cat.items.forEach(it=>{
+    const claims=state.gearClaims[it.id]||[];
+    if(!claims.length)return;
+    const pk=state.gearPacked[it.id];
+    if(claims.includes('ALL')){
+      const n=Math.max(1,state.crew.length);
+      claimedUnits+=n;
+      packedUnits+=(pk&&typeof pk==='object')?Object.keys(pk).filter(k=>state.crew.includes(k)).length:0;
+    }else{
+      claimedUnits+=1;
+      if(pk&&typeof pk!=='object')packedUnits+=1;
+    }
+  }));
+  const ps=$('#pack-summary');
+  if(ps){
+    if(claimedUnits===0){ps.innerHTML='<div style="font-size:13px;color:var(--muted)">📦 Claim gear below, then each person marks their items <b>Packed</b>. Pick who you are on the Basecamp tab to track your own list.</div>';}
+    else{
+      const pct=Math.round(packedUnits/claimedUnits*100);
+      ps.innerHTML=`<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><div style="font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)">Team packed</div><div style="font-family:var(--display);font-weight:700;font-size:18px">${packedUnits}/${claimedUnits}</div><div class="progress-track" style="flex:1;min-width:120px"><div class="progress-fill" style="width:${pct}%"></div></div><div style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--green)">${pct}%</div></div>`;
+    }
+  }
   gearData().forEach((cat,ci)=>{
     if(!cat.items.length)return;
     const g=document.createElement('div');
@@ -523,10 +690,26 @@ function renderGear(){
       const avail=state.crew.filter(c=>!claims.includes(c));
       const opts=avail.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
       const allOpt=claims.includes('ALL')?'':'<option value="ALL">👥 All crew</option>';
+      const isAll=claims.includes('ALL');
+      const me=whoAmI();
+      let packed=false, packLabel='Pack';
+      const pk=state.gearPacked[it.id];
+      if(isAll){
+        // per-person: reflect the current "who am I" selection
+        const cnt = (pk&&typeof pk==='object') ? Object.keys(pk).length : 0;
+        packed = !!(me && pk && typeof pk==='object' && pk[me]);
+        packLabel = me ? (packed?'✓ Packed':'Pack (you)') : `Packed ${cnt}/${state.crew.length}`;
+      } else {
+        packed = !!(pk && typeof pk!=='object');
+        packLabel = packed?'✓ Packed':'Pack';
+      }
+      const packBtn=claims.length?`<button class="pack-btn ${packed?'on':''}" onclick="togglePacked('${it.id}')" title="${isAll&&!me?'Pick who you are on Basecamp to pack your copy':'Mark as packed'}">${packLabel}</button>`:'';
+      if(packed) row.className+=' packed';
       row.innerHTML=`
         <div class="gear-info"><div class="gear-name">${esc(it.n)} <span class="gtype ${tcls}">${it.t}</span></div><div class="gear-note">${esc(it.note||'')}</div></div>
         <div class="gear-claim">${chips}
           <select onchange="assign('${it.id}',this.value);this.value=''"><option value="">${state.crew.length?'+ Assign…':'Add crew first'}</option>${allOpt}${opts}</select>
+          ${packBtn}
         </div>
         <span class="gear-x" title="Remove (goes to archive)" onclick="archiveGear('${it.id}')">🗑</span>`;
       g.appendChild(row);
@@ -539,12 +722,96 @@ function assign(id,name){
   const arr=state.gearClaims[id]||(state.gearClaims[id]=[]);
   if(name==='ALL'){state.gearClaims[id]=['ALL'];}
   else{const i=arr.indexOf('ALL');if(i>-1)arr.splice(i,1);if(!arr.includes(name))arr.push(name);}
-  persist();renderGear();
+  persist();renderGear();renderMyPacking();renderProgress();
 }
 function unassign(id,name){
   const arr=state.gearClaims[id]||[];const i=arr.indexOf(name);if(i>-1)arr.splice(i,1);
   if(!arr.length)delete state.gearClaims[id];
-  persist();renderGear();
+  persist();renderGear();renderMyPacking();renderProgress();
+}
+// Toggle packed for a gear item. If the item is assigned to "All crew", track per-person
+// (each person packs their own); otherwise a single shared flag.
+function togglePacked(id, person){
+  if(!state.gearPacked)state.gearPacked={};
+  const claims=state.gearClaims[id]||[];
+  const isAll=claims.includes('ALL');
+  if(isAll){
+    const who=person||whoAmI();
+    if(!who){toast('Pick who you are first');return;}
+    let m=state.gearPacked[id];
+    if(!m||typeof m!=='object'){m={};state.gearPacked[id]=m;}
+    if(m[who])delete m[who];else m[who]=true;
+    if(Object.keys(m).length===0)delete state.gearPacked[id];
+  }else{
+    if(state.gearPacked[id]&&typeof state.gearPacked[id]!=='object')delete state.gearPacked[id];
+    else state.gearPacked[id]=true;
+  }
+  persist();renderGear();renderMyPacking();renderProgress();
+}
+
+// Toggle a packing-list line from the personal "My packing list" view (handles both gear + personal items)
+function toggleMyPack(key){
+  const me=whoAmI();if(!me)return;
+  if(key.startsWith('personal:')){
+    const id=key.slice('personal:'.length);
+    const arr=state.personalItems[me]||[];
+    const item=arr.find(x=>x.id===id);if(item){item.packed=!item.packed;}
+    persist();renderMyPacking();renderProgress();renderGear();
+  }else{
+    togglePacked(key,me);
+  }
+}
+function addPersonalItem(){
+  const me=whoAmI();if(!me){toast('Pick who you are first');return;}
+  const inp=$('#my-item-in');const v=(inp.value||'').trim();if(!v)return;
+  if(!state.personalItems[me])state.personalItems[me]=[];
+  state.personalItems[me].push({id:uid(),name:v,packed:false});
+  inp.value='';persist();renderMyPacking();renderProgress();
+}
+function removePersonalItem(id){
+  const me=whoAmI();if(!me)return;
+  state.personalItems[me]=(state.personalItems[me]||[]).filter(x=>x.id!==id);
+  persist();renderMyPacking();renderProgress();
+}
+function renderMyPacking(){
+  const wrap=$('#my-packing');if(!wrap)return;
+  const me=whoAmI();
+  const fillSel=(sel)=>{ if(sel){const opts=state.crew.map(c=>`<option value="${esc(c)}" ${c===me?'selected':''}>${esc(c)}</option>`).join('');sel.innerHTML=`<option value="">Who are you?</option>${opts}`;} };
+  fillSel($('#whoami-select'));
+  fillSel($('#whoami-select-gear'));
+  if(!me){
+    wrap.innerHTML='<div class="empty">Pick your name above to see your personal packing list — everything assigned to you, plus anything marked “All crew”, plus your own custom items.</div>';
+    return;
+  }
+  if(!state.crew.includes(me)){ // stale selection
+    try{localStorage.removeItem('ww_whoami');}catch(e){}
+    wrap.innerHTML='<div class="empty">Pick your name above to see your personal packing list.</div>';
+    [$('#whoami-select'),$('#whoami-select-gear')].forEach(s=>{if(s)s.value='';});
+    return;
+  }
+  const list=packingListFor(me);
+  const stats=packStatsFor(me);
+  const pct=stats.total?Math.round(stats.packed/stats.total*100):0;
+  let html=`<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+    <div style="font-family:var(--display);font-weight:700;font-size:20px">${stats.packed}/${stats.total} packed</div>
+    <div class="progress-track" style="flex:1;min-width:120px"><div class="progress-fill" style="width:${pct}%"></div></div>
+    <div style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--green)">${pct}%</div></div>`;
+  if(!list.length){
+    html+='<div class="empty">Nothing on your list yet. Claim gear in the list below, or add personal items here.</div>';
+  } else {
+    html+=list.map(x=>{
+      const tag = x.kind==='personal'?'<span class="gtype gt-each">personal</span>':x.kind==='all'?'<span class="gtype gt-shared">all crew</span>':'<span class="gtype gt-someone">yours</span>';
+      const rm = x.kind==='personal'?`<span class="gear-x" onclick="removePersonalItem('${x.key.slice(9)}')" title="Remove">🗑</span>`:'';
+      return `<div class="chk ${x.packed?'done':''}" onclick="toggleMyPack('${x.key.replace(/'/g,"\\'")}')">
+        <div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div>
+        <div class="ct" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${esc(x.name)} ${tag}</div>${rm}</div>`;
+    }).join('');
+  }
+  // add personal item row
+  html+=`<div style="display:flex;gap:6px;margin-top:12px">
+    <input id="my-item-in" placeholder="Add a personal item (e.g. retainer, book)…" style="flex:1" onkeydown="if(event.key==='Enter')addPersonalItem()">
+    <button class="btn sm" onclick="addPersonalItem()">Add</button></div>`;
+  wrap.innerHTML=html;
 }
 function addGear(){
   const n=$('#gear-name-in').value.trim(),note=$('#gear-note-in').value.trim(),t=$('#gear-type-in').value;
@@ -638,7 +905,7 @@ function renderCrew(){
   if(!state.crew.length){bar.innerHTML='<span class="empty" style="padding:8px">No crew yet — add names above.</span>';}
   state.crew.forEach(c=>{const chip=document.createElement('div');chip.className='crew-chip';
     chip.innerHTML=`<span class="avatar" style="background:${colorFor(c)}">${initials(c)}</span>${esc(c)}<span class="x" onclick="removeCrew('${esc(c).replace(/&#39;/g,"\\'")}')">✕</span>`;bar.appendChild(chip);});
-  refreshCrewSelects();renderGear();renderRoles();renderSites();renderSettle();
+  refreshCrewSelects();renderGear();renderRoles();renderSites();renderSettle();renderMyPacking();
 }
 function addCrew(){
   const i=$('#crew-input');const v=i.value.trim();
@@ -873,11 +1140,33 @@ function renderSettingsUI(){
   $('#motion-toggle')?.classList.toggle('done',motionOn());
   $('#perf-toggle')?.classList.toggle('done',perfOn());
   $('#compact-toggle')?.classList.toggle('done',compactOn());
+  $('#simplify-toggle')?.classList.toggle('done',simplifyOn());
 }
 function perfOn(){try{return localStorage.getItem('ww_perf')==='1';}catch(e){return false;}}
 function compactOn(){try{return localStorage.getItem('ww_compact')==='1';}catch(e){return false;}}
+function simplifyOn(){try{return localStorage.getItem('ww_simplify')==='1';}catch(e){return false;}}
 function togglePerf(){const v=!perfOn();try{localStorage.setItem('ww_perf',v?'1':'0');}catch(e){}document.documentElement.classList.toggle('perf',v);renderSettingsUI();}
 function toggleCompact(){const v=!compactOn();try{localStorage.setItem('ww_compact',v?'1':'0');}catch(e){}document.documentElement.classList.toggle('compact',v);renderSettingsUI();}
+function toggleSimplify(){const v=!simplifyOn();try{localStorage.setItem('ww_simplify',v?'1':'0');}catch(e){}applySimplify(v);renderSettingsUI();toast(v?'Simplified — extra tabs & sections hidden':'Full mode — everything shown');}
+// Simplify mode: hide non-essential tabs & sections to de-clutter (esp. mobile).
+// Keeps the essentials: Basecamp, Campsites, Gear, Food, Survival. Hides Itinerary,
+// Shopping, Costs, Activities, and trims secondary sections within kept pages.
+const SIMPLIFY_HIDE_TABS=['plan','shop','money','fun'];
+function applySimplify(on){
+  document.documentElement.classList.toggle('simplify',on);
+  // hide/show the secondary tabs
+  SIMPLIFY_HIDE_TABS.forEach(p=>{
+    const tab=document.querySelector('.tab[data-p="'+p+'"]');
+    if(tab)tab.style.display=on?'none':'';
+  });
+  // if the active tab is being hidden, jump back to Basecamp
+  if(on){
+    const active=document.querySelector('.tab.active');
+    if(active && SIMPLIFY_HIDE_TABS.includes(active.dataset.p)){
+      const dash=document.querySelector('.tab[data-p="dash"]');if(dash)dash.click();
+    }
+  }
+}
 function openSettings(){renderSettingsUI();$('#settings-modal').classList.add('open');}
 function closeSettings(){$('#settings-modal').classList.remove('open');}
 
@@ -1277,15 +1566,20 @@ function animateBoot(){
 /* ---------- progress + share ---------- */
 function renderProgress(){
   const w=$('#progress-wrap');if(!w)return;
-  // gear claimed %
+  // shared trip readiness
   let total=0,claimed=0;
   gearData().forEach(c=>c.items.forEach(it=>{total++;if((state.gearClaims[it.id]||[]).length)claimed++;}));
-  // shopping %
   let sTotal=0,sDone=0;
   SHOP.forEach((s,si)=>s.items.forEach((_,ii)=>{sTotal++;if(state.checks['shop-'+si+'-'+ii])sDone++;}));
   const sitePicked=state.chosenSite?100:0;
   const crewPct=Math.min(100,Math.round(state.crew.length/4*100));
   const rows=[['Crew added',crewPct],['Site chosen',sitePicked],['Gear claimed',total?Math.round(claimed/total*100):0],['Shopping done',sTotal?Math.round(sDone/sTotal*100):0]];
+  // personal packing row driven by "who am I"
+  const me=whoAmI();
+  if(me && state.crew.includes(me)){
+    const st=packStatsFor(me);
+    rows.push(['My packing ('+me.split(' ')[0]+')', st.total?Math.round(st.packed/st.total*100):0]);
+  }
   w.innerHTML=rows.map(([l,v])=>`<div class="progress-row"><span class="pl">${l}</span><div class="progress-track"><div class="progress-fill" style="width:${v}%"></div></div><span class="pv">${v}%</span></div>`).join('');
 }
 function copySettle(){
@@ -1352,7 +1646,7 @@ function countdown(){
 function renderAll(){
   renderCrew();renderExpenses();renderFood();renderMeals();renderPrep();renderShop();
   renderTips();renderSituations();renderFAQ();renderActivities();renderStops();renderSites();renderProgress();
-  renderPresence();
+  renderQuickLinks();renderPresence();renderMyPacking();
   const active=document.querySelector('.panel.active');if(active)animatePanel(active);
 }
 async function boot(){
@@ -1360,10 +1654,12 @@ async function boot(){
   try{ loadLocal(); }catch(e){ console.warn('loadLocal',e); }
   try{ if(localStorage.getItem('ww_banner_hidden'))$('#help-banner').style.display='none'; }catch(e){}
   try{ initTabs(); }catch(e){ console.warn('initTabs',e); }
+  try{ initMapViewer(); }catch(e){ console.warn('initMapViewer',e); }
   try{ countdown(); }catch(e){}
   try{
     document.documentElement.classList.toggle('perf',perfOn());
     document.documentElement.classList.toggle('compact',compactOn());
+    applySimplify(simplifyOn());
   }catch(e){}
   try{ renderAll(); }catch(e){ console.warn('renderAll',e); }
   try{ setSync('local','Local'); }catch(e){}

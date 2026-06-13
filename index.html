@@ -153,6 +153,11 @@ input::placeholder{color:var(--faint)}
 .assignee .x:hover{color:var(--danger)}
 .gear-x{cursor:pointer;color:var(--faint);font-size:16px;padding:2px 6px}
 .gear-x:hover{color:var(--danger)}
+.pack-btn{font-family:var(--mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;font-weight:700;background:transparent;border:1px solid var(--border-strong);color:var(--muted);border-radius:99px;padding:5px 11px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.pack-btn:hover{color:var(--text);border-color:var(--green)}
+.pack-btn.on{background:var(--green);border-color:var(--green);color:var(--bg)}
+.gear-item.packed{opacity:.7}
+.gear-item.packed .gear-name{text-decoration:line-through;text-decoration-color:var(--faint)}
 .add-row{display:grid;grid-template-columns:1.4fr 1fr 130px auto;gap:8px;margin-bottom:16px}
 @media(max-width:720px){.add-row{grid-template-columns:1fr 1fr}}
 .ftable{width:100%;border-collapse:collapse;font-size:13px}
@@ -518,10 +523,32 @@ html.compact .panel .kicker{margin:22px 0 9px}
 .progress-track{flex:1;height:8px;background:var(--surface3);border-radius:5px;overflow:hidden}
 .progress-fill{height:100%;border-radius:5px;background:linear-gradient(90deg,var(--green),var(--river));transition:width .6s ease}
 .progress-row .pv{width:46px;text-align:right;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--green)}
+/* simplify mode: hide non-essential sections within kept pages */
+html.simplify .simplify-hide{display:none !important}
+/* map viewer */{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--bg);z-index:55}
+.map-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface)}
+.map-title{font-family:var(--display);font-weight:700;font-size:15px}
+.map-actions{display:flex;gap:8px}
+.map-stage{flex:1;overflow:hidden;position:relative;touch-action:none;display:flex;align-items:center;justify-content:center;background:#0a0d08;cursor:grab}
+.map-stage:active{cursor:grabbing}
+.map-stage img{max-width:100%;max-height:100%;transform-origin:center center;transition:transform .05s linear;user-select:none;-webkit-user-drag:none;will-change:transform}
+.map-hint{padding:9px 16px;text-align:center;font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;color:var(--faint);background:var(--surface);border-top:1px solid var(--border)}
+#map-modal{padding:0}
+#map-modal .map-shell{display:none}
+#map-modal.open .map-shell{display:flex}
+/* mobile: compact sign-in modal — "Google" instead of full label, tighter */
+@media(max-width:560px){
+  #signin-modal .modal{max-width:300px;padding:16px}
+  #signin-google-label-full{display:none}
+  #signin-google-label-short{display:inline}
+}
+@media(min-width:561px){
+  #signin-google-label-short{display:none}
+}
 /* PRINT / PDF EXPORT */
 @media print{
   body{background:#fff;color:#1a221a;font-size:11pt}
-  .topo,.glow,nav,.help-banner,.iconbtn,.auth-row,.btn,.toolbar,.modal-bg,.toast,input,select,.gear-x,.x,.hb-x,#aurora-blobs,#fireflies{display:none !important}
+  .topo,.glow,nav,.help-banner,.iconbtn,.auth-row,.btn,.toolbar,.modal-bg,.toast,input,select,.gear-x,.x,.hb-x,#aurora-blobs,#fireflies,.map-shell{display:none !important}
   .panel{display:block !important;page-break-before:always}
   .panel:first-of-type{page-break-before:avoid}
   .card,.icard,.site,.meal,.gear-item,.exp-row,.stop-row,.transfer,details.faq{background:#fff;border-color:#ccc;color:#1a221a;break-inside:avoid}
@@ -577,7 +604,7 @@ html.compact .panel .kicker{margin:22px 0 9px}
   <div class="hb-ico">👋</div>
   <div class="hb-body">
     <h4>First time here? 30-second tour</h4>
-    <p>Add your name in <b>Basecamp → The crew</b>, then claim your gear, vote on a campsite, and log what you spend. Everything syncs live for the whole crew when connected. Tap for the full guide →</p>
+    <p>Add the crew in <b>Basecamp</b>, then pick <b>who you are</b> to get your own packing list. Vote on a campsite, claim &amp; pack your gear, and sign in to sync live with everyone. Tap for the full guide →</p>
     <div class="toolbar" style="margin-top:8px"><button class="btn sm" onclick="openHelp()">Open the guide</button><button class="btn sm ghost" onclick="dismissBanner()">Got it, hide this</button></div>
   </div>
   <span class="hb-x" onclick="dismissBanner()">✕</span>
@@ -608,6 +635,11 @@ html.compact .panel .kicker{margin:22px 0 9px}
         <div class="stat"><div class="v">$90<small>–175</small></div><div class="k">est. / person</div></div>
       </div>
       <div class="kicker">◆ Trip readiness</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <span style="font-size:12px;color:var(--muted)">I'm:</span>
+        <select id="whoami-select" onchange="setWhoAmI(this.value)" style="font-size:13px"></select>
+        <span style="font-size:11px;color:var(--faint);font-family:var(--mono)">→ shows your packing progress</span>
+      </div>
       <div class="progress-wrap" id="progress-wrap"></div>
       <div class="toolbar" style="margin-top:10px"><button class="btn ghost sm" onclick="shareSite()">🔗 Share this site with the crew</button></div>
     </div>
@@ -623,14 +655,7 @@ html.compact .panel .kicker{margin:22px 0 9px}
   </div>
 
   <div class="kicker">◆ Quick links</div>
-  <div class="grid g2">
-    <a class="quicklink" href="http://www.campingdelaplage-qc.ca/plan-eng.html" target="_blank" rel="noopener"><div class="ico">🏞️</div><div><div class="qt">Camping de la Plage</div><div class="qd">campingdelaplage-qc.ca · 819-275-7757</div></div><div class="arr">↗</div></a>
-    <a class="quicklink" href="https://reservations.parks.on.ca/" target="_blank" rel="noopener"><div class="ico">🛶</div><div><div class="qt">Ivy Lea — Book now</div><div class="qd">reservations.parks.on.ca · 613-659-3057</div></div><div class="arr">↗</div></a>
-    <a class="quicklink" href="https://sopfeu.qc.ca/" target="_blank" rel="noopener"><div class="ico">🔥</div><div><div class="qt">QC fire ban status (SOPFEU)</div><div class="qd">sopfeu.qc.ca · check before you leave</div></div><div class="arr">↗</div></a>
-    <a class="quicklink" href="https://www.ontario.ca/page/forest-fires" target="_blank" rel="noopener"><div class="ico">🔥</div><div><div class="qt">ON fire ban status</div><div class="qd">ontario.ca/page/forest-fires</div></div><div class="arr">↗</div></a>
-    <a class="quicklink" href="https://www.theweathernetwork.com/en/city/ca/quebec/riviere-rouge/14-days" target="_blank" rel="noopener"><div class="ico">⛅</div><div><div class="qt">14-day weather forecast</div><div class="qd">theweathernetwork.com · Rivière-Rouge / use site card for Ivy Lea</div></div><div class="arr">↗</div></a>
-    <a class="quicklink" href="https://www.stlawrenceparks.com/fees/" target="_blank" rel="noopener"><div class="ico">💵</div><div><div class="qt">Ivy Lea fees &amp; rules</div><div class="qd">stlawrenceparks.com/fees</div></div><div class="arr">↗</div></a>
-  </div>
+  <div class="grid g2" id="quicklinks"></div>
   <div class="note">⚠️ Book ASAP — June 19 is the Friday right before Saint-Jean-Baptiste (Jun 24). Both campgrounds fill up fast around this long weekend.</div>
 
   <div class="kicker">◆ Data, sync &amp; export</div>
@@ -689,8 +714,20 @@ html.compact .panel .kicker{margin:22px 0 9px}
 
 <!-- GEAR -->
 <section class="panel" id="gear">
-  <div class="sec-title">Gear — claim, add, archive</div>
-  <div class="sec-desc">Assign one or more people per item (or <b>All</b> = everyone brings their own). Add custom gear below; removing an item sends it to the archive, where it can be restored anytime.</div>
+  <div class="sec-title">Gear — claim, pack, archive</div>
+  <div class="sec-desc">Assign one or more people per item (or <b>All</b> = everyone brings their own). Pick who you are to get your own packing checklist, then tick things off as you pack. Add custom gear for the team below, or personal items to your own list.</div>
+
+  <div class="kicker" style="margin-top:6px">◆ My packing list</div>
+  <div class="card" style="margin-bottom:14px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <span style="font-size:12px;color:var(--muted)">I'm:</span>
+      <select id="whoami-select-gear" onchange="setWhoAmI(this.value)" style="font-size:13px"></select>
+    </div>
+    <div id="my-packing"></div>
+  </div>
+
+  <div class="kicker">◆ Team gear — who's bringing what</div>
+  <div class="card" style="margin-bottom:14px" id="pack-summary"></div>
   <div class="card" style="margin-bottom:18px">
     <div class="add-row">
       <input id="gear-name-in" placeholder="New gear item (e.g. Axe)">
@@ -713,8 +750,8 @@ html.compact .panel .kicker{margin:22px 0 9px}
   <div class="card" style="padding:4px 0;overflow-x:auto"><table class="ftable" id="ftable"><thead><tr><th>Food</th><th>Store</th><th>Cook</th><th>Why it works + pro tip</th></tr></thead><tbody></tbody></table></div>
   <div class="kicker">◆ The 9-meal plan</div>
   <div class="grid g3" id="meal-grid"></div>
-  <div class="kicker">◆ Expert prep, packing &amp; storage</div>
-  <div class="grid g2" id="prep-grid"></div>
+  <div class="kicker simplify-hide">◆ Expert prep, packing &amp; storage</div>
+  <div class="grid g2 simplify-hide" id="prep-grid"></div>
 </section>
 
 <!-- SHOPPING -->
@@ -768,8 +805,8 @@ html.compact .panel .kicker{margin:22px 0 9px}
   <div class="role-grid" id="role-grid"></div>
   <div class="kicker">◆ Situations &amp; fixes — when things go sideways</div>
   <div class="grid g2" id="situations-grid"></div>
-  <div class="kicker">◆ Field tips &amp; good-to-knows</div>
-  <div class="card" id="tips-card"></div>
+  <div class="kicker simplify-hide">◆ Field tips &amp; good-to-knows</div>
+  <div class="card simplify-hide" id="tips-card"></div>
   <div class="kicker">◆ FAQ</div>
   <div id="faq-list"></div>
   <div class="kicker">◆ Emergency &amp; key info</div>
@@ -789,13 +826,13 @@ html.compact .panel .kicker{margin:22px 0 9px}
     <h3>How to use Camping 2026</h3>
     <p style="font-size:13px;color:var(--muted);margin-bottom:14px">One shared trip, every device, live. Here's the 60-second version:</p>
     <div class="help-step"><div class="hn">1</div><p><b>Add the crew</b> — Basecamp tab → type each person's name. Names power everything else.</p></div>
-    <div class="help-step"><div class="hn">2</div><p><b>Pick the campsite</b> — Campsites tab → vote with your name, then hit <b>Choose this site</b> on the winner. That unlocks maps &amp; weather for it.</p></div>
-    <div class="help-step"><div class="hn">3</div><p><b>Claim your gear</b> — Gear tab → assign one or more people per item (or "All"). Add or remove items; removed gear goes to a restorable archive.</p></div>
-    <div class="help-step"><div class="hn">4</div><p><b>Plan the drive</b> — Itinerary tab → add stops (gas, grocery), then open the whole route in Google Maps. One tap reverses it for the drive home.</p></div>
-    <div class="help-step"><div class="hn">5</div><p><b>Shop smart</b> — Shopping tab → food + gear checklists in 3 phases, with our best-store pick per gear item (Amazon / Canadian Tire / Decathlon).</p></div>
-    <div class="help-step"><div class="hn">6</div><p><b>Track the money</b> — Costs tab → log expenses; the app computes who pays who to settle up.</p></div>
-    <div class="help-step"><div class="hn">7</div><p><b>Sign in (optional)</b> — top right. Google sign-in identifies who's editing once Supabase is connected. The dot shows sync status: <span style="color:var(--green)">green = live</span>, <span style="color:var(--amber)">amber = this device only</span>.</p></div>
-    <div class="help-step"><div class="hn">8</div><p><b>Take it offline</b> — add it to your phone's home screen (Share → Add to Home Screen). The site keeps working without signal; it re-syncs when you're back online. You can also export the whole site as a PDF from Basecamp.</p></div>
+    <div class="help-step"><div class="hn">2</div><p><b>Say who you are</b> — Basecamp tab → pick yourself in the <b>"I'm:"</b> dropdown. This gives you a personal packing list and your own progress bar.</p></div>
+    <div class="help-step"><div class="hn">3</div><p><b>Pick the campsite</b> — Campsites tab → vote with your name, then hit <b>Choose this site</b>. That switches the quick links, weather &amp; route to that site, and shows its <b>site map</b> (zoom, pan, save).</p></div>
+    <div class="help-step"><div class="hn">4</div><p><b>Claim &amp; pack your gear</b> — Gear tab → assign people per item (or "All"). Your <b>My packing list</b> shows everything you need; tick items off as you pack, and add your own personal items.</p></div>
+    <div class="help-step"><div class="hn">5</div><p><b>Plan the drive</b> — Itinerary tab → add stops, open the route in Google Maps, one tap reverses it for home.</p></div>
+    <div class="help-step"><div class="hn">6</div><p><b>Shop &amp; split costs</b> — Shopping tab for the 3-phase lists with store picks; Costs tab logs expenses and computes who pays who.</p></div>
+    <div class="help-step"><div class="hn">7</div><p><b>Sign in to go live</b> — top right. Signing in syncs the trip with the whole crew in real time and unlocks all themes. Signed out, you're in local (this-device) mode on the Classic theme.</p></div>
+    <div class="help-step"><div class="hn">8</div><p><b>Make it yours</b> — ⚙ Settings → switch themes, and turn on <b>Simplify</b> to hide extra tabs for a cleaner phone view. Add the site to your home screen (Share → Add to Home Screen) for an app icon + offline use.</p></div>
   </div>
 </div>
 
@@ -893,6 +930,10 @@ html.compact .panel .kicker{margin:22px 0 9px}
       <div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div>
       <div class="ct">Compact mode — tighter spacing, more on screen</div>
     </div>
+    <div class="chk" id="simplify-toggle" onclick="toggleSimplify()" style="border-bottom:none">
+      <div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div>
+      <div class="ct">Simplify — hide extra tabs &amp; sections (keeps Basecamp, Campsites, Gear, Food, Survival). Great on mobile.</div>
+    </div>
     <div class="kicker" style="margin:18px 0 4px">◆ Help</div>
     <div class="toolbar" style="margin-top:8px">
       <button class="btn sm ghost" onclick="closeSettings();openHelp()">Open the how-to guide</button>
@@ -902,6 +943,23 @@ html.compact .panel .kicker{margin:22px 0 9px}
 </div>
 
 <!-- SESSION TRANSFER MODAL -->
+<!-- MAP VIEWER MODAL -->
+<div class="modal-bg" id="map-modal" onclick="if(event.target===this)closeSiteMap()">
+  <div class="map-shell">
+    <div class="map-bar">
+      <span id="map-title" class="map-title">Site map</span>
+      <div class="map-actions">
+        <button class="btn sm ghost" onclick="saveMap()">⬇ Save</button>
+        <button class="btn sm ghost" onclick="closeSiteMap()">✕ Close</button>
+      </div>
+    </div>
+    <div class="map-stage" id="map-stage">
+      <img id="map-img" src="" alt="" draggable="false">
+    </div>
+    <div class="map-hint">Pinch or scroll to zoom · drag to pan · double-tap to reset</div>
+  </div>
+</div>
+
 <!-- SIGN-IN MODAL -->
 <div class="modal-bg" id="signin-modal" onclick="if(event.target===this)closeSignin()">
   <div class="modal" style="max-width:330px;padding:18px">
@@ -909,7 +967,7 @@ html.compact .panel .kicker{margin:22px 0 9px}
     <h3 style="margin-bottom:2px;font-size:18px">Sign in to go live</h3>
     <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Syncs the trip &amp; unlocks all themes.</p>
 
-    <button class="btn" style="width:100%" onclick="signIn()">Continue with Google</button>
+    <button class="btn" style="width:100%" onclick="signIn()"><span id="signin-google-label-full">Continue with Google</span><span id="signin-google-label-short">Google</span></button>
 
     <div style="display:flex;align-items:center;gap:8px;margin:10px 0;color:var(--faint);font-size:10px;font-family:var(--mono)">
       <span style="flex:1;height:1px;background:var(--border)"></span>OR<span style="flex:1;height:1px;background:var(--border)"></span>
@@ -928,6 +986,6 @@ html.compact .panel .kicker{margin:22px 0 9px}
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" onerror="window.__gsapFailed=1"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" onerror="window.__sbFailed=1"></script>
 <script src="config.js"></script>
-<script src="app.js?v=14"></script>
+<script src="app.js?v=16"></script>
 </body>
 </html>

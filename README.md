@@ -152,7 +152,29 @@ To share state when Supabase isn't connected: **Export crew data** → send the 
 
 ## Version history
 
-### v6 — June 12, 2026 (current)
+### v7 — June 13, 2026 (current)
+
+This release added per-person packing, dynamic site-aware links, the in-app campsite maps, and a Simplify mode.
+
+**Personal packing lists**
+- **"Who am I" selector** on Basecamp and the Gear tab (saved per device). Pick yourself to get a personal packing list and your own progress bar in the Basecamp readiness meters.
+- **My packing list** shows everything assigned to you, everything marked "All crew" (each person packs their own copy), and your own custom personal items. Tick items off as you pack.
+- **Add/remove personal items** to your own list (e.g. retainer, charger, book) without touching the shared team gear.
+- **Per-person packing for "All crew" gear** — each crew member checks off their own copy; the team gear row shows a per-person packed count.
+
+**Campsite enhancements**
+- **Dynamic quick links** — the Basecamp quick links follow the chosen campsite: booking, info/rates, directions, that town's weather, and the correct provincial fire-ban page all switch with your pick. (Both options show until a site is chosen.)
+- **In-app site maps** — each campsite card has a 🗺 Site map button opening a full-screen viewer with the high-resolution map. Pinch/scroll to zoom, drag to pan, double-tap to reset, and Save to your device (uses the iOS share sheet, with a download fallback). Maps are cached for offline use.
+- Updated the Ivy Lea links to the current campground page.
+
+**Simplify mode**
+- New **Simplify** setting de-clutters the site (especially on mobile) by hiding the secondary tabs (Itinerary, Shopping, Costs, Activities) and trimming secondary sections, keeping the essentials: Basecamp, Campsites, Gear, Food, Survival. Saved per device.
+
+**Polish**
+- Help guide and welcome banner updated to cover the packing list, "who am I", sign-in, and Simplify.
+- Mobile sign-in button shortened to "Google" with the email link on one compact row.
+
+### v6 — June 12, 2026
 
 This release focused on sign-in and the iOS home-screen (PWA) experience, plus a round of polish.
 
