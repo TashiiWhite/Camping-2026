@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Camping 2026 · The Crew's Field Plan</title>
+<title>WildWeekend · The Crew's Field Plan</title>
 <meta name="description" content="A 3-day car camping field plan: campsites, gear, meals, route, costs & contingencies.">
 <meta name="theme-color" content="#0e120d">
 <link rel="manifest" href="manifest.webmanifest">
@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Camping 2026">
+<meta name="apple-mobile-web-app-title" content="WildWeekend">
 <script>
 /* theme pre-boot: per-device preference, applied before first paint */
 (function(){try{var t=localStorage.getItem('ww_theme')||'aurora';document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme='aurora';}})();
@@ -310,8 +310,22 @@ html[data-theme="aurora"] #aurora-blobs{display:block}
 @keyframes drift2{to{transform:translate(9vw,-7vw) scale(1.08)}}
 @keyframes drift3{to{transform:translate(-10vw,-6vw) scale(.92)}}
 #fireflies{position:fixed;inset:0;z-index:1;pointer-events:none;display:none}
-html:is([data-theme="aurora"],[data-theme="ember"],[data-theme="glacier"],[data-theme="topo"]) #fireflies{display:block}
-html:is([data-theme="aurora"],[data-theme="ember"],[data-theme="glacier"]) :is(.card,.icard,.site,.meal,.gear-item,.exp-row,.stop-row,.transfer,.role,.quicklink,.countdown,.settle,details.faq,.help-banner,.modal){
+html[data-theme="aurora"] #fireflies{display:block}
+html[data-theme="aurora"] .card,
+html[data-theme="aurora"] .icard,
+html[data-theme="aurora"] .site,
+html[data-theme="aurora"] .meal,
+html[data-theme="aurora"] .gear-item,
+html[data-theme="aurora"] .exp-row,
+html[data-theme="aurora"] .stop-row,
+html[data-theme="aurora"] .transfer,
+html[data-theme="aurora"] .role,
+html[data-theme="aurora"] .quicklink,
+html[data-theme="aurora"] .countdown,
+html[data-theme="aurora"] .settle,
+html[data-theme="aurora"] details.faq,
+html[data-theme="aurora"] .help-banner,
+html[data-theme="aurora"] .modal{
   background:linear-gradient(160deg,rgba(255,255,255,.055),rgba(255,255,255,.02));
   backdrop-filter:blur(14px) saturate(1.3);-webkit-backdrop-filter:blur(14px) saturate(1.3);
   border-color:rgba(255,255,255,.1);
@@ -345,73 +359,8 @@ html[data-theme="aurora"] .sync-live .dot{box-shadow:0 0 12px #7ee2a8}
   #aurora-blobs .blob{animation:none}
   html[data-theme="aurora"] .brand h1{animation:none}
 }
-/* ============ EMBER — camping campfire theme ============ */
-html[data-theme="ember"]{
-  --bg:#150d07;--surface:rgba(255,225,190,.04);--surface2:rgba(255,225,190,.07);--surface3:rgba(255,225,190,.11);
-  --border:rgba(255,190,140,.13);--border-strong:rgba(255,190,140,.26);
-  --text:#f9f0e6;--muted:#c2a98f;--faint:#826c56;--green:#ff9d5c;--green-d:#f08443;--amber:#ffd27d;
-  --river:#ffb38a;--coral:#ff7d5c;--danger:#ff6b5c;--purple:#e8a87c;
-  --grad-a:#ffb347;--grad-b:#ff6b4a;--grad-text:#1d0e05;
-}
-html[data-theme="ember"] body{background:
-  radial-gradient(1100px 750px at 82% -8%,rgba(255,120,40,.17),transparent 60%),
-  radial-gradient(950px 700px at -6% 108%,rgba(190,60,20,.2),transparent 60%),#150d07}
-html[data-theme="ember"] .topo{opacity:.12}
-html[data-theme="ember"] .glow{display:none}
-html[data-theme="ember"] .brand h1{background:linear-gradient(95deg,#f9f0e6 5%,#ffb347 45%,#ff6b4a 85%);
-  -webkit-background-clip:text;background-clip:text;color:transparent}
-html[data-theme="ember"] .brand h1 em{color:transparent}
-html[data-theme="ember"] .countdown .num{text-shadow:0 0 26px rgba(255,140,60,.5)}
-
-/* ============ GLACIER — icy snowfall theme ============ */
-html[data-theme="glacier"]{
-  --bg:#061321;--surface:rgba(200,235,255,.045);--surface2:rgba(200,235,255,.075);--surface3:rgba(200,235,255,.11);
-  --border:rgba(160,215,255,.14);--border-strong:rgba(160,215,255,.28);
-  --text:#eef7fd;--muted:#93b3c9;--faint:#5b7891;--green:#7dd3fc;--green-d:#5cbef0;--amber:#bfe8ff;
-  --river:#67e8f9;--coral:#a5b4fc;--danger:#fda4af;--purple:#c4b5fd;
-  --grad-a:#7dd3fc;--grad-b:#3b82d6;--grad-text:#041220;
-}
-html[data-theme="glacier"] body{background:
-  radial-gradient(1100px 750px at 80% -10%,rgba(80,170,255,.16),transparent 60%),
-  radial-gradient(950px 700px at -8% 110%,rgba(40,110,200,.16),transparent 60%),#061321}
-html[data-theme="glacier"] .topo{opacity:.14}
-html[data-theme="glacier"] .glow{display:none}
-html[data-theme="glacier"] .brand h1{background:linear-gradient(95deg,#ffffff 5%,#bfe8ff 40%,#67b6f9 85%);
-  -webkit-background-clip:text;background-clip:text;color:transparent}
-html[data-theme="glacier"] .brand h1 em{color:transparent}
-html[data-theme="glacier"] .countdown .num{color:#bfe8ff;text-shadow:0 0 26px rgba(125,211,252,.5)}
-
-/* ============ TOPO — tactical wireframe expedition theme ============ */
-html[data-theme="topo"]{
-  --bg:#060a06;--surface:#0a120b;--surface2:#0e180f;--surface3:#132013;
-  --border:rgba(88,255,155,.16);--border-strong:rgba(88,255,155,.34);
-  --text:#dcf7e6;--muted:#84ad92;--faint:#527b60;--green:#58ff9b;--green-d:#3fe785;--amber:#d8ff58;
-  --river:#58ffe0;--coral:#ffa658;--danger:#ff7058;--purple:#a8ff58;
-  --grad-a:#58ff9b;--grad-b:#2fd87a;--grad-text:#04150a;
-}
-html[data-theme="topo"] body{background:#060a06}
-html[data-theme="topo"] .topo{opacity:.1}
-html[data-theme="topo"] .glow{display:none}
-html[data-theme="topo"] .brand h1{color:#58ff9b;text-shadow:0 0 32px rgba(88,255,155,.35);letter-spacing:.01em}
-html[data-theme="topo"] .brand h1 em{color:#dcf7e6}
-html[data-theme="topo"] .countdown .num{color:#58ff9b;text-shadow:0 0 22px rgba(88,255,155,.45)}
-html[data-theme="topo"] :is(.card,.icard,.site,.meal,.gear-item,.role,.quicklink,.countdown,.settle,.modal,.help-banner){border-radius:6px}
-html[data-theme="topo"] .kicker{color:#58ff9b}
-html[data-theme="topo"] .sec-title{font-family:var(--mono);letter-spacing:-.02em;font-size:22px}
-
-/* shared accent gradients for the new themes */
-html:is([data-theme="ember"],[data-theme="glacier"],[data-theme="topo"]) .tab.active{
-  background:linear-gradient(95deg,var(--grad-a),var(--grad-b));border-color:transparent;color:var(--grad-text);font-weight:700}
-html:is([data-theme="ember"],[data-theme="glacier"],[data-theme="topo"]) .btn{
-  background:linear-gradient(95deg,var(--grad-a),var(--grad-b));color:var(--grad-text)}
-html:is([data-theme="ember"],[data-theme="glacier"],[data-theme="topo"]) .btn.ghost{
-  background:transparent;border:1px solid var(--border-strong);color:var(--text)}
-html:is([data-theme="ember"],[data-theme="glacier"],[data-theme="topo"]) .btn.amber{
-  background:linear-gradient(95deg,var(--amber),var(--grad-a));color:var(--grad-text)}
-html:is([data-theme="ember"],[data-theme="glacier"],[data-theme="topo"]) .help-step .hn{
-  background:linear-gradient(135deg,var(--grad-a),var(--grad-b));color:var(--grad-text)}
 /* settings modal */
-.theme-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:12px}
+.theme-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
 .theme-card{border:2px solid var(--border);border-radius:var(--radius-sm);padding:14px;cursor:pointer;transition:all .18s;background:var(--surface2)}
 .theme-card:hover{border-color:var(--border-strong)}
 .theme-card.on{border-color:var(--green)}
@@ -420,9 +369,6 @@ html:is([data-theme="ember"],[data-theme="glacier"],[data-theme="topo"]) .help-s
 .theme-card .tc-desc{font-size:11.5px;color:var(--muted);margin-top:2px}
 .tc-aurora{background:radial-gradient(60px 40px at 80% 10%,rgba(126,226,168,.7),transparent),radial-gradient(70px 50px at 15% 90%,rgba(150,100,230,.6),transparent),#07090f}
 .tc-classic{background:linear-gradient(135deg,#161d14,#0e120d);position:relative}
-.tc-ember{background:radial-gradient(70px 50px at 75% 85%,rgba(255,120,40,.85),transparent),radial-gradient(50px 40px at 30% 20%,rgba(255,200,87,.5),transparent),#150d07}
-.tc-glacier{background:radial-gradient(60px 45px at 25% 15%,rgba(190,232,255,.8),transparent),radial-gradient(70px 50px at 80% 90%,rgba(59,130,214,.6),transparent),#061321}
-.tc-topo{background:repeating-linear-gradient(0deg,transparent,transparent 7px,rgba(88,255,155,.25) 8px),repeating-linear-gradient(90deg,transparent,transparent 7px,rgba(88,255,155,.18) 8px),#060a06}
 .tc-classic::after{content:'▲';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#9bce6f;font-size:22px}
 .progress-wrap{margin-top:6px}
 .progress-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:12px}
@@ -469,7 +415,7 @@ html:is([data-theme="ember"],[data-theme="glacier"],[data-theme="topo"]) .help-s
 <header>
   <div class="brand">
     <div class="eyebrow">◆ Basecamp · the crew's field plan</div>
-    <h1>Camping <em>2026</em></h1>
+    <h1>Wild<em>Weekend</em></h1>
     <div class="sub">Fri Jun 19 → Sun Jun 21, 2026 · 4–5 guys · 2 cars · car camping</div>
   </div>
   <div class="head-right">
@@ -539,7 +485,7 @@ html:is([data-theme="ember"],[data-theme="glacier"],[data-theme="topo"]) .help-s
     <a class="quicklink" href="https://reservations.parks.on.ca/" target="_blank" rel="noopener"><div class="ico">🛶</div><div><div class="qt">Ivy Lea — Book now</div><div class="qd">reservations.parks.on.ca · 613-659-3057</div></div><div class="arr">↗</div></a>
     <a class="quicklink" href="https://sopfeu.qc.ca/" target="_blank" rel="noopener"><div class="ico">🔥</div><div><div class="qt">QC fire ban status (SOPFEU)</div><div class="qd">sopfeu.qc.ca · check before you leave</div></div><div class="arr">↗</div></a>
     <a class="quicklink" href="https://www.ontario.ca/page/forest-fires" target="_blank" rel="noopener"><div class="ico">🔥</div><div><div class="qt">ON fire ban status</div><div class="qd">ontario.ca/page/forest-fires</div></div><div class="arr">↗</div></a>
-    <a class="quicklink" href="https://www.theweathernetwork.com/en/city/ca/quebec/riviere-rouge/14-days" target="_blank" rel="noopener"><div class="ico">⛅</div><div><div class="qt">14-day weather forecast</div><div class="qd">theweathernetwork.com · Rivière-Rouge / use site card for Ivy Lea</div></div><div class="arr">↗</div></a>
+    <a class="quicklink" href="https://weather.gc.ca/" target="_blank" rel="noopener"><div class="ico">⛅</div><div><div class="qt">Environment Canada weather</div><div class="qd">weather.gc.ca · search the campsite town</div></div><div class="arr">↗</div></a>
     <a class="quicklink" href="https://www.stlawrenceparks.com/fees/" target="_blank" rel="noopener"><div class="ico">💵</div><div><div class="qt">Ivy Lea fees &amp; rules</div><div class="qd">stlawrenceparks.com/fees</div></div><div class="arr">↗</div></a>
   </div>
   <div class="note">⚠️ Book ASAP — June 19 is the Friday right before Saint-Jean-Baptiste (Jun 24). Both campgrounds fill up fast around this long weekend.</div>
@@ -690,14 +636,14 @@ html:is([data-theme="ember"],[data-theme="glacier"],[data-theme="topo"]) .help-s
   </div>
 </section>
 
-<footer>◆ Camping 2026 · built for the crew · live-synced · works offline ◆</footer>
+<footer>◆ WildWeekend · built for the crew · live-synced · works offline ◆</footer>
 </div>
 
 <!-- HELP MODAL -->
 <div class="modal-bg" id="help-modal" onclick="if(event.target===this)closeHelp()">
   <div class="modal">
     <span class="close-x" onclick="closeHelp()">✕</span>
-    <h3>How to use Camping 2026</h3>
+    <h3>How to use WildWeekend</h3>
     <p style="font-size:13px;color:var(--muted);margin-bottom:14px">One shared trip, every device, live. Here's the 60-second version:</p>
     <div class="help-step"><div class="hn">1</div><p><b>Add the crew</b> — Basecamp tab → type each person's name. Names power everything else.</p></div>
     <div class="help-step"><div class="hn">2</div><p><b>Pick the campsite</b> — Campsites tab → vote with your name, then hit <b>Choose this site</b> on the winner. That unlocks maps &amp; weather for it.</p></div>
@@ -733,21 +679,6 @@ html:is([data-theme="ember"],[data-theme="glacier"],[data-theme="topo"]) .help-s
         <div class="tc-name">Aurora <span style="font-size:10px;color:var(--green);font-family:var(--mono)">DEFAULT</span></div>
         <div class="tc-desc">Glass cards, gradient glow, fireflies. The captivating one.</div>
       </div>
-      <div class="theme-card" id="tc-ember" onclick="setTheme('ember')">
-        <div class="tc-swatch tc-ember"></div>
-        <div class="tc-name">Ember 🔥</div>
-        <div class="tc-desc">Camping mode — warm firelight, embers rising off the screen.</div>
-      </div>
-      <div class="theme-card" id="tc-glacier" onclick="setTheme('glacier')">
-        <div class="tc-swatch tc-glacier"></div>
-        <div class="tc-name">Glacier</div>
-        <div class="tc-desc">Icy blues with slow-falling snow. Cool and calm.</div>
-      </div>
-      <div class="theme-card" id="tc-topo" onclick="setTheme('topo')">
-        <div class="tc-swatch tc-topo"></div>
-        <div class="tc-name">Topo</div>
-        <div class="tc-desc">Tactical expedition — a living wireframe terrain.</div>
-      </div>
       <div class="theme-card" id="tc-classic" onclick="setTheme('classic')">
         <div class="tc-swatch tc-classic"></div>
         <div class="tc-name">Classic</div>
@@ -772,6 +703,6 @@ html:is([data-theme="ember"],[data-theme="glacier"],[data-theme="topo"]) .help-s
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
-<script src="app.js?v=4"></script>
+<script src="app.js"></script>
 </body>
 </html>

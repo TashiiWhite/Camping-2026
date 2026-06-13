@@ -1,47 +1,25 @@
-/* Camping 2026 service worker — NETWORK-FIRST for app files.
-   New deploys always show immediately; cache is only the offline fallback. */
-const CACHE = 'camping2026-v4';
-const CORE = ['./','./index.html','./app.js','./config.js','./manifest.webmanifest',
+/* WildWeekend service worker — offline-first app shell */
+const CACHE = 'wildweekend-v1';
+const ASSETS = ['./','./index.html','./app.js','./config.js','./manifest.webmanifest',
   './icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png','./icons/favicon.png'];
-
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(()=>self.skipWaiting()));
 });
-
 self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
-      .then(() => self.clients.claim())
-  );
+  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
 });
-
 self.addEventListener('fetch', e => {
-  const req = e.request;
-  if (req.method !== 'GET') return;
-  const url = new URL(req.url);
-  if (url.hostname.endsWith('supabase.co')) return; // never touch API calls
-
-  if (url.origin === location.origin) {
-    // SAME-ORIGIN (our app files): network-first, cache fallback for offline
-    e.respondWith(
-      fetch(req).then(res => {
-        if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
-        return res;
-      }).catch(() =>
-        caches.match(req, { ignoreSearch: true })
-          .then(hit => hit || caches.match('./index.html'))
-      )
-    );
-  } else {
-    // CDN (fonts, gsap, three, supabase-js lib): cache-first is fine, they're versioned URLs
-    e.respondWith(
-      caches.match(req).then(hit => hit || fetch(req).then(res => {
-        if (res.ok && (url.hostname.includes('fonts') || url.hostname.includes('jsdelivr'))) {
-          const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy));
-        }
-        return res;
-      }))
-    );
-  }
+  const url = new URL(e.request.url);
+  if (e.request.method !== 'GET') return;
+  // never cache supabase API calls
+  if (url.hostname.endsWith('supabase.co')) return;
+  e.respondWith(
+    caches.match(e.request).then(hit => hit || fetch(e.request).then(res => {
+      if (res.ok && (url.origin === location.origin || url.hostname.includes('fonts') || url.hostname.includes('jsdelivr'))) {
+        const copy = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, copy));
+      }
+      return res;
+    }).catch(() => caches.match('./index.html')))
+  );
 });
