@@ -73,7 +73,7 @@ async function initSupabase(){
   const url=CFG.SUPABASE_URL||'', key=CFG.SUPABASE_ANON_KEY||'';
   if(!url||url.includes('YOUR_')||!key||key.includes('YOUR_')){ setSync('local','Local'); renderAuth(); return; }
   try{
-    sb = supabase.createClient(url,key);
+    sb = supabase.createClient(url,key,{auth:{flowType:'pkce',detectSessionInUrl:true,persistSession:true,autoRefreshToken:true}});
     sb.auth.onAuthStateChange((_e,session)=>{ user=session?.user||null; applyAccess(); });
     const {data:{session}}=await sb.auth.getSession(); user=session?.user||null;
     await applyAccess();
@@ -144,10 +144,24 @@ function renderAuth(){
     area.innerHTML=`<button class="btn ghost sm" onclick="signIn()">Sign in with Google</button>`;
   }
 }
+function isStandalonePWA(){
+  return (window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone===true;
+}
 async function signIn(){
   if(!sb){toast('Connect Supabase first (see README)');return;}
-  const {error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.href.split('#')[0]}});
-  if(error) toast('Sign-in failed: '+error.message);
+  const redirectTo=location.origin+location.pathname; // clean URL, no hash
+  // iOS PWAs: the embedded Google sheet won't accept typing. Force a full top-level
+  // navigation in the same window instead (skipBrowserRedirect + manual location change),
+  // which renders a real, typeable Google page. Session returns via detectSessionInUrl.
+  try{
+    const {data,error}=await sb.auth.signInWithOAuth({provider:'google',
+      options:{redirectTo,skipBrowserRedirect:isStandalonePWA()}});
+    if(error) throw error;
+    if(isStandalonePWA()&&data&&data.url){
+      window.location.assign(data.url);
+      return;
+    }
+  }catch(e){ toast('Sign-in failed: '+(e.message||e)); }
 }
 async function signOut(){ if(sb){await sb.auth.signOut(); user=null; await applyAccess();} }
 

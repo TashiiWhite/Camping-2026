@@ -150,6 +150,57 @@ To share state when Supabase isn't connected: **Export crew data** → send the 
 
 ---
 
+---
+
+## Version history
+
+### v6 — current
+- **Fixed: Google sign-in from the iOS home-screen app.** Standalone PWAs on iOS couldn't type into the embedded Google sheet. Sign-in now does a full top-level redirect in the PWA window (a real, typeable Google page) and returns the session automatically. Also switched Supabase auth to the PKCE flow with `detectSessionInUrl`.
+- Added this version history to the README.
+
+### v5
+- **Google sign-in now gates live access.** Signed-out visitors run in local mode (device-only data) with the **Classic theme forced**; all other themes show a 🔒 lock. Signing in unlocks live sync + every theme; signing out reverts automatically.
+- **Online presence counter** — a pill showing "N online" via Supabase Presence, visible only in live mode.
+- **Status tooltip** — hover the Live/Local/Offline pill for a plain-language explanation.
+- **7 new flagship themes** (12 total), each with a unique identity, its own Three.js desktop scene + themed 2D mobile fallback: **Nebula** (starfield + shooting stars), **Synthwave** (neon grid horizon + scanlines), **Botanic ☀** (the light theme — meadow paper + pollen), **Abyss** (ocean bubbles + light rays), **Sakura** (falling petals), **Carbon** (brutalist mono + film grain + torus knot), **Dune** (wind-blown sand + low sun).
+- **Motion on scroll** — cards reveal/lift as you scroll; Three.js cameras respond to scroll depth.
+- **New settings:** Performance mode (disables glass blur) and Compact mode (tighter spacing).
+- Service-worker cache bumped (cache-first → kept network-first); auto-reload on new deploys.
+
+### v4
+- Renamed the whole app **WildWeekend → Camping 2026** (title, wordmark, PWA name, footer, share text, manifest).
+- **Fixed: stale deploys.** Rewrote the service worker to **network-first** with a versioned cache name + a cache-busted script tag + auto-reload, so new deploys always appear (the old cache-first SW was serving outdated files).
+- README rewritten for the final feature set.
+
+### v3 (Aurora release)
+- **Default Aurora theme** — glassmorphism cards, gradient wordmark, animated aurora blobs, fireflies canvas, GSAP entrance animations.
+- **Settings panel (⚙)** with theme switching (Aurora / Ember / Glacier / Topo / Classic) + motion toggle, all saved **per device** (never synced to crew).
+- **Adaptive ambience** — Three.js particle field on desktop, lightweight 2D canvas on mobile (mobile never downloads Three.js); graceful fallback if WebGL fails.
+- 3 themed scenes added: **Ember** (camping — rising embers), **Glacier** (snowfall), **Topo** (wireframe terrain).
+- **Trip-readiness meters** (crew / site / gear / shopping %) and a **Share** button (native share sheet + clipboard fallback).
+- Particles tuned smaller and slower; soft-sprite glow replaces hard squares.
+- **Weather links fixed** — switched from a broken Environment Canada search URL to working Weather Network 14-day pages.
+- **Clothing & attire** + **Personal kit** gear categories added (16 items) with a sync-safe migration that merges into existing live data without disturbing claims/votes.
+- "Copy for group chat" button on the settle-up; Enter-key support on stop inputs.
+
+### v2 (Live sync release)
+- **Supabase live sync** — one shared trip (`camping-june-2026`), realtime across all devices via the `trips` table + Supabase Realtime.
+- **Google sign-in** (optional at this stage) via Supabase Auth.
+- **PWA** — home-screen install with app icon, offline mode via service worker, web manifest.
+- **Route planner** — add stops, open the full multi-stop route in Google Maps, reverse it for the drive home.
+- **Choose-this-site** locks the campsite and powers maps/weather/route.
+- **Gear upgrades** — add/remove items, restorable archive, multi-assign, "All crew" option.
+- **Shopping** split into Food + Gear & essentials with Amazon / Canadian Tire / Decathlon links and best-store picks, including preventative items.
+- **Upgraded costs** — categories, spend-by-category bars, minimal "who-pays-who" transfers.
+- **Activities tab**, **Situations & fixes**, and an **FAQ**.
+- Dismissible **how-to guide** banner + "?" button.
+- **Export full site as PDF.**
+
+### v1 (initial)
+- Single-file static site: Basecamp, Campsites (with voting), Itinerary, Gear (claim system), Food (matrix + 9-meal plan + prep), Shopping (3 phases), Costs (Splitwise-style splitter), Survival (roles, tips).
+- `localStorage` persistence with JSON export/import for sharing.
+- Deployable to GitHub + Netlify, zero build step.
+
 ## Files
 
 ```
