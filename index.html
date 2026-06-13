@@ -189,6 +189,12 @@ input::placeholder{color:var(--faint)}
 .chk .box svg{display:none;width:12px;height:12px;color:var(--bg)}
 .chk .ct{font-size:13.5px;flex:1}
 .chk.done .ct{color:var(--faint);text-decoration:line-through}
+/* TOGGLES (settings + admin): no strikethrough — illuminate when ON, normal when OFF */
+.chk.toggle.done .ct{color:var(--text);text-decoration:none;font-weight:700}
+.chk.toggle .ct{color:var(--text);transition:color .14s}
+.chk.toggle.done .box{background:var(--green);border-color:var(--green)}
+.chk.toggle.done .tg-state{background:var(--green);color:var(--bg)}
+.chk.toggle .tg-state{background:var(--surface3);color:var(--muted)}
 .shoplinks{display:flex;gap:5px;flex-wrap:wrap;margin-top:3px}
 .shoplink{font-family:var(--mono);font-size:9.5px;letter-spacing:.03em;padding:2px 8px;border-radius:5px;text-decoration:none;border:1px solid var(--border)}
 .sl-amz{color:#f5b95e}.sl-ct{color:#e87a6b}.sl-dec{color:#6cb6d4}
@@ -969,19 +975,19 @@ html.signed-out .panel.gated .gate-disable{opacity:.5;pointer-events:none;filter
     </div>
     <p id="theme-lock-note">🔒 Sign in with Google (top right) to unlock all themes — without sign-in you're in local mode with the Classic look.</p>
     <div class="kicker" style="margin:18px 0 4px">◆ Motion &amp; display</div>
-    <div class="chk" id="motion-toggle" onclick="toggleMotion()" style="border-bottom:none">
+    <div class="chk toggle" id="motion-toggle" onclick="toggleMotion()" style="border-bottom:none">
       <div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div>
       <div class="ct">Animations <span class="tg-state">OFF</span><div class="tg-sub">Fireflies, ambient scenes &amp; transitions</div></div>
     </div>
-    <div class="chk" id="perf-toggle" onclick="togglePerf()" style="border-bottom:none">
+    <div class="chk toggle" id="perf-toggle" onclick="togglePerf()" style="border-bottom:none">
       <div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div>
       <div class="ct">Lite mode <span class="tg-state">OFF</span><div class="tg-sub">Trims visual effects (glass blur) for smoother performance on older devices</div></div>
     </div>
-    <div class="chk" id="compact-toggle" onclick="toggleCompact()" style="border-bottom:none">
+    <div class="chk toggle" id="compact-toggle" onclick="toggleCompact()" style="border-bottom:none">
       <div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div>
       <div class="ct">Compact mode <span class="tg-state">OFF</span><div class="tg-sub">Tighter spacing, more on screen</div></div>
     </div>
-    <div class="chk" id="simplify-toggle" onclick="toggleSimplify()" style="border-bottom:none">
+    <div class="chk toggle" id="simplify-toggle" onclick="toggleSimplify()" style="border-bottom:none">
       <div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div>
       <div class="ct">Simplify <span class="tg-state">OFF</span><div class="tg-sub">Hide extra tabs &amp; sections (keeps Basecamp, Campsites, Gear, Food, Survival). Great on mobile.</div></div>
     </div>
@@ -1036,9 +1042,9 @@ html.signed-out .panel.gated .gate-disable{opacity:.5;pointer-events:none;filter
     <div id="admin-sec-banner" class="admin-sec" style="display:none">
       <div class="kicker" style="margin-top:4px">◆ Departure / announcement banner</div>
       <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Shows at the top of Basecamp for everyone. Turn on, set the text, optionally add a link.</p>
-      <div class="chk" id="adm-banner-on" onclick="adminToggleBanner()" style="border-bottom:none;margin-bottom:8px">
+      <div class="chk toggle" id="adm-banner-on" onclick="adminToggleBanner()" style="border-bottom:none;margin-bottom:8px">
         <div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div>
-        <div class="ct">Banner is visible to everyone</div>
+        <div class="ct">Banner is visible to everyone <span class="tg-state">OFF</span></div>
       </div>
       <input id="adm-banner-title" placeholder="Title (e.g. Departure day!)" style="width:100%;margin-bottom:8px">
       <textarea id="adm-banner-text" placeholder="Message — e.g. Pack rain gear, charge power banks, grab ice, bring the speaker & camera. Leaving DDO at 8 AM sharp." style="width:100%;min-height:80px;margin-bottom:8px;font-family:var(--body);resize:vertical"></textarea>
@@ -1055,9 +1061,9 @@ html.signed-out .panel.gated .gate-disable{opacity:.5;pointer-events:none;filter
       <div class="kicker" style="margin-top:4px">◆ Crew / user management</div>
       <div id="admin-users"></div>
       <div class="kicker" style="margin:16px 0 8px">◆ New sign-ups</div>
-      <div class="chk" id="adm-signup-on" onclick="adminToggleSignups()" style="border-bottom:none">
+      <div class="chk toggle" id="adm-signup-on" onclick="adminToggleSignups()" style="border-bottom:none">
         <div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div>
-        <div class="ct">Allow new people to sign up</div>
+        <div class="ct">Allow new people to sign up <span class="tg-state">OFF</span></div>
       </div>
       <button class="btn ghost sm" style="margin-top:8px" onclick="saveAdminConfig()">Save sign-up setting</button>
       <p style="font-size:11px;color:var(--faint);margin-top:8px">For a hard lock, also toggle it in Supabase → Authentication → Sign In / Providers → “Allow new users to sign up”.</p>
@@ -1109,6 +1115,6 @@ html.signed-out .panel.gated .gate-disable{opacity:.5;pointer-events:none;filter
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" onerror="window.__gsapFailed=1"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" onerror="window.__sbFailed=1"></script>
 <script src="config.js"></script>
-<script src="app.js?v=18"></script>
+<script src="app.js?v=19"></script>
 </body>
 </html>

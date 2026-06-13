@@ -19,7 +19,7 @@ let lastRev = 0;
 
 let state = defaultState();
 function defaultState(){
-  return { rev:0, by:'', crew:[], gear:null, gearArchive:[], gearClaims:{}, gearPacked:{}, personalItems:{},
+  return { rev:0, by:'', crew:[], crewMeta:{}, gear:null, gearArchive:[], gearClaims:{}, gearPacked:{}, personalItems:{},
     expenses:[], votes:{}, roles:{}, checks:{}, stops:[], chosenSite:'' };
 }
 
@@ -122,8 +122,8 @@ function accessLevel(){
   if(isLeader()) return 'leader';
   return 'user';
 }
-// Anyone signed in can edit/interact. Signed-out = read-only/locked.
-function canEdit(){ return isSignedIn(); }
+// Anyone signed in (and not blocked) can edit/interact. Signed-out = read-only/locked.
+function canEdit(){ return isSignedIn() && !isBlocked(); }
 // Only admin or leader can reset the shared trip data.
 function canReset(){ return isOwner()||isLeader(); }
 function currentTabName(){
@@ -136,6 +136,17 @@ function applyGateClasses(){
   h.classList.toggle('signed-out', !isSignedIn());
   h.classList.toggle('signed-in', isSignedIn());
   h.dataset.access=accessLevel();
+}
+function myEmail(){ return (user&&user.email||'').toLowerCase(); }
+function blockedEmails(){ return (adminConfig.blocked||[]).map(e=>(e||'').toLowerCase()); }
+function isBlocked(){ return !!(user && blockedEmails().includes(myEmail())); }
+// How many crew members does the current user "own" (added under their email)?
+function crewOwnedBy(email){ email=(email||'').toLowerCase(); return state.crew.filter(c=>((state.crewMeta[c]||{}).email||'').toLowerCase()===email); }
+// Regular users may own only 1 crew member; leaders/admins unlimited.
+function canAddCrew(){
+  if(!isSignedIn()||isBlocked()) return false;
+  if(isOwner()||isLeader()) return true;
+  return crewOwnedBy(myEmail()).length<1;
 }
 
 async function initSupabase(){
@@ -183,6 +194,14 @@ async function connectLive(){
       await sb.from('trips').upsert({id:TRIP_ID,data:state});
     }
     saveLocal();
+    // auto-select "who am I" to the crew member linked to this email (if any & not already set)
+    try{
+      const me=myEmail();
+      if(me && !localStorage.getItem('ww_whoami')){
+        const mine=state.crew.find(c=>((state.crewMeta&&state.crewMeta[c]||{}).email||'').toLowerCase()===me);
+        if(mine) localStorage.setItem('ww_whoami',mine);
+      }
+    }catch(e){}
     if(liveChannel){try{sb.removeChannel(liveChannel);}catch(e){}}
     liveChannel=sb.channel('trip-'+TRIP_ID,{config:{presence:{key:CLIENT_ID}}})
       .on('postgres_changes',{event:'*',schema:'public',table:'trips',filter:'id=eq.'+TRIP_ID},payload=>{
@@ -197,7 +216,7 @@ async function connectLive(){
           Object.values(st).forEach(arr=>{ if(arr&&arr[0]) presenceList.push(arr[0]); });
           onlineCount=presenceList.length;
         }catch(e){ onlineCount=1; presenceList=[]; }
-        renderPresence(); if(isOwner()) renderAdminPresence();
+        renderPresence(); if(isOwner()){ recordTraffic(); renderAdminPresence(); }
       })
       .subscribe(async status=>{
         if(status==='SUBSCRIBED'){
@@ -303,12 +322,12 @@ function renderAdminConfigUI(){
   if(!isOwner())return;
   const b=adminConfig.banner||{};
   const set=(id,val)=>{const el=$(id);if(el&&el.value!==val)el.value=val||'';};
-  const tog=$('#adm-banner-on'); if(tog)tog.classList.toggle('done',!!b.on);
+  const tog=$('#adm-banner-on'); if(tog){tog.classList.toggle('done',!!b.on); const s=tog.querySelector('.tg-state'); if(s)s.textContent=b.on?'ON':'OFF';}
   set('#adm-banner-title',b.title);
   set('#adm-banner-text',b.text);
   set('#adm-banner-link',b.link);
   set('#adm-banner-linklabel',b.linkLabel);
-  const su=$('#adm-signup-on'); if(su)su.classList.toggle('done', adminConfig.signupsOpen!==false);
+  const su=$('#adm-signup-on'); if(su){const on=adminConfig.signupsOpen!==false; su.classList.toggle('done',on); const s=su.querySelector('.tg-state'); if(s)s.textContent=on?'ON':'OFF';}
 }
 function adminToggleBanner(){ if(!adminConfig.banner)adminConfig.banner={}; adminConfig.banner.on=!adminConfig.banner.on; renderAdminConfigUI(); }
 function adminToggleSignups(){ adminConfig.signupsOpen=(adminConfig.signupsOpen===false)?true:false; renderAdminConfigUI(); }
@@ -334,18 +353,71 @@ function renderDepartureBanner(){
     ${link}</div></div>`;
 }
 
+/* --- traffic history: owner records the daily peak concurrent online count --- */
+let _trafficSaveT=null;
+function recordTraffic(){
+  if(!isOwner())return;
+  const today=new Date().toISOString().slice(0,10);
+  if(!adminConfig.traffic)adminConfig.traffic={};
+  const peak=adminConfig.traffic[today]||0;
+  if(onlineCount>peak){
+    adminConfig.traffic[today]=onlineCount;
+    // prune to last 60 days
+    const keys=Object.keys(adminConfig.traffic).sort();
+    while(keys.length>60){ delete adminConfig.traffic[keys.shift()]; }
+    clearTimeout(_trafficSaveT);
+    _trafficSaveT=setTimeout(()=>{ saveAdminConfig(); },1500);
+  }
+}
+/* --- tiny dependency-free SVG charts --- */
+function svgBarChart(data,opts){ // data:[{label,value}]
+  opts=opts||{}; const w=opts.w||440,h=opts.h||150,pad=28,bw=data.length?(w-pad*2)/data.length:0;
+  const max=Math.max(1,...data.map(d=>d.value));
+  const bars=data.map((d,i)=>{
+    const bh=Math.round((d.value/max)*(h-pad*2));
+    const x=pad+i*bw+bw*0.15, y=h-pad-bh, bwid=bw*0.7;
+    return `<rect x="${x.toFixed(1)}" y="${y}" width="${bwid.toFixed(1)}" height="${bh}" rx="3" fill="var(--green)"/>
+      <text x="${(x+bwid/2).toFixed(1)}" y="${h-pad+13}" font-size="9" fill="var(--faint)" text-anchor="middle" font-family="var(--mono)">${esc(String(d.label).slice(0,6))}</text>
+      <text x="${(x+bwid/2).toFixed(1)}" y="${y-4}" font-size="9" fill="var(--muted)" text-anchor="middle" font-family="var(--mono)">${d.value}</text>`;
+  }).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;display:block"><line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="var(--border)"/>${bars}</svg>`;
+}
+function svgLineChart(points,opts){ // points:[{label,value}]
+  opts=opts||{}; const w=opts.w||440,h=opts.h||160,pad=30;
+  if(!points.length) return '<div class="empty">No data yet.</div>';
+  const max=Math.max(1,...points.map(p=>p.value));
+  const stepX=points.length>1?(w-pad*2)/(points.length-1):0;
+  const xy=points.map((p,i)=>[pad+i*stepX, h-pad-(p.value/max)*(h-pad*2)]);
+  const path=xy.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  const area=path+` L ${(pad+(points.length-1)*stepX).toFixed(1)} ${h-pad} L ${pad} ${h-pad} Z`;
+  const dots=xy.map((p)=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.5" fill="var(--green)"/>`).join('');
+  // sparse x labels (first, mid, last)
+  const idxs=[0,Math.floor(points.length/2),points.length-1].filter((v,i,a)=>a.indexOf(v)===i);
+  const labels=idxs.map(i=>`<text x="${xy[i][0].toFixed(1)}" y="${h-pad+14}" font-size="9" fill="var(--faint)" text-anchor="middle" font-family="var(--mono)">${esc(points[i].label.slice(5))}</text>`).join('');
+  const gridY=[0,.5,1].map(f=>{const y=h-pad-f*(h-pad*2);return `<line x1="${pad}" y1="${y.toFixed(1)}" x2="${w-pad}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-dasharray="2 3"/><text x="${pad-5}" y="${(y+3).toFixed(1)}" font-size="8" fill="var(--faint)" text-anchor="end" font-family="var(--mono)">${Math.round(f*max)}</text>`;}).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;display:block">${gridY}<path d="${area}" fill="var(--green)" opacity="0.12"/><path d="${path}" fill="none" stroke="var(--green)" stroke-width="2"/>${dots}${labels}</svg>`;
+}
+function svgDonut(segments,opts){ // segments:[{label,value,color}]
+  opts=opts||{}; const size=opts.size||120,r=size/2-6,cx=size/2,cy=size/2,C=2*Math.PI*r;
+  const total=segments.reduce((s,x)=>s+x.value,0)||1;
+  let off=0;
+  const rings=segments.map(s=>{
+    const frac=s.value/total, len=frac*C;
+    const el=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${s.color}" stroke-width="12" stroke-dasharray="${len.toFixed(2)} ${(C-len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 ${cx} ${cy})"/>`;
+    off+=len; return el;
+  }).join('');
+  const legend=segments.map(s=>`<div style="display:flex;align-items:center;gap:6px;font-size:11px"><span style="width:10px;height:10px;border-radius:2px;background:${s.color};display:inline-block"></span>${esc(s.label)} <span style="color:var(--faint)">${s.value}</span></div>`).join('');
+  return `<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap"><svg viewBox="0 0 ${size} ${size}" style="width:${size}px;height:${size}px;flex-shrink:0">${rings}<text x="${cx}" y="${cy+4}" font-size="16" font-weight="700" fill="var(--text)" text-anchor="middle" font-family="var(--display)">${total}</text></svg><div style="display:flex;flex-direction:column;gap:6px">${legend}</div></div>`;
+}
+
 /* --- reports / stats dashboard --- */
 function renderAdminStats(){
   const w=$('#admin-reports');if(!w)return;
   const crew=state.crew.length;
-  // gear stats
   let gearTotal=0,claimed=0;
   gearData().forEach(c=>c.items.forEach(it=>{gearTotal++;if((state.gearClaims[it.id]||[]).length)claimed++;}));
-  // packing per person
   const packRows=state.crew.map(n=>{const s=packStatsFor(n);return {n,...s};});
-  // costs
   const total=state.expenses.reduce((s,e)=>s+e.amt,0);
-  // votes
   const votes={};Object.values(state.votes).forEach(v=>votes[v]=(votes[v]||0)+1);
   const stat=(v,k)=>`<div class="stat"><div class="v">${v}</div><div class="k">${k}</div></div>`;
   let html=`<div class="dash-stats" style="grid-template-columns:repeat(3,1fr)">
@@ -356,17 +428,38 @@ function renderAdminStats(){
     ${stat(state.stops.length,'route stops')}
     ${stat(state.chosenSite?(state.chosenSite==='ivy'?'Ivy Lea':'Plage'):'—','site')}
   </div>`;
-  // packing progress per crew
+
+  // traffic line chart (daily peak online)
+  const traffic=adminConfig.traffic||{};
+  const days=Object.keys(traffic).sort();
+  html+='<div class="kicker" style="margin:18px 0 8px">◆ Site traffic — peak online per day</div>';
+  if(days.length<1){ html+='<div class="empty">No traffic recorded yet. This fills in as people use the site live.</div>'; }
+  else html+=svgLineChart(days.map(d=>({label:d,value:traffic[d]})));
+
+  // gear claimed donut
+  html+='<div class="kicker" style="margin:18px 0 8px">◆ Gear claimed vs unclaimed</div>';
+  html+=svgDonut([
+    {label:'Claimed',value:claimed,color:'var(--green)'},
+    {label:'Unclaimed',value:Math.max(0,gearTotal-claimed),color:'var(--surface3)'}
+  ]);
+
+  // packing by crew — bar chart
   if(packRows.length){
-    html+='<div class="kicker" style="margin:16px 0 8px">◆ Packing by crew member</div>';
-    html+=packRows.map(r=>{const pct=r.total?Math.round(r.packed/r.total*100):0;
-      return `<div class="progress-row"><span class="pl">${esc(r.n.split(' ')[0])}</span><div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div><span class="pv">${r.packed}/${r.total}</span></div>`;
-    }).join('');
+    html+='<div class="kicker" style="margin:18px 0 8px">◆ Packing progress by crew member (%)</div>';
+    html+=svgBarChart(packRows.map(r=>({label:r.n,value:r.total?Math.round(r.packed/r.total*100):0})));
   }
-  // votes
+
+  // spend by person — bar chart
+  const spendBy={};state.expenses.forEach(e=>{spendBy[e.who]=(spendBy[e.who]||0)+e.amt;});
+  if(Object.keys(spendBy).length){
+    html+='<div class="kicker" style="margin:18px 0 8px">◆ Spend by person ($)</div>';
+    html+=svgBarChart(Object.entries(spendBy).map(([k,v])=>({label:k,value:Math.round(v)})));
+  }
+
+  // votes donut
   if(Object.keys(votes).length){
-    html+='<div class="kicker" style="margin:16px 0 8px">◆ Campsite votes</div>';
-    html+=Object.entries(votes).map(([k,v])=>`<div class="settle-row"><span>${k==='ivy'?'Ivy Lea':'Camping de la Plage'}</span><span class="owe pos">${v} vote${v===1?'':'s'}</span></div>`).join('');
+    html+='<div class="kicker" style="margin:18px 0 8px">◆ Campsite votes</div>';
+    html+=svgDonut(Object.entries(votes).map(([k,v],i)=>({label:k==='ivy'?'Ivy Lea':'Camping de la Plage',value:v,color:i===0?'var(--green)':'var(--river)'})));
   }
   w.innerHTML=html;
 }
@@ -375,23 +468,67 @@ function renderAdminStats(){
 function renderAdminUsers(){
   const w=$('#admin-users');if(!w)return;
   let html='';
-  // crew (trip members)
+  // --- Live access: signed-in emails currently online ---
+  html+='<div class="kicker" style="margin-top:4px">◆ Live access — emails online now</div>';
+  const online=presenceList.filter(p=>p.email);
+  if(!online.length) html+='<div class="empty" style="margin-bottom:8px">No signed-in users online right now.</div>';
+  else html+=online.map(p=>{
+    const em=(p.email||'').toLowerCase();
+    const blocked=blockedEmails().includes(em);
+    const isYou=em===myEmail();
+    return `<div class="admin-row"><span class="avatar" style="width:26px;height:26px;font-size:11px;background:${colorFor(p.name||em)}">${initials(p.name||em)}</span>
+      <div style="flex:1"><div style="font-size:13px;font-weight:600">${esc(p.name||'crew')}${isYou?' <span style="color:var(--faint)">(you)</span>':''} <span class="admin-tab-badge">👁 ${esc(p.tab||'—')}</span></div>
+      <div style="font-size:11px;color:var(--faint);font-family:var(--mono)">${esc(p.email)}</div></div>
+      ${isYou?'':`<button class="btn ghost sm" onclick="adminToggleBlock('${esc(em).replace(/'/g,"\\'")}')">${blocked?'Unblock':'Block'}</button>`}</div>`;
+  }).join('');
+
+  // --- Crew members (with linked email) ---
+  html+='<div class="kicker" style="margin:16px 0 8px">◆ Crew members &amp; linked emails</div>';
   if(!state.crew.length){html+='<div class="empty">No crew members yet.</div>';}
   else html+=state.crew.map(c=>{
+    const meta=state.crewMeta&&state.crewMeta[c]||{};
     const role=Object.entries(state.roles).filter(([,n])=>n===c).map(([r])=>r).join(', ')||'—';
-    const onlineP=presenceList.find(p=>(p.name||'')===c||(p.email||'')===c);
-    const dot=onlineP?'<span style="color:var(--green);font-size:10px">● online</span>':'<span style="color:var(--faint);font-size:10px">offline</span>';
+    const linked=meta.email?`<span style="font-family:var(--mono);font-size:11px;color:var(--river)">🔗 ${esc(meta.email)}</span>`:'<span style="font-size:11px;color:var(--faint)">no email linked</span>';
     return `<div class="admin-row"><span class="avatar" style="width:26px;height:26px;font-size:11px;background:${colorFor(c)}">${initials(c)}</span>
-      <div style="flex:1"><div style="font-size:13px;font-weight:600">${esc(c)} ${dot}</div><div style="font-size:11px;color:var(--faint);font-family:var(--mono)">role: ${esc(role)}</div></div>
-      <button class="btn ghost sm" onclick="adminRemoveCrew('${esc(c).replace(/'/g,"\\'")}')">Remove</button></div>`;
+      <div style="flex:1"><div style="font-size:13px;font-weight:600">${esc(c)}</div><div>${linked} · <span style="font-size:11px;color:var(--faint)">role: ${esc(role)}</span></div></div>
+      <div style="display:flex;gap:4px"><button class="btn ghost sm" onclick="adminLinkCrew('${esc(c).replace(/'/g,"\\'")}')">Link email</button>
+      <button class="btn ghost sm" onclick="adminRemoveCrew('${esc(c).replace(/'/g,"\\'")}')">Remove</button></div></div>`;
   }).join('');
-  // leaders
+
+  // --- Blocked emails ---
+  const blk=adminConfig.blocked||[];
+  if(blk.length){
+    html+='<div class="kicker" style="margin:16px 0 8px">◆ Blocked emails</div>';
+    html+=blk.map(e=>`<div class="admin-row"><span class="admin-tab-badge" style="color:var(--danger);background:rgba(224,90,90,.14);border-color:rgba(224,90,90,.3)">⛔ Blocked</span><div style="flex:1;font-size:13px;font-family:var(--mono)">${esc(e)}</div><button class="btn ghost sm" onclick="adminToggleBlock('${esc(e).replace(/'/g,"\\'")}')">Unblock</button></div>`).join('');
+  }
+
+  // --- Leaders ---
   html+='<div class="kicker" style="margin:16px 0 8px">◆ Leaders — full access (no admin panel)</div>';
   const leaders=adminConfig.leaders||[];
-  if(!leaders.length) html+='<div class="empty" style="margin-bottom:8px">No leaders yet. Grant by email below — that person gets full edit access and can reset the trip.</div>';
+  if(!leaders.length) html+='<div class="empty" style="margin-bottom:8px">No leaders yet. Grant by email below — they get full edit access, unlimited crew, and can reset the trip.</div>';
   else html+=leaders.map(e=>`<div class="admin-row"><span class="admin-tab-badge" style="color:var(--amber);background:rgba(240,180,85,.14);border-color:rgba(240,180,85,.3)">★ Leader</span><div style="flex:1;font-size:13px;font-family:var(--mono)">${esc(e)}</div><button class="btn ghost sm" onclick="adminRemoveLeader('${esc(e).replace(/'/g,"\\'")}')">Revoke</button></div>`).join('');
   html+=`<div style="display:flex;gap:6px;margin-top:10px"><input id="adm-leader-in" type="email" placeholder="leader@email.com" style="flex:1" onkeydown="if(event.key==='Enter')adminAddLeader()"><button class="btn sm" onclick="adminAddLeader()">Grant</button></div>`;
   w.innerHTML=html;
+}
+function adminToggleBlock(email){
+  if(!isOwner())return; email=(email||'').toLowerCase();
+  if(!adminConfig.blocked)adminConfig.blocked=[];
+  const i=adminConfig.blocked.map(e=>e.toLowerCase()).indexOf(email);
+  if(i>-1){adminConfig.blocked.splice(i,1);toast('Unblocked '+email);}
+  else{adminConfig.blocked.push(email);toast('Blocked '+email);}
+  saveAdminConfig();renderAdminUsers();
+}
+function adminLinkCrew(name){
+  if(!isOwner())return;
+  const cur=(state.crewMeta&&state.crewMeta[name]&&state.crewMeta[name].email)||'';
+  const email=prompt('Link "'+name+'" to which email? (leave blank to unlink)',cur);
+  if(email===null)return;
+  if(!state.crewMeta)state.crewMeta={};
+  const e=email.trim().toLowerCase();
+  if(e&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)){toast('Enter a valid email');return;}
+  state.crewMeta[name]=Object.assign(state.crewMeta[name]||{},{email:e,linkedByAdmin:true});
+  persist();renderAdminUsers();renderCrew();
+  toast(e?('Linked '+name+' → '+e):('Unlinked '+name));
 }
 function adminRemoveCrew(name){
   if(!isOwner())return;
@@ -1162,14 +1299,20 @@ function renderCrew(){
     chip.innerHTML=`<span class="avatar" style="background:${colorFor(c)}">${initials(c)}</span>${esc(c)}<span class="x" onclick="removeCrew('${esc(c).replace(/&#39;/g,"\\'")}')">✕</span>`;bar.appendChild(chip);});
   refreshCrewSelects();renderGear();renderRoles();renderSites();renderSettle();renderMyPacking();
 }
-function requireEdit(){ if(!isSignedIn()){ toast('🔒 Sign in to edit the trip'); return false; } return true; }
+function requireEdit(){ if(!isSignedIn()){ toast('🔒 Sign in to edit the trip'); return false; } if(isBlocked()){ toast('Your access has been revoked by the organizer'); return false; } return true; }
 function addCrew(){
   if(!requireEdit())return;
+  if(!canAddCrew()){ toast('You can add 1 crew member. Ask an organizer to add more.'); return; }
   const i=$('#crew-input');const v=i.value.trim();
-  if(!v||state.crew.includes(v))return;state.crew.push(v);i.value='';persist();renderCrew();
+  if(!v||state.crew.includes(v))return;
+  state.crew.push(v);
+  if(!state.crewMeta)state.crewMeta={};
+  state.crewMeta[v]={email:myEmail(),by:myEmail(),at:Date.now()};
+  i.value='';persist();renderCrew();
 }
 function removeCrew(name){
   state.crew=state.crew.filter(c=>c!==name);
+  if(state.crewMeta)delete state.crewMeta[name];
   Object.keys(state.gearClaims).forEach(k=>{state.gearClaims[k]=(state.gearClaims[k]||[]).filter(n=>n!==name);if(!state.gearClaims[k].length)delete state.gearClaims[k];});
   delete state.votes[name];
   Object.keys(state.roles).forEach(k=>{if(state.roles[k]===name)delete state.roles[k];});

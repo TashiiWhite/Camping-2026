@@ -186,8 +186,9 @@ This release locked down writes, added a private admin control panel, and built 
 - A hidden **🛠 Admin** panel, visible only to the owner; never surfaced or explained to other users.
 - **Live presence** — who's online and which tab each person is viewing ("Nick is on Gear"), via Supabase Presence.
 - **Departure / announcement banner** — compose a banner (title, message, optional link) shown at the top of Basecamp for everyone; toggle on/off and edit anytime.
-- **User management** — view crew with online status & role and remove members; **grant/revoke the Leader role by email**; toggle whether new sign-ups are allowed.
-- **Reports dashboard** — crew, online count, gear claimed, spend, stops, chosen site, per-member packing progress, vote tallies.
+- **User management** — see which **emails** are online live and **block/unblock** any of them; view crew with their **linked email** and role; **link any crew member to an email**; remove members; **grant/revoke the Leader role by email**; toggle whether new sign-ups are allowed.
+- **Email ↔ crew linking** — when someone signs in and adds their crew name, it's stamped with their email. Regular users can add **one** crew member; leaders/admins unlimited. The owner can manually link/relink any crew member to an email.
+- **Reports dashboard with charts** — a live **site-traffic line chart** (peak online per day), **gear-claimed donut**, **packing-by-crew bar chart**, **spend-by-person bar chart**, and **vote donut** — all lightweight inline SVG (no external libraries, works offline).
 - **Data tools** — export/import trip JSON, export PDF, reset trip.
 
 ### v7 — June 13, 2026
