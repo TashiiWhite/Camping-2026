@@ -154,6 +154,11 @@ To share state when Supabase isn't connected: **Export crew data** → send the 
 
 ## Version history
 
+### v10 — current
+- **Stay-signed-in bridge for the home-screen app.** iOS keeps Safari and installed PWAs in separate storage, so a Safari sign-in doesn't carry into the home-screen app on its own. New flow: sign in normally in Safari, tap **📲 Sync to app**, then in the home-screen app open **Sign in → paste the sync link** (or scan the QR). The app restores the session and stays signed in with live sync. The sync link carries the session tokens, so it's private — for your own device only.
+- The sign-in modal now has three paths: Continue with Google, email magic-link, and "paste sync link from Safari".
+
+
 ### v9 — current
 - **Fixed: couldn't type the email in the home-screen app.** The email sign-in used a JavaScript `prompt()` dialog, which iOS standalone PWAs block/ignore. Replaced it with a proper in-page **sign-in modal** containing a real `<input>` field that accepts typing inside the installed app. Both Google and the email magic-link now live in one clean modal, with an inline warning that explains the iOS Google-typing limitation and points to the email link as the reliable path.
 

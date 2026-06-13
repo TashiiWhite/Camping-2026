@@ -901,6 +901,24 @@ html.compact .panel .kicker{margin:22px 0 9px}
   </div>
 </div>
 
+<!-- SESSION TRANSFER MODAL -->
+<div class="modal-bg" id="xfer-modal" onclick="if(event.target===this)closeTransfer()">
+  <div class="modal" style="max-width:420px">
+    <span class="close-x" onclick="closeTransfer()">✕</span>
+    <h3>📲 Stay signed in on your phone</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">iPhone keeps Safari and home-screen apps separate, so a sign-in in Safari doesn't carry over on its own. This bridges it — <b>do this once</b> and the app stays signed in.</p>
+    <ol style="font-size:13px;color:var(--text);line-height:1.7;margin:0 0 14px 18px">
+      <li>On the <b>same phone</b>, open your home-screen Camping 2026 app.</li>
+      <li>Tap <b>Sign in → "Paste sync link"</b> and paste the link below.</li>
+    </ol>
+    <div id="xfer-qr" style="display:flex;justify-content:center;margin:10px 0 14px"></div>
+    <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Sync link</label>
+    <input id="xfer-link" readonly onclick="this.select()" style="width:100%;margin-bottom:8px;font-size:11px">
+    <button class="btn" style="width:100%" onclick="copyTransfer()">Copy sync link</button>
+    <p style="font-size:11.5px;color:var(--faint);margin-top:10px;line-height:1.45">The link contains your private session — only paste it into your own home-screen app, don't share it.</p>
+  </div>
+</div>
+
 <!-- SIGN-IN MODAL -->
 <div class="modal-bg" id="signin-modal" onclick="if(event.target===this)closeSignin()">
   <div class="modal" style="max-width:420px">
@@ -923,14 +941,22 @@ html.compact .panel .kicker{margin:22px 0 9px}
     <input id="signin-email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="you@example.com" style="width:100%;margin-bottom:8px" onkeydown="if(event.key==='Enter')sendEmailLink()">
     <button class="btn ghost" style="width:100%" onclick="sendEmailLink()">✉ Send me the link</button>
     <p id="signin-email-status" style="font-size:12px;color:var(--green);margin-top:10px;display:none"></p>
+
+    <div style="display:flex;align-items:center;gap:10px;margin:14px 0;color:var(--faint);font-size:11px;font-family:var(--mono)">
+      <span style="flex:1;height:1px;background:var(--border)"></span>ALREADY SIGNED IN ON SAFARI?<span style="flex:1;height:1px;background:var(--border)"></span>
+    </div>
+    <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Paste the sync link from Safari ("📲 Sync to app")</label>
+    <input id="paste-xfer" type="text" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Paste sync link here" style="width:100%;margin-bottom:8px" onkeydown="if(event.key==='Enter')usePastedTransfer()">
+    <button class="btn ghost" style="width:100%" onclick="usePastedTransfer()">Sign in with sync link</button>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
-<script src="app.js?v=9"></script>
+<script src="app.js?v=10"></script>
 </body>
 </html>
