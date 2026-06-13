@@ -27,11 +27,11 @@
   --mono:'JetBrains Mono',monospace;--display:'Bricolage Grotesque',sans-serif;--body:'Hanken Grotesk',sans-serif;
 }
 *{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth}
+html{scroll-behavior:smooth;overflow-x:hidden;max-width:100%}
 body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;min-height:100vh;position:relative;overflow-x:hidden}
-.topo{position:fixed;inset:0;z-index:0;opacity:.5;pointer-events:none}
-.topo svg{width:100%;height:100%}
-.glow{position:fixed;width:600px;height:600px;border-radius:50%;filter:blur(120px);z-index:0;pointer-events:none;opacity:.18}
+.topo{position:fixed;inset:0;width:100vw;max-width:100%;z-index:0;opacity:.5;pointer-events:none;overflow:hidden}
+.topo svg{width:100%;height:100%;max-width:100vw}
+.glow{position:fixed;width:600px;height:600px;max-width:90vw;max-height:90vw;border-radius:50%;filter:blur(120px);z-index:0;pointer-events:none;opacity:.18}
 .glow.g1{background:var(--green);top:-200px;right:-150px}
 .glow.g2{background:var(--amber);bottom:-250px;left:-150px;opacity:.12}
 .app{position:relative;z-index:2;max-width:1080px;margin:0 auto;padding:0 20px 80px}
@@ -902,23 +902,6 @@ html.compact .panel .kicker{margin:22px 0 9px}
 </div>
 
 <!-- SESSION TRANSFER MODAL -->
-<div class="modal-bg" id="xfer-modal" onclick="if(event.target===this)closeTransfer()">
-  <div class="modal" style="max-width:420px">
-    <span class="close-x" onclick="closeTransfer()">✕</span>
-    <h3>📲 Stay signed in on your phone</h3>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">iPhone keeps Safari and home-screen apps separate, so a sign-in in Safari doesn't carry over on its own. This bridges it — <b>do this once</b> and the app stays signed in.</p>
-    <ol style="font-size:13px;color:var(--text);line-height:1.7;margin:0 0 14px 18px">
-      <li>On the <b>same phone</b>, open your home-screen Camping 2026 app.</li>
-      <li>Tap <b>Sign in → "Paste sync link"</b> and paste the link below.</li>
-    </ol>
-    <div id="xfer-qr" style="display:flex;justify-content:center;margin:10px 0 14px"></div>
-    <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Sync link</label>
-    <input id="xfer-link" readonly onclick="this.select()" style="width:100%;margin-bottom:8px;font-size:11px">
-    <button class="btn" style="width:100%" onclick="copyTransfer()">Copy sync link</button>
-    <p style="font-size:11.5px;color:var(--faint);margin-top:10px;line-height:1.45">The link contains your private session — only paste it into your own home-screen app, don't share it.</p>
-  </div>
-</div>
-
 <!-- SIGN-IN MODAL -->
 <div class="modal-bg" id="signin-modal" onclick="if(event.target===this)closeSignin()">
   <div class="modal" style="max-width:420px">
@@ -953,10 +936,9 @@ html.compact .panel .kicker{margin:22px 0 9px}
 
 <div class="toast" id="toast"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" onerror="window.__gsapFailed=1"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" onerror="window.__sbFailed=1"></script>
 <script src="config.js"></script>
-<script src="app.js?v=10"></script>
+<script src="app.js?v=12"></script>
 </body>
 </html>

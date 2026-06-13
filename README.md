@@ -154,31 +154,39 @@ To share state when Supabase isn't connected: **Export crew data** → send the 
 
 ## Version history
 
-### v10 — current
-- **Stay-signed-in bridge for the home-screen app.** iOS keeps Safari and installed PWAs in separate storage, so a Safari sign-in doesn't carry into the home-screen app on its own. New flow: sign in normally in Safari, tap **📲 Sync to app**, then in the home-screen app open **Sign in → paste the sync link** (or scan the QR). The app restores the session and stays signed in with live sync. The sync link carries the session tokens, so it's private — for your own device only.
+### v11 — June 12, 2026 (current)
+- **Critical fix: couldn't type anything in the home-screen app.** Root cause was the service-worker `controllerchange` handler calling `location.reload()` — on a standalone PWA a brand-new worker takes control on first launch and fired an immediate mid-boot reload, leaving the page frozen and unresponsive (no inputs, no taps). Removed that reload loop.
+- **Hardened the entire boot sequence.** Core UI now initialises first inside guarded try/catch blocks, so the app is always usable and typeable even if GSAP, Three.js, or the Supabase script fail to load. Animations and auth are now strictly optional enhancements that can never freeze the page.
+- **Service worker no longer caches broken responses** (only clean 200s), and CDN script tags have `onerror` guards. This prevents a corrupt cached library from bricking the app on later launches.
+- **Removed the QR code + copy-link UI** from the Safari→app session transfer. The "📲 Sync to app" button now simply copies the sync link to your clipboard in one tap (with a plain-text prompt fallback), and you paste it into the home-screen app's Sign in screen. One less third-party library (the QR script is gone entirely), which also reduces what can ever go wrong at boot.
+- Verified by simulating both standalone-PWA mode and a total CDN failure: the app boots, every input field accepts typing, and it runs in local mode with zero errors.
+
+
+### v10 — June 12, 2026
+- **Stay-signed-in bridge for the home-screen app.** iOS keeps Safari and installed PWAs in separate storage, so a Safari sign-in doesn't carry into the home-screen app on its own. New flow: sign in normally in Safari, tap **📲 Sync to app** (copies a sync link), then in the home-screen app open **Sign in → paste the sync link**. The app restores the session and stays signed in with live sync. The sync link carries the session tokens, so it's private — for your own device only.
 - The sign-in modal now has three paths: Continue with Google, email magic-link, and "paste sync link from Safari".
 
 
-### v9 — current
+### v9 — June 12, 2026
 - **Fixed: couldn't type the email in the home-screen app.** The email sign-in used a JavaScript `prompt()` dialog, which iOS standalone PWAs block/ignore. Replaced it with a proper in-page **sign-in modal** containing a real `<input>` field that accepts typing inside the installed app. Both Google and the email magic-link now live in one clean modal, with an inline warning that explains the iOS Google-typing limitation and points to the email link as the reliable path.
 
 
-### v8 — current
+### v8 — June 12, 2026
 - **Signed-in users get a monthly-rotating default theme.** On sign-in the app switches to that month's default, alternating every calendar month forever: **June 2026 → Botanic, July → Aurora, Aug → Botanic, …**. A manual theme pick still wins for the rest of that month, and the rotation re-applies when a new month begins.
 
 
-### v7 — current
+### v7 — June 12, 2026
 - **Reworked Google sign-in for the iOS home-screen app.** Switched Supabase auth from the PKCE flow to the **implicit flow** and added explicit URL-hash session recovery (`setSession`) on return — a standalone iOS PWA can read the token from the URL hash even though it can't share PKCE storage with the separate Safari OAuth context.
 - **Added an email magic-link fallback** (✉ Email link), shown automatically when the app is launched from the home screen. This always works inside the PWA sandbox, bypassing the OAuth-popup limitation entirely.
 - Sign-in errors now surface as toasts instead of failing silently.
 
 
-### v6
+### v6 — June 11, 2026
 
 - **Fixed: Google sign-in from the iOS home-screen app.** Standalone PWAs on iOS couldn't type into the embedded Google sheet. Sign-in now does a full top-level redirect in the PWA window (a real, typeable Google page) and returns the session automatically. Also switched Supabase auth to the PKCE flow with `detectSessionInUrl`.
 - Added this version history to the README.
 
-### v5
+### v5 — June 11, 2026
 - **Google sign-in now gates live access.** Signed-out visitors run in local mode (device-only data) with the **Classic theme forced**; all other themes show a 🔒 lock. Signing in unlocks live sync + every theme; signing out reverts automatically.
 - **Online presence counter** — a pill showing "N online" via Supabase Presence, visible only in live mode.
 - **Status tooltip** — hover the Live/Local/Offline pill for a plain-language explanation.
@@ -187,12 +195,12 @@ To share state when Supabase isn't connected: **Export crew data** → send the 
 - **New settings:** Performance mode (disables glass blur) and Compact mode (tighter spacing).
 - Service-worker cache bumped (cache-first → kept network-first); auto-reload on new deploys.
 
-### v4
+### v4 — June 10, 2026
 - Renamed the whole app **WildWeekend → Camping 2026** (title, wordmark, PWA name, footer, share text, manifest).
 - **Fixed: stale deploys.** Rewrote the service worker to **network-first** with a versioned cache name + a cache-busted script tag + auto-reload, so new deploys always appear (the old cache-first SW was serving outdated files).
 - README rewritten for the final feature set.
 
-### v3 (Aurora release)
+### v3 — June 10, 2026 (Aurora release)
 - **Default Aurora theme** — glassmorphism cards, gradient wordmark, animated aurora blobs, fireflies canvas, GSAP entrance animations.
 - **Settings panel (⚙)** with theme switching (Aurora / Ember / Glacier / Topo / Classic) + motion toggle, all saved **per device** (never synced to crew).
 - **Adaptive ambience** — Three.js particle field on desktop, lightweight 2D canvas on mobile (mobile never downloads Three.js); graceful fallback if WebGL fails.
@@ -203,7 +211,7 @@ To share state when Supabase isn't connected: **Export crew data** → send the 
 - **Clothing & attire** + **Personal kit** gear categories added (16 items) with a sync-safe migration that merges into existing live data without disturbing claims/votes.
 - "Copy for group chat" button on the settle-up; Enter-key support on stop inputs.
 
-### v2 (Live sync release)
+### v2 — June 6, 2026 (Live sync release)
 - **Supabase live sync** — one shared trip (`camping-june-2026`), realtime across all devices via the `trips` table + Supabase Realtime.
 - **Google sign-in** (optional at this stage) via Supabase Auth.
 - **PWA** — home-screen install with app icon, offline mode via service worker, web manifest.
@@ -216,7 +224,7 @@ To share state when Supabase isn't connected: **Export crew data** → send the 
 - Dismissible **how-to guide** banner + "?" button.
 - **Export full site as PDF.**
 
-### v1 (initial)
+### v1 — June 6, 2026 (initial)
 - Single-file static site: Basecamp, Campsites (with voting), Itinerary, Gear (claim system), Food (matrix + 9-meal plan + prep), Shopping (3 phases), Costs (Splitwise-style splitter), Survival (roles, tips).
 - `localStorage` persistence with JSON export/import for sharing.
 - Deployable to GitHub + Netlify, zero build step.

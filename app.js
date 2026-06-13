@@ -72,6 +72,7 @@ let liveChannel=null,liveReady=false,onlineCount=0;
 async function initSupabase(){
   const url=CFG.SUPABASE_URL||'', key=CFG.SUPABASE_ANON_KEY||'';
   if(!url||url.includes('YOUR_')||!key||key.includes('YOUR_')){ setSync('local','Local'); renderAuth(); return; }
+  if(!window.supabase||typeof window.supabase.createClient!=='function'){ setSync('local','Local'); renderAuth(); return; }
   try{
     sb = supabase.createClient(url,key,{auth:{flowType:'implicit',detectSessionInUrl:true,persistSession:true,autoRefreshToken:true,storage:window.localStorage}});
     await recoverSessionFromUrl();
@@ -209,7 +210,7 @@ function openSignin(){
 }
 function closeSignin(){ document.getElementById('signin-modal').classList.remove('open'); }
 
-// Build a link that carries the current session into the home-screen app.
+// Copy a link that carries the current session into the home-screen app.
 async function openTransfer(){
   if(!sb){toast('Not connected');return;}
   try{
@@ -217,18 +218,14 @@ async function openTransfer(){
     if(!session){toast('Sign in first');return;}
     const payload=btoa(JSON.stringify({access_token:session.access_token,refresh_token:session.refresh_token}));
     const link=location.origin+location.pathname+'#ww_xfer='+encodeURIComponent(payload);
-    const box=document.getElementById('xfer-modal');
-    document.getElementById('xfer-link').value=link;
-    const qr=document.getElementById('xfer-qr'); qr.innerHTML='';
-    try{ if(window.QRCode) new QRCode(qr,{text:link,width:180,height:180,correctLevel:QRCode.CorrectLevel.L}); }catch(e){}
-    box.classList.add('open');
+    try{
+      await navigator.clipboard.writeText(link);
+      toast('Sync link copied — open your home-screen app, tap Sign in, and paste it');
+    }catch(e){
+      // clipboard blocked: fall back to a prompt so the link is still selectable
+      window.prompt('Copy this sync link, then paste it in your home-screen app (Sign in → paste):', link);
+    }
   }catch(e){ toast('Could not build transfer link: '+(e.message||e)); }
-}
-function closeTransfer(){ document.getElementById('xfer-modal').classList.remove('open'); }
-async function copyTransfer(){
-  const inp=document.getElementById('xfer-link');
-  try{ await navigator.clipboard.writeText(inp.value); toast('Link copied — open it in your home-screen app'); }
-  catch(e){ inp.select(); document.execCommand&&document.execCommand('copy'); toast('Link copied'); }
 }
 
 async function usePastedTransfer(){
@@ -1411,24 +1408,39 @@ function renderAll(){
   const active=document.querySelector('.panel.active');if(active)animatePanel(active);
 }
 async function boot(){
-  loadLocal();
-  try{if(localStorage.getItem('ww_banner_hidden'))$('#help-banner').style.display='none';}catch(e){}
-  initTabs();countdown();
-  document.documentElement.classList.toggle('perf',perfOn());
-  document.documentElement.classList.toggle('compact',compactOn());
-  renderAll();setSync('local','Local');
-  renderSettingsUI();
-  startAmbient();
-  animateBoot();
-  if('serviceWorker' in navigator && location.protocol.startsWith('http')){
-    navigator.serviceWorker.register('sw.js').catch(()=>{});
-    // auto-reload once when a new version of the app takes control
-    let swReloaded=false;
-    navigator.serviceWorker.addEventListener('controllerchange',()=>{
-      if(swReloaded)return;swReloaded=true;location.reload();
-    });
-  }
-  await initSupabase();
-  renderAll();
+  // --- CORE UI FIRST: must run no matter what, so the app is always usable & typeable ---
+  try{ loadLocal(); }catch(e){ console.warn('loadLocal',e); }
+  try{ if(localStorage.getItem('ww_banner_hidden'))$('#help-banner').style.display='none'; }catch(e){}
+  try{ initTabs(); }catch(e){ console.warn('initTabs',e); }
+  try{ countdown(); }catch(e){}
+  try{
+    document.documentElement.classList.toggle('perf',perfOn());
+    document.documentElement.classList.toggle('compact',compactOn());
+  }catch(e){}
+  try{ renderAll(); }catch(e){ console.warn('renderAll',e); }
+  try{ setSync('local','Local'); }catch(e){}
+  try{ renderSettingsUI(); }catch(e){}
+
+  // --- NICE-TO-HAVE (animations): never allowed to break the app ---
+  try{ if(window.gsap) animateBoot(); }catch(e){}
+  try{ startAmbient(); }catch(e){ console.warn('ambient',e); }
+
+  // --- SERVICE WORKER: register WITHOUT the reload-on-controllerchange loop ---
+  try{
+    if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+      navigator.serviceWorker.register('sw.js').catch(()=>{});
+    }
+  }catch(e){}
+
+  // --- SUPABASE / AUTH: fully optional; failure leaves the app in working local mode ---
+  try{
+    if(window.supabase && typeof window.supabase.createClient==='function'){
+      await initSupabase();
+      try{ renderAll(); }catch(e){}
+    } else {
+      setSync('local','Local'); // supabase lib didn't load — app still fully works locally
+    }
+  }catch(e){ console.warn('supabase boot skipped:',e); try{setSync('local','Local');}catch(_){} }
 }
-boot();
+// run boot but never let a thrown error leave the page frozen
+boot().catch(e=>{ console.error('boot failed, app still usable:',e); });

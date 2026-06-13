@@ -1,11 +1,15 @@
-/* Camping 2026 service worker — NETWORK-FIRST for app files.
-   New deploys always show immediately; cache is only the offline fallback. */
-const CACHE = 'camping2026-v10';
+/* Camping 2026 service worker v11 — resilient.
+   App files: network-first (always fresh on deploy), cache fallback offline.
+   CDN libs: cache-first but only ever cache a valid 200 response (never a broken one).
+   Never caches partial/error responses that could freeze the app. */
+const CACHE = 'camping2026-v12';
 const CORE = ['./','./index.html','./app.js','./config.js','./manifest.webmanifest',
   './icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png','./icons/favicon.png'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.open(CACHE).then(c => Promise.allSettled(CORE.map(u => c.add(u)))).then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', e => {
@@ -20,28 +24,30 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  if (url.hostname.endsWith('supabase.co')) return; // never touch API calls
+  if (url.hostname.endsWith('supabase.co')) return; // never touch API/auth calls
 
   if (url.origin === location.origin) {
-    // SAME-ORIGIN (our app files): network-first, cache fallback for offline
+    // App files: network-first; only cache valid responses; fall back to cache offline.
     e.respondWith(
       fetch(req).then(res => {
-        if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
-        return res;
-      }).catch(() =>
-        caches.match(req, { ignoreSearch: true })
-          .then(hit => hit || caches.match('./index.html'))
-      )
-    );
-  } else {
-    // CDN (fonts, gsap, three, supabase-js lib): cache-first is fine, they're versioned URLs
-    e.respondWith(
-      caches.match(req).then(hit => hit || fetch(req).then(res => {
-        if (res.ok && (url.hostname.includes('fonts') || url.hostname.includes('jsdelivr'))) {
+        if (res && res.ok && res.type === 'basic') {
           const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy));
         }
         return res;
-      }))
+      }).catch(() =>
+        caches.match(req, { ignoreSearch: true }).then(hit => hit || caches.match('./index.html'))
+      )
+    );
+  } else if (url.hostname.includes('jsdelivr') || url.hostname.includes('fonts')) {
+    // CDN libs/fonts: serve cache if present, else fetch and cache ONLY if a clean 200.
+    e.respondWith(
+      caches.match(req).then(hit => hit || fetch(req).then(res => {
+        if (res && (res.ok || res.type === 'opaque')) {
+          // only store genuinely successful responses; opaque (CORS) we pass through but don't trust-cache app-critically
+          if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
+        }
+        return res;
+      }).catch(() => hit))
     );
   }
 });
