@@ -171,25 +171,41 @@ To share state when Supabase isn't connected: **Export crew data** → send the 
 This release locked down writes, added a private admin control panel, and built a full signed-in/signed-out access model with roles.
 
 **Access model & roles**
-- **Signed-out = clean, read-only site.** No crew/trip data shows; signing in reveals the live shared data. Signed-out users can't edit anything.
-- **Roles:** `user` (any signed-in person — full edit access), `leader` (granted by the owner — same full access *plus* can reset the trip, but no admin panel), and `admin`/owner (`tashiiwhite@gmail.com` — everything, including the admin panel).
-- **Offline-resilient:** once signed in, a user keeps their access and data even if the connection drops; changes save locally and sync on reconnect.
-- **Crew features greyed out when signed-out** — the "who am I" selector and crew controls are dimmed with a small "🔒 Sign in to enable" note. The Food, Gear, Shopping and Costs tabs are greyed with a 🔒 and remain *viewable* (so people can look) but are disabled with a sign-in notice until you sign in. The "?" guide shows a sign-in nudge when signed-out.
-- **Display settings now gated like themes.** Signed-out defaults: animations **off**, Lite mode **on**, Compact **on** (fast & lightweight). Signed-in defaults: animations **on**, Lite **off**, Compact **off**.
-- Renamed "Performance mode" → **Lite mode** (clearer: it trims visual effects for smoother performance). All motion/display toggles now show an explicit **ON/OFF** pill instead of a strikethrough.
+- **Signed-out = clean, read-only site.** No crew/trip data shows; signing in reveals the live shared data.
+- **Roles:** `visitor` (signed in but not linked to a crew member — can view everything but not edit), `camper` (linked to a crew member — full edit access), `leader` (granted by the owner — full access plus reset/cost-edit/timeline powers, no admin panel), and `admin`/owner. Your role shows as a badge in the header.
+- **First sign-in identity prompt** — choose *existing crew member* / *add me as new crew* / *just browsing*. Linking stamps your email to that crew name (you become a camper); browsing keeps you a visitor. You can link later anytime via the "This is me" button on Basecamp.
+- **Edit or remove your own crew name** (rename ✎ / remove ✕ on your chip); leaders/admins can edit anyone's. Regular users own one crew member; leaders/admins unlimited.
+- **Offline-resilient:** once signed in, your role and data persist even if the connection drops.
+
+**Crew & packing**
+- **"Who am I" selector** drives your personal packing list and progress bar.
+- **Personal packing list** — everything assigned to you, everything marked "All crew", and your own custom items, each with an optional **quantity**. Tick items off as you pack.
+- **View other crew members' lists read-only**; only leaders/admins can edit someone else's, and visitors can edit none.
+
+**Everyday features**
+- **Add food** (with cooler/dry + cook category) to the food matrix — any signed-in editor.
+- **Edit the meal-plan days** — override any of the 9 meals' item lists.
+- **Leaders/admins add timeline points** anywhere on the itinerary.
+- **Shopping "I bought this"** — multiple crew can confirm a purchase; buyer avatars show globally so you don't double-buy.
+- **Editable cost items** — leaders/admins can fix an expense's name/amount after it's logged.
+- **Collapsible settings sections**, a **back-to-top button** on long pages, and the **Simplify** display mode.
+
+**Display settings**
+- Gated like themes (locked when signed-out). Signed-out defaults: animations off, Lite on, Compact on. Signed-in: animations on, Lite off, Compact off.
+- "Performance mode" renamed **Lite mode**; toggles show an explicit **ON/OFF** state (no more strikethrough).
 
 **Security**
-- **Writes require sign-in at the database level** (via `supabase-v8-admin.sql`); reading stays open so the app loads for everyone.
-- **Reset is restricted** to admin/leader only.
+- **Writes require sign-in at the database level** (via `supabase-v8-admin.sql`); reading stays open.
+- **Reset, cost-editing, and timeline edits** are limited to leaders/admins.
 
 **Admin (owner-only — `tashiiwhite@gmail.com`)**
 - A hidden **🛠 Admin** panel, visible only to the owner; never surfaced or explained to other users.
-- **Live presence** — who's online and which tab each person is viewing ("Nick is on Gear"), via Supabase Presence.
-- **Departure / announcement banner** — compose a banner (title, message, optional link) shown at the top of Basecamp for everyone; toggle on/off and edit anytime.
-- **User management** — see which **emails** are online live and **block/unblock** any of them; view crew with their **linked email** and role; **link any crew member to an email**; remove members; **grant/revoke the Leader role by email**; toggle whether new sign-ups are allowed.
-- **Email ↔ crew linking** — when someone signs in and adds their crew name, it's stamped with their email. Regular users can add **one** crew member; leaders/admins unlimited. The owner can manually link/relink any crew member to an email.
-- **Reports dashboard with charts** — a live **site-traffic line chart** (peak online per day), **gear-claimed donut**, **packing-by-crew bar chart**, **spend-by-person bar chart**, and **vote donut** — all lightweight inline SVG (no external libraries, works offline).
-- **Data tools** — export/import trip JSON, export PDF, reset trip.
+- **Preview as any role** — view the site exactly as not-signed-in / visitor / camper / leader, with a sticky preview bar and one-click exit.
+- **Live presence** — who's online and which tab they're on, via Supabase Presence.
+- **Departure / announcement banner** — title, message, optional link; toggle on/off; shows atop Basecamp for everyone.
+- **User management** — see which emails are online live and **block/unblock** them; view crew with their **linked email**; **link or unlink** any crew member to an email; remove members; **grant/revoke Leader** by email; toggle new sign-ups.
+- **Reports dashboard with charts** (dependency-free inline SVG): site-traffic line chart (peak online per day), gear claimed/unclaimed donut, packing-by-crew bar chart, spend-by-person bar chart, vote donut, shopping-progress donut, items-bought-by-crew bar chart, and a roles overview.
+- **Data tools** — export/import JSON, export PDF, reset trip.
 
 ### v7 — June 13, 2026
 

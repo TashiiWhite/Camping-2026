@@ -20,7 +20,8 @@ let lastRev = 0;
 let state = defaultState();
 function defaultState(){
   return { rev:0, by:'', crew:[], crewMeta:{}, gear:null, gearArchive:[], gearClaims:{}, gearPacked:{}, personalItems:{},
-    expenses:[], votes:{}, roles:{}, checks:{}, stops:[], chosenSite:'' };
+    expenses:[], votes:{}, roles:{}, checks:{}, stops:[], chosenSite:'',
+    customFood:[], timelineExtra:[], shopBought:{}, prepEdits:{}, mealEdits:{} };
 }
 
 /* "Who am I" — per device, never synced. Drives the personal packing list + progress. */
@@ -45,7 +46,7 @@ function packingListFor(name){
     }
   }));
   (state.personalItems[name]||[]).forEach(pi=>{
-    out.push({key:'personal:'+pi.id, name:pi.name, note:'personal', packed:!!pi.packed, kind:'personal'});
+    out.push({key:'personal:'+pi.id, name:pi.name, note:'personal', packed:!!pi.packed, kind:'personal', qty:pi.qty||0});
   });
   return out;
 }
@@ -107,45 +108,67 @@ function setSync(mode,text,tip){
 
 let liveChannel=null,liveReady=false,onlineCount=0;
 let presenceList=[];           // [{name,email,tab,at}] of everyone currently online
-let adminConfig={};            // app-wide admin settings (banner, signups)
+let adminConfig={};            // app-wide admin settings (banner, signups, leaders, blocked, traffic)
 let adminChannel=null;
+let viewAs=null;               // owner impersonation: null | 'none' | 'visitor' | 'camper' | 'leader'
 const OWNER_EMAIL='tashiiwhite@gmail.com';
-function isOwner(){ return !!(user && (user.email||'').toLowerCase()===OWNER_EMAIL); }
-function isSignedIn(){ return !!user; }
-// Leaders are emails the owner grants full-site access (same as admin, minus the admin panel).
+function isOwnerReal(){ return !!(user && (user.email||'').toLowerCase()===OWNER_EMAIL); }
+function isSignedInReal(){ return !!user; }
+function myEmail(){ return (user&&user.email||'').toLowerCase(); }
 function leaderEmails(){ return (adminConfig.leaders||[]).map(e=>(e||'').toLowerCase()); }
-function isLeader(){ return !!(user && leaderEmails().includes((user.email||'').toLowerCase())); }
-// Access levels: 'none' (signed out), 'user' (signed in), 'leader', 'admin'(owner)
-function accessLevel(){
+function isLeaderReal(){ return !!(user && leaderEmails().includes((user.email||'').toLowerCase())); }
+function blockedEmails(){ return (adminConfig.blocked||[]).map(e=>(e||'').toLowerCase()); }
+function isBlocked(){ return !!(user && !isOwnerReal() && blockedEmails().includes(myEmail())); }
+// Is this email linked to a crew member? (linked => "camper", not => "visitor")
+function crewForEmail(email){ email=(email||'').toLowerCase(); if(!email)return null; return state.crew.find(c=>((state.crewMeta&&state.crewMeta[c]||{}).email||'').toLowerCase()===email)||null; }
+function myCrew(){ return crewForEmail(myEmail()); }
+function crewOwnedBy(email){ email=(email||'').toLowerCase(); return state.crew.filter(c=>((state.crewMeta&&state.crewMeta[c]||{}).email||'').toLowerCase()===email); }
+
+// REAL access level, ignoring impersonation.
+// none(signed out) | visitor(signed in, no crew) | camper(linked to crew) | leader | admin(owner)
+function realLevel(){
   if(!user) return 'none';
-  if(isOwner()) return 'admin';
-  if(isLeader()) return 'leader';
-  return 'user';
+  if(isOwnerReal()) return 'admin';
+  if(isLeaderReal()) return 'leader';
+  return myCrew() ? 'camper' : 'visitor';
 }
-// Anyone signed in (and not blocked) can edit/interact. Signed-out = read-only/locked.
-function canEdit(){ return isSignedIn() && !isBlocked(); }
-// Only admin or leader can reset the shared trip data.
-function canReset(){ return isOwner()||isLeader(); }
+// EFFECTIVE level — what the UI behaves as. Owner can temporarily "view as" a lower role.
+function accessLevel(){
+  const real=realLevel();
+  if(real==='admin' && viewAs && viewAs!=='admin') return viewAs;
+  return real;
+}
+function isSignedIn(){ const l=accessLevel(); return l!=='none'; }
+function isOwner(){ return accessLevel()==='admin'; }
+function isLeader(){ return accessLevel()==='leader'; }
+function isCamper(){ return accessLevel()==='camper'; }
+function isVisitor(){ return accessLevel()==='visitor'; }
+// Editing trip data (crew, gear, votes, costs, food, etc.): campers, leaders, admins. NOT visitors.
+function canEdit(){ if(isBlocked())return false; const l=accessLevel(); return l==='camper'||l==='leader'||l==='admin'; }
+// Only admin or leader can reset the shared trip data, edit costs after add, add itinerary points.
+function canManage(){ const l=accessLevel(); return l==='leader'||l==='admin'; }
+function canReset(){ return canManage(); }
 function currentTabName(){
   const t=document.querySelector('.tab.active');
   return t?(t.textContent||'').trim():'Basecamp';
 }
-// Reflect access on <html> so CSS can gate the UI for signed-out users.
+// Reflect access on <html> so CSS can gate the UI by role.
 function applyGateClasses(){
   const h=document.documentElement;
-  h.classList.toggle('signed-out', !isSignedIn());
-  h.classList.toggle('signed-in', isSignedIn());
-  h.dataset.access=accessLevel();
+  const l=accessLevel();
+  h.classList.toggle('signed-out', l==='none');
+  h.classList.toggle('signed-in', l!=='none');
+  h.classList.toggle('lvl-visitor', l==='visitor');
+  h.classList.toggle('can-edit', canEdit());
+  h.classList.toggle('can-manage', canManage());
+  h.dataset.access=l;
 }
-function myEmail(){ return (user&&user.email||'').toLowerCase(); }
-function blockedEmails(){ return (adminConfig.blocked||[]).map(e=>(e||'').toLowerCase()); }
-function isBlocked(){ return !!(user && blockedEmails().includes(myEmail())); }
-// How many crew members does the current user "own" (added under their email)?
-function crewOwnedBy(email){ email=(email||'').toLowerCase(); return state.crew.filter(c=>((state.crewMeta[c]||{}).email||'').toLowerCase()===email); }
-// Regular users may own only 1 crew member; leaders/admins unlimited.
+// Regular campers/visitors may own only 1 crew member; leaders/admins unlimited.
 function canAddCrew(){
-  if(!isSignedIn()||isBlocked()) return false;
-  if(isOwner()||isLeader()) return true;
+  if(isBlocked()) return false;
+  const l=accessLevel();
+  if(l==='leader'||l==='admin') return true;
+  if(l==='none') return false;
   return crewOwnedBy(myEmail()).length<1;
 }
 
@@ -164,6 +187,7 @@ async function initSupabase(){
 
 async function applyAccess(){
   if(user){ try{closeSignin();}catch(e){} }
+  viewAs=null; // any auth change clears impersonation
   applyGateClasses();
   renderAuth();
   enforceThemeAccess();
@@ -172,14 +196,85 @@ async function applyAccess(){
   renderSettingsUI();
   if(user){
     await connectLive();
+    applyGateClasses(); // re-evaluate now that crew data (camper vs visitor) is loaded
+    renderAuth();
+    try{ maybePromptLink(); }catch(e){}
   } else {
     disconnectLive();
     setSync('local','Local — sign in for live');
-    // Signed-out = clean site: show no crew/trip data. Real data loads on sign-in.
     state=defaultState();
     try{ await loadAdminConfig(); }catch(e){}
   }
   renderAll();
+}
+
+// First-sign-in identity prompt: existing crew / add new / just browsing.
+function maybePromptLink(){
+  if(!user||isOwnerReal()||isLeaderReal()) return;       // owner/leaders don't need linking
+  if(myCrew()) return;                                   // already linked
+  try{ if(localStorage.getItem('ww_link_dismissed')==='1') return; }catch(e){}
+  renderLinkPrompt();
+  $('#link-modal').classList.add('open');
+}
+function renderLinkPrompt(){
+  const sel=$('#link-existing-select'); if(!sel)return;
+  const unlinked=state.crew.filter(c=>!((state.crewMeta&&state.crewMeta[c]||{}).email));
+  sel.innerHTML='<option value="">Choose your name…</option>'+unlinked.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  const exWrap=$('#link-existing-wrap'); if(exWrap) exWrap.style.display=unlinked.length?'block':'none';
+}
+function linkChooseExisting(){
+  const name=$('#link-existing-select').value;
+  if(!name){toast('Pick your name');return;}
+  linkMeToCrew(name);
+}
+function linkCreateNew(){
+  const v=($('#link-new-name').value||'').trim();
+  if(!v){toast('Enter your name');return;}
+  if(state.crew.includes(v)){ linkMeToCrew(v); return; }
+  state.crew.push(v);
+  if(!state.crewMeta)state.crewMeta={};
+  state.crewMeta[v]={email:myEmail(),by:myEmail(),at:Date.now()};
+  persist();
+  finishLink(v);
+}
+function linkMeToCrew(name){
+  if(!state.crewMeta)state.crewMeta={};
+  // don't steal someone else's linked name
+  const existing=state.crewMeta[name]||{};
+  if(existing.email && existing.email.toLowerCase()!==myEmail()){ toast('That name is already linked to someone else'); return; }
+  state.crewMeta[name]=Object.assign(existing,{email:myEmail(),at:Date.now()});
+  persist();
+  finishLink(name);
+}
+function finishLink(name){
+  try{ localStorage.setItem('ww_whoami',name); localStorage.removeItem('ww_link_dismissed'); }catch(e){}
+  closeLink();
+  applyGateClasses(); renderAuth(); renderAll();
+  toast('✓ Linked as '+name+' — you can edit the trip now');
+}
+function linkJustBrowsing(){
+  try{ localStorage.setItem('ww_link_dismissed','1'); }catch(e){}
+  closeLink();
+  applyGateClasses(); renderAuth(); renderAll();
+  toast('Browsing as a visitor — you can look around. Link your name anytime in Basecamp.');
+}
+function closeLink(){ const m=$('#link-modal'); if(m)m.classList.remove('open'); }
+function openLinkPrompt(){ renderLinkPrompt(); $('#link-modal').classList.add('open'); } // manual trigger from Basecamp
+
+// Owner "view as" impersonation (preview the site as another role)
+function setViewAs(level){
+  if(!isOwnerReal())return;
+  viewAs=(level==='admin'||!level)?null:level;
+  applyGateClasses(); renderAuth(); enforceThemeAccess(); renderSettingsUI(); renderAll();
+  renderViewAsBar();
+  toast(viewAs?('Viewing as: '+viewAs):'Back to admin view');
+}
+function renderViewAsBar(){
+  const bar=$('#viewas-bar');if(!bar)return;
+  if(isOwnerReal() && viewAs){
+    bar.style.display='flex';
+    $('#viewas-label').textContent='👁 Previewing as '+viewAs.toUpperCase();
+  } else bar.style.display='none';
 }
 
 async function connectLive(){
@@ -194,13 +289,10 @@ async function connectLive(){
       await sb.from('trips').upsert({id:TRIP_ID,data:state});
     }
     saveLocal();
-    // auto-select "who am I" to the crew member linked to this email (if any & not already set)
+    // If this email is already linked to a crew member, sync "who am I" to it.
     try{
-      const me=myEmail();
-      if(me && !localStorage.getItem('ww_whoami')){
-        const mine=state.crew.find(c=>((state.crewMeta&&state.crewMeta[c]||{}).email||'').toLowerCase()===me);
-        if(mine) localStorage.setItem('ww_whoami',mine);
-      }
+      const mine=myCrew();
+      if(mine){ localStorage.setItem('ww_whoami',mine); }
     }catch(e){}
     if(liveChannel){try{sb.removeChannel(liveChannel);}catch(e){}}
     liveChannel=sb.channel('trip-'+TRIP_ID,{config:{presence:{key:CLIENT_ID}}})
@@ -461,6 +553,32 @@ function renderAdminStats(){
     html+='<div class="kicker" style="margin:18px 0 8px">◆ Campsite votes</div>';
     html+=svgDonut(Object.entries(votes).map(([k,v],i)=>({label:k==='ivy'?'Ivy Lea':'Camping de la Plage',value:v,color:i===0?'var(--green)':'var(--river)'})));
   }
+
+  // shopping progress donut
+  let shopTotal=0,shopDone=0;
+  SHOP.forEach((s,si)=>s.items.forEach((_,ii)=>{shopTotal++;if(state.checks['shop-'+si+'-'+ii])shopDone++;}));
+  if(shopTotal){
+    html+='<div class="kicker" style="margin:18px 0 8px">◆ Shopping checked off</div>';
+    html+=svgDonut([
+      {label:'Done',value:shopDone,color:'var(--green)'},
+      {label:'To buy',value:Math.max(0,shopTotal-shopDone),color:'var(--surface3)'}
+    ]);
+  }
+
+  // purchases logged by crew member (who bought how many things)
+  const boughtBy={};
+  Object.values(state.shopBought||{}).forEach(arr=>(arr||[]).forEach(n=>{boughtBy[n]=(boughtBy[n]||0)+1;}));
+  if(Object.keys(boughtBy).length){
+    html+='<div class="kicker" style="margin:18px 0 8px">◆ Items bought by crew member</div>';
+    html+=svgBarChart(Object.entries(boughtBy).map(([k,v])=>({label:k,value:v})));
+  }
+
+  // roles assigned overview
+  const roleCount=Object.keys(state.roles||{}).length;
+  if(roleCount){
+    html+='<div class="kicker" style="margin:18px 0 8px">◆ Roles assigned</div>';
+    html+='<div style="font-size:12px">'+Object.entries(state.roles).map(([r,n])=>`<div class="settle-row"><span>${esc(r)}</span><span class="owe pos">${esc(n)}</span></div>`).join('')+'</div>';
+  }
   w.innerHTML=html;
 }
 
@@ -558,11 +676,14 @@ function renderAuth(){
   if(user){
     const name=user.user_metadata?.full_name||user.email||'Signed in';
     const pic=user.user_metadata?.avatar_url;
-    const adminBtn=isOwner()?`<button class="btn ghost sm" style="margin-left:6px" onclick="openAdmin()" title="Admin">🛠 Admin</button>`:'';
-    area.innerHTML=`<span class="user-chip">${pic?`<img src="${esc(pic)}" alt="">`:''}${esc(name.split(' ')[0])} <span class="x" style="cursor:pointer;color:var(--faint)" onclick="signOut()" title="Sign out">⎋</span></span>${adminBtn}`;
+    const adminBtn=isOwnerReal()?`<button class="btn ghost sm" style="margin-left:6px" onclick="openAdmin()" title="Admin">🛠 Admin</button>`:'';
+    const lvl=accessLevel();
+    const roleBadge=`<span class="role-badge role-${lvl}">${lvl==='admin'?'Admin':lvl==='leader'?'Leader':lvl==='camper'?'Camper':'Visitor'}</span>`;
+    area.innerHTML=`<span class="user-chip">${pic?`<img src="${esc(pic)}" alt="">`:''}${esc(name.split(' ')[0])} ${roleBadge} <span class="x" style="cursor:pointer;color:var(--faint)" onclick="signOut()" title="Sign out">⎋</span></span>${adminBtn}`;
   } else {
     area.innerHTML=`<button class="btn ghost sm" onclick="openSignin()">Sign in</button>`;
   }
+  renderViewAsBar();
 }
 function isStandalonePWA(){
   return (window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone===true;
@@ -1018,6 +1139,31 @@ function renderStops(){
     w.appendChild(r);
   });
   renderRouteEndpoints();
+  renderTimelineExtra();
+}
+function renderTimelineExtra(){
+  const w=$('#tl-extra'); const addCard=$('#tl-add-card');
+  if(addCard) addCard.style.display=canManage()?'block':'none';
+  if(!w)return;
+  const list=state.timelineExtra||[];
+  w.innerHTML=list.map(p=>{
+    const del=canManage()?`<span class="x" style="float:right" onclick="delTimelinePoint('${esc(p.id)}')">✕</span>`:'';
+    return `<div class="tl-item">${del}<div class="tl-time">${esc(p.when||'')}</div><h4>${esc(p.title||'')}</h4>${p.desc?`<p>${esc(p.desc)}</p>`:''}</div>`;
+  }).join('');
+}
+function addTimelinePoint(){
+  if(!requireManage())return;
+  const when=$('#tl-when').value.trim(), title=$('#tl-title').value.trim(), desc=$('#tl-desc').value.trim();
+  if(!title){toast('Give the point a title');return;}
+  if(!state.timelineExtra)state.timelineExtra=[];
+  state.timelineExtra.push({id:'tl'+Date.now(),when,title,desc});
+  $('#tl-when').value='';$('#tl-title').value='';$('#tl-desc').value='';
+  persist();renderTimelineExtra();toast('Timeline point added');
+}
+function delTimelinePoint(id){
+  if(!requireManage())return;
+  state.timelineExtra=(state.timelineExtra||[]).filter(p=>p.id!==id);
+  persist();renderTimelineExtra();
 }
 function addStop(){
   if(!requireEdit())return;
@@ -1120,13 +1266,22 @@ function unassign(id,name){
 }
 // Toggle packed for a gear item. If the item is assigned to "All crew", track per-person
 // (each person packs their own); otherwise a single shared flag.
+// Who can edit a given person's packing list?
+// leaders/admins: anyone. campers: only their own linked name. visitors: none.
+function canEditPacking(person){
+  if(!canEdit())return false;
+  if(canManage())return true;
+  const mine=myCrew();
+  return !!(mine && person===mine);
+}
 function togglePacked(id, person){
-  if(!requireEdit())return;
+  const isAll=(state.gearClaims[id]||[]).includes('ALL');
+  const who=person||whoAmI();
+  if(isAll){ if(!canEditPacking(who)){toast('You can only pack your own items');return;} }
+  else { if(!requireEdit())return; }
   if(!state.gearPacked)state.gearPacked={};
   const claims=state.gearClaims[id]||[];
-  const isAll=claims.includes('ALL');
   if(isAll){
-    const who=person||whoAmI();
     if(!who){toast('Pick who you are first');return;}
     let m=state.gearPacked[id];
     if(!m||typeof m!=='object'){m={};state.gearPacked[id]=m;}
@@ -1140,8 +1295,9 @@ function togglePacked(id, person){
 }
 
 // Toggle a packing-list line from the personal "My packing list" view (handles both gear + personal items)
-function toggleMyPack(key){
-  const me=whoAmI();if(!me)return;
+function toggleMyPack(key, person){
+  const me=person||whoAmI();if(!me)return;
+  if(!canEditPacking(me)){toast('You can only edit your own list');return;}
   if(key.startsWith('personal:')){
     const id=key.slice('personal:'.length);
     const arr=state.personalItems[me]||[];
@@ -1151,19 +1307,25 @@ function toggleMyPack(key){
     togglePacked(key,me);
   }
 }
-function addPersonalItem(){
-  if(!requireEdit())return;
-  const me=whoAmI();if(!me){toast('Pick who you are first');return;}
+function addPersonalItem(person){
+  const me=person||whoAmI();if(!me){toast('Pick who you are first');return;}
+  if(!canEditPacking(me)){toast('You can only edit your own list');return;}
   const inp=$('#my-item-in');const v=(inp.value||'').trim();if(!v)return;
+  const qInp=$('#my-item-qty');const qty=qInp?parseInt(qInp.value,10)||0:0;
   if(!state.personalItems[me])state.personalItems[me]=[];
-  state.personalItems[me].push({id:uid(),name:v,packed:false});
-  inp.value='';persist();renderMyPacking();renderProgress();
+  const item={id:uid(),name:v,packed:false}; if(qty>1)item.qty=qty;
+  state.personalItems[me].push(item);
+  inp.value=''; if(qInp)qInp.value='';
+  persist();renderMyPacking();renderProgress();
 }
-function removePersonalItem(id){
-  const me=whoAmI();if(!me)return;
+function removePersonalItem(id, person){
+  const me=person||whoAmI();if(!me)return;
+  if(!canEditPacking(me)){toast('You can only edit your own list');return;}
   state.personalItems[me]=(state.personalItems[me]||[]).filter(x=>x.id!==id);
   persist();renderMyPacking();renderProgress();
 }
+let _viewPackOf=''; // which crew member's list is being viewed (read-only if not yours)
+function viewPackingOf(name){ _viewPackOf=name||''; renderMyPacking(); }
 function renderMyPacking(){
   const wrap=$('#my-packing');if(!wrap)return;
   const me=whoAmI();
@@ -1171,37 +1333,54 @@ function renderMyPacking(){
   fillSel($('#whoami-select'));
   fillSel($('#whoami-select-gear'));
   if(!me){
-    wrap.innerHTML='<div class="empty">Pick your name above to see your personal packing list — everything assigned to you, plus anything marked “All crew”, plus your own custom items.</div>';
+    wrap.innerHTML='<div class="empty">Pick your name above to see your personal packing list — everything assigned to you, plus anything marked "All crew", plus your own custom items.</div>';
     return;
   }
-  if(!state.crew.includes(me)){ // stale selection
+  if(!state.crew.includes(me)){
     try{localStorage.removeItem('ww_whoami');}catch(e){}
     wrap.innerHTML='<div class="empty">Pick your name above to see your personal packing list.</div>';
     [$('#whoami-select'),$('#whoami-select-gear')].forEach(s=>{if(s)s.value='';});
     return;
   }
-  const list=packingListFor(me);
-  const stats=packStatsFor(me);
+  // whose list are we viewing? default = me
+  const viewing = (_viewPackOf && state.crew.includes(_viewPackOf)) ? _viewPackOf : me;
+  const editable = canEditPacking(viewing);
+  const list=packingListFor(viewing);
+  const stats=packStatsFor(viewing);
   const pct=stats.total?Math.round(stats.packed/stats.total*100):0;
-  let html=`<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+
+  // crew switcher (view others read-only)
+  let html='';
+  if(state.crew.length>1){
+    html+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <span style="font-size:12px;color:var(--muted)">Viewing:</span>
+      <select onchange="viewPackingOf(this.value)" style="font-size:13px">${state.crew.map(c=>`<option value="${esc(c)}" ${c===viewing?'selected':''}>${esc(c)}${c===me?' (me)':''}</option>`).join('')}</select>
+      ${!editable?'<span class="gtype gt-someone">read-only</span>':''}
+    </div>`;
+  }
+  html+=`<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px">
     <div style="font-family:var(--display);font-weight:700;font-size:20px">${stats.packed}/${stats.total} packed</div>
     <div class="progress-track" style="flex:1;min-width:120px"><div class="progress-fill" style="width:${pct}%"></div></div>
     <div style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--green)">${pct}%</div></div>`;
   if(!list.length){
-    html+='<div class="empty">Nothing on your list yet. Claim gear in the list below, or add personal items here.</div>';
+    html+='<div class="empty">Nothing on this list yet.'+(editable?' Claim gear below, or add personal items here.':'')+'</div>';
   } else {
     html+=list.map(x=>{
-      const tag = x.kind==='personal'?'<span class="gtype gt-each">personal</span>':x.kind==='all'?'<span class="gtype gt-shared">all crew</span>':'<span class="gtype gt-someone">yours</span>';
-      const rm = x.kind==='personal'?`<span class="gear-x" onclick="removePersonalItem('${x.key.slice(9)}')" title="Remove">🗑</span>`:'';
-      return `<div class="chk ${x.packed?'done':''}" onclick="toggleMyPack('${x.key.replace(/'/g,"\\'")}')">
+      const tag = x.kind==='personal'?'<span class="gtype gt-each">personal</span>':x.kind==='all'?'<span class="gtype gt-shared">all crew</span>':'<span class="gtype gt-someone">theirs</span>';
+      const qty = x.qty&&x.qty>1?`<span class="qty-badge">×${x.qty}</span>`:'';
+      const rm = (x.kind==='personal'&&editable)?`<span class="gear-x" onclick="event.stopPropagation();removePersonalItem('${x.key.slice(9)}','${esc(viewing).replace(/'/g,"\\'")}')" title="Remove">🗑</span>`:'';
+      const click = editable?`onclick="toggleMyPack('${x.key.replace(/'/g,"\\'")}','${esc(viewing).replace(/'/g,"\\'")}')"`:'';
+      return `<div class="chk ${x.packed?'done':''} ${editable?'':'readonly'}" ${click}>
         <div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div>
-        <div class="ct" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${esc(x.name)} ${tag}</div>${rm}</div>`;
+        <div class="ct" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${esc(x.name)} ${qty} ${tag}</div>${rm}</div>`;
     }).join('');
   }
-  // add personal item row
-  html+=`<div style="display:flex;gap:6px;margin-top:12px">
-    <input id="my-item-in" placeholder="Add a personal item (e.g. retainer, book)…" style="flex:1" onkeydown="if(event.key==='Enter')addPersonalItem()">
-    <button class="btn sm" onclick="addPersonalItem()">Add</button></div>`;
+  if(editable){
+    html+=`<div style="display:flex;gap:6px;margin-top:12px">
+      <input id="my-item-in" placeholder="Add a personal item (e.g. retainer)…" style="flex:1" onkeydown="if(event.key==='Enter')addPersonalItem('${esc(viewing).replace(/'/g,"\\'")}')">
+      <input id="my-item-qty" type="number" min="1" placeholder="Qty" style="width:62px" title="Optional quantity">
+      <button class="btn sm" onclick="addPersonalItem('${esc(viewing).replace(/'/g,"\\'")}')">Add</button></div>`;
+  }
   wrap.innerHTML=html;
 }
 function addGear(){
@@ -1252,17 +1431,59 @@ function renderArchive(){
 
 /* ---------- food ---------- */
 let foodFilter='all';
+function allFood(){ return FOOD.concat(state.customFood||[]); }
 function renderFood(){
   const tb=document.querySelector('#ftable tbody');tb.innerHTML='';
   const sl={cooler:'Cooler',dry:'Dry',fire:'Fire',stove:'Stove',none:'No cook'};
-  FOOD.filter(f=>foodFilter==='all'||f.store===foodFilter||f.cook===foodFilter).forEach(f=>{
+  allFood().filter(f=>foodFilter==='all'||f.store===foodFilter||f.cook===foodFilter).forEach((f,i)=>{
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td class="fn">${f.n}</td><td><span class="fpill fp-${f.store}">${sl[f.store]}</span></td><td><span class="fpill fp-${f.cook}">${sl[f.cook]}</span></td><td>${f.why}</td>`;
+    const isCustom=f.custom;
+    const delc=(isCustom&&canEdit())?`<button class="x" title="Remove" onclick="delFood('${esc(f.id)}')">✕</button>`:'';
+    tr.innerHTML=`<td class="fn">${esc(f.n)} ${isCustom?'<span class="catpill">added</span>':''}</td><td><span class="fpill fp-${f.store}">${sl[f.store]}</span></td><td><span class="fpill fp-${f.cook}">${sl[f.cook]}</span></td><td>${esc(f.why||'')} ${delc}</td>`;
     tb.appendChild(tr);
   });
 }
-function renderMeals(){const w=$('#meal-grid');w.innerHTML='';MEALS.forEach(m=>{const d=document.createElement('div');d.className='meal';
-  d.innerHTML=`<div class="mh">${m.h}</div><h4>${m.t}</h4><ul>${m.items.map(i=>`<li>${i}</li>`).join('')}</ul>${m.tip?`<div class="mtip">↳ ${m.tip}</div>`:''}`;w.appendChild(d);});}
+function addFood(){
+  if(!requireEdit())return;
+  const n=$('#food-name-in'),s=$('#food-store-in'),c=$('#food-cook-in'),wy=$('#food-why-in');
+  const name=(n.value||'').trim();
+  if(!name){toast('Enter a food name');return;}
+  if(!state.customFood)state.customFood=[];
+  state.customFood.push({id:'cf'+Date.now(),n:name,store:s.value,cook:c.value,why:(wy.value||'').trim(),custom:true});
+  n.value='';if(wy)wy.value='';
+  persist();renderFood();toast('Added to the food list');
+}
+function delFood(id){
+  if(!requireEdit())return;
+  state.customFood=(state.customFood||[]).filter(f=>f.id!==id);
+  persist();renderFood();
+}
+function mealItems(m,i){
+  const ov=state.mealEdits&&state.mealEdits[i];
+  return ov&&ov.items?ov.items:m.items;
+}
+function renderMeals(){
+  const w=$('#meal-grid');w.innerHTML='';
+  MEALS.forEach((m,i)=>{
+    const d=document.createElement('div');d.className='meal';
+    const items=mealItems(m,i);
+    const editBtn=canEdit()?`<button class="x" style="float:right;font-size:13px" title="Edit this meal" onclick="editMeal(${i})">✎</button>`:'';
+    d.innerHTML=`<div class="mh">${m.h}${editBtn}</div><h4>${m.t}</h4><ul>${items.map(it=>`<li>${esc(it)}</li>`).join('')}</ul>${m.tip?`<div class="mtip">↳ ${m.tip}</div>`:''}`;
+    w.appendChild(d);
+  });
+}
+function editMeal(i){
+  if(!requireEdit())return;
+  const m=MEALS[i];if(!m)return;
+  const cur=mealItems(m,i).join('\n');
+  const nv=prompt('Edit "'+m.t+'" items (one per line):',cur);
+  if(nv===null)return;
+  const items=nv.split('\n').map(s=>s.trim()).filter(Boolean);
+  if(!state.mealEdits)state.mealEdits={};
+  if(items.join('\n')===m.items.join('\n')) delete state.mealEdits[i]; // back to default
+  else state.mealEdits[i]={items};
+  persist();renderMeals();toast('Meal updated');
+}
 function renderPrep(){const w=$('#prep-grid');w.innerHTML='';PREP.forEach(p=>{const d=document.createElement('div');d.className='icard';
   d.innerHTML=`<div class="itag ${p.c}">${p.tag}</div><h4>${p.title}</h4><p>${p.body}</p>`;w.appendChild(d);});}
 
@@ -1271,6 +1492,7 @@ let shopFilter='all';
 function shopCat(btn,f){$$('.fbtn[data-sc]').forEach(b=>b.classList.remove('on'));btn.classList.add('on');shopFilter=f;renderShop();}
 function renderShop(){
   const w=$('#shop-grid');w.innerHTML='';
+  const me=whoAmI();
   SHOP.filter(s=>shopFilter==='all'||s.cat===shopFilter).forEach((s)=>{
     const si=SHOP.indexOf(s);
     const card=document.createElement('div');card.className='icard';
@@ -1283,23 +1505,96 @@ function renderShop(){
         const mk=(k,label,cls)=>`<a class="shoplink ${cls} ${L.best===k?'best':''}" href="${L[k]}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${L.best===k?'★ ':''}${label}</a>`;
         links=`<div class="shoplinks">${mk('amz','Amazon','sl-amz')}${mk('ct','Canadian Tire','sl-ct')}${mk('dec','Decathlon','sl-dec')}</div><div class="best-note">↳ ${L.reason}</div>`;
       }
-      html+=`<div class="chk ${done?'done':''}" onclick="toggleCheck('${key}')"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div><div class="ct">${esc(it.n)}${links}</div></div>`;
+      // who-bought indicator (global, multi-crew)
+      const buyers=(state.shopBought&&state.shopBought[key])||[];
+      const iBought=me&&buyers.includes(me);
+      const avatars=buyers.map(b=>`<span class="buyer-av" style="background:${colorFor(b)}" title="${esc(b)} bought this">${initials(b)}</span>`).join('');
+      const buyBtn=`<button class="bought-btn ${iBought?'on':''}" onclick="event.stopPropagation();toggleBought('${key}')" title="${iBought?'You marked this bought':'Mark that you bought this'}">${iBought?'✓ bought':'I bought this'}</button>`;
+      const buyRow=`<div class="bought-row">${avatars}${buyBtn}</div>`;
+      html+=`<div class="shop-item"><div class="chk ${done?'done':''}" onclick="toggleCheck('${key}')"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div><div class="ct">${esc(it.n)}${links}</div></div>${buyRow}</div>`;
     });
     html+=`</div><div class="note" style="margin-top:12px">${s.note}</div>`;
     card.innerHTML=html;w.appendChild(card);
   });
 }
+function toggleBought(key){
+  if(!requireEdit())return;
+  const me=whoAmI();
+  if(!me){toast('Pick who you are (Basecamp) to mark purchases');return;}
+  if(!state.shopBought)state.shopBought={};
+  const arr=state.shopBought[key]||(state.shopBought[key]=[]);
+  const i=arr.indexOf(me);
+  if(i>-1)arr.splice(i,1);else arr.push(me);
+  if(!arr.length)delete state.shopBought[key];
+  persist();renderShop();
+}
 function toggleCheck(k){if(!requireEdit())return;state.checks[k]=!state.checks[k];persist();renderShop();}
 
 /* ---------- crew / roles ---------- */
 function renderCrew(){
-  const bar=$('#crew-bar');bar.innerHTML='';
+  const bar=$('#crew-bar');if(!bar)return;bar.innerHTML='';
   if(!state.crew.length){bar.innerHTML='<span class="empty" style="padding:8px">No crew yet — add names above.</span>';}
-  state.crew.forEach(c=>{const chip=document.createElement('div');chip.className='crew-chip';
-    chip.innerHTML=`<span class="avatar" style="background:${colorFor(c)}">${initials(c)}</span>${esc(c)}<span class="x" onclick="removeCrew('${esc(c).replace(/&#39;/g,"\\'")}')">✕</span>`;bar.appendChild(chip);});
+  const mine=myCrew();
+  state.crew.forEach(c=>{
+    const meta=state.crewMeta&&state.crewMeta[c]||{};
+    const isMine=mine&&c===mine;
+    const canRemove=canManage()||isMine;
+    const canRename=canManage()||isMine;
+    const chip=document.createElement('div');chip.className='crew-chip'+(isMine?' is-me':'');
+    const linkDot=meta.email?'<span class="crew-linked" title="Linked to '+esc(meta.email)+'">🔗</span>':'';
+    let actions='';
+    if(canRename) actions+=`<span class="x rename" title="Rename" onclick="renameCrew('${esc(c).replace(/&#39;/g,"\\'")}')">✎</span>`;
+    if(canRemove) actions+=`<span class="x" title="Remove" onclick="removeCrewGuarded('${esc(c).replace(/&#39;/g,"\\'")}')">✕</span>`;
+    chip.innerHTML=`<span class="avatar" style="background:${colorFor(c)}">${initials(c)}</span>${esc(c)}${linkDot}${actions}`;
+    bar.appendChild(chip);
+  });
+  // visitor "link my name" entry point
+  const lb=$('#link-cta');
+  if(lb){
+    const showCta = isSignedIn() && !canManage() && !mine && !isOwnerReal();
+    lb.style.display=showCta?'block':'none';
+  }
   refreshCrewSelects();renderGear();renderRoles();renderSites();renderSettle();renderMyPacking();
 }
-function requireEdit(){ if(!isSignedIn()){ toast('🔒 Sign in to edit the trip'); return false; } if(isBlocked()){ toast('Your access has been revoked by the organizer'); return false; } return true; }
+function removeCrewGuarded(name){
+  const mine=myCrew();
+  if(!(canManage()||(mine&&name===mine))){toast('You can only remove your own name');return;}
+  if(!confirm('Remove "'+name+'" from the crew?'))return;
+  removeCrew(name);
+  if(mine===name){try{localStorage.removeItem('ww_whoami');}catch(e){} applyGateClasses();renderAuth();}
+}
+function renameCrew(name){
+  const mine=myCrew();
+  if(!(canManage()||(mine&&name===mine))){toast('You can only rename your own name');return;}
+  const nv=prompt('Rename "'+name+'" to:',name);
+  if(nv===null)return;
+  const v=nv.trim();
+  if(!v||v===name)return;
+  if(state.crew.includes(v)){toast('That name already exists');return;}
+  // migrate everything referencing the old name
+  state.crew=state.crew.map(c=>c===name?v:c);
+  if(state.crewMeta&&state.crewMeta[name]){state.crewMeta[v]=state.crewMeta[name];delete state.crewMeta[name];}
+  Object.keys(state.gearClaims).forEach(k=>{state.gearClaims[k]=(state.gearClaims[k]||[]).map(n=>n===name?v:n);});
+  if(state.gearPacked)Object.keys(state.gearPacked).forEach(k=>{const m=state.gearPacked[k];if(m&&typeof m==='object'&&m[name]){m[v]=m[name];delete m[name];}});
+  if(state.personalItems&&state.personalItems[name]){state.personalItems[v]=state.personalItems[name];delete state.personalItems[name];}
+  if(state.votes&&state.votes[name]){state.votes[v]=state.votes[name];delete state.votes[name];}
+  Object.keys(state.roles||{}).forEach(k=>{if(state.roles[k]===name)state.roles[k]=v;});
+  (state.expenses||[]).forEach(e=>{if(e.who===name)e.who=v;});
+  if(whoAmI()===name){try{localStorage.setItem('ww_whoami',v);}catch(e){}}
+  persist();renderCrew();renderExpenses();renderAuth();
+  toast('Renamed to '+v);
+}
+function requireEdit(){
+  const l=accessLevel();
+  if(l==='none'){ toast('🔒 Sign in to edit the trip'); return false; }
+  if(isBlocked()){ toast('Your access has been revoked by the organizer'); return false; }
+  if(l==='visitor'){ toast('👀 Visitors can view but not edit. Link your name in Basecamp to become a camper.'); return false; }
+  return true;
+}
+function requireManage(){
+  if(!canManage()){ toast('Only leaders or the admin can do that'); return false; }
+  return true;
+}
 function addCrew(){
   if(!requireEdit())return;
   if(!canAddCrew()){ toast('You can add 1 crew member. Ask an organizer to add more.'); return; }
@@ -1340,12 +1635,23 @@ function addExpense(){
   state.expenses.push({id:Date.now(),desc,amt:Math.round(amt*100)/100,who,cat});
   d.value='';a.value='';w.value='';persist();renderExpenses();
 }
-function delExpense(id){state.expenses=state.expenses.filter(e=>e.id!==id);persist();renderExpenses();}
+function delExpense(id){ if(!requireEdit())return; state.expenses=state.expenses.filter(e=>e.id!==id);persist();renderExpenses();}
+function editExpense(id){
+  if(!requireManage()){return;}
+  const e=state.expenses.find(x=>x.id===id);if(!e)return;
+  const nd=prompt('Item name:',e.desc); if(nd===null)return;
+  const na=prompt('Amount ($):',e.amt); if(na===null)return;
+  const amt=parseFloat(na);
+  if(!nd.trim()||isNaN(amt)||amt<=0){toast('Enter a valid name & amount');return;}
+  e.desc=nd.trim(); e.amt=Math.round(amt*100)/100;
+  persist();renderExpenses();toast('Expense updated');
+}
 function renderExpenses(){
   const w=$('#exp-list');w.innerHTML='';
   if(!state.expenses.length){w.innerHTML='<div class="empty">No expenses logged yet.</div>';}
   state.expenses.forEach(e=>{const r=document.createElement('div');r.className='exp-row';
-    r.innerHTML=`<span class="avatar" style="background:${colorFor(e.who)}">${initials(e.who)}</span><div class="ed"><div class="edesc">${esc(e.desc)} <span class="catpill">${esc(e.cat||'Other')}</span></div><div class="emeta">paid by ${esc(e.who)}</div></div><div class="eamt">$${e.amt.toFixed(2)}</div><span class="x" onclick="delExpense(${e.id})">✕</span>`;w.appendChild(r);});
+    const editBtn=canManage()?`<span class="x" title="Edit" onclick="editExpense(${e.id})">✎</span>`:'';
+    r.innerHTML=`<span class="avatar" style="background:${colorFor(e.who)}">${initials(e.who)}</span><div class="ed"><div class="edesc">${esc(e.desc)} <span class="catpill">${esc(e.cat||'Other')}</span></div><div class="emeta">paid by ${esc(e.who)}</div></div><div class="eamt">$${e.amt.toFixed(2)}</div>${editBtn}<span class="x" onclick="delExpense(${e.id})">✕</span>`;w.appendChild(r);});
   renderCatBars();renderSettle();
 }
 function renderCatBars(){
@@ -1590,6 +1896,31 @@ function toggleCompact(){
   if(!canUseDisplay()){toast('🔒 Sign in to change display settings');return;}
   const v=!compactOn();try{localStorage.setItem('ww_compact',v?'1':'0');}catch(e){}document.documentElement.classList.toggle('compact',v);renderSettingsUI();
 }
+function toggleSetSec(key){
+  const sec=$('#setsec-'+key), head=sec&&sec.previousElementSibling, caret=$('#caret-'+key);
+  if(!sec)return;
+  const collapsed=sec.classList.toggle('collapsed');
+  if(head)head.classList.toggle('collapsed',collapsed);
+  try{localStorage.setItem('ww_setsec_'+key,collapsed?'1':'0');}catch(e){}
+}
+function renderLangPills(){
+  const w=$('#lang-pills'); if(!w||!window.i18n)return;
+  const cur=window.i18n.getLang();
+  w.innerHTML=Object.entries(window.i18n.LANGS).map(([code,info])=>
+    `<button class="lang-pill ${code===cur?'on':''}" onclick="chooseLang('${code}')"><span class="lp-flag">${info.flag}</span>${info.name}</button>`
+  ).join('');
+}
+function chooseLang(code){
+  if(!window.i18n)return;
+  window.i18n.setLang(code);
+  renderLangPills();
+}
+// called by i18n.setLang after the static DOM is translated — re-render dynamic content
+window.onLangChange=function(lang){
+  try{ countdown(); }catch(e){}
+  try{ renderAll(); }catch(e){}
+  try{ renderLangPills(); }catch(e){}
+};
 function toggleSimplify(){
   if(!canUseDisplay()){toast('🔒 Sign in to change display settings');return;}
   const v=!simplifyOn();try{localStorage.setItem('ww_simplify',v?'1':'0');}catch(e){}applySimplify(v);renderSettingsUI();toast(v?'Simplified — extra tabs & sections hidden':'Full mode — everything shown');
@@ -2089,9 +2420,9 @@ function countdown(){
   const target=new Date('2026-06-19T08:00:00-04:00');const now=new Date();
   const diff=Math.ceil((target-now)/(86400000));
   const n=$('#cd-num'),l=$('#cd-lbl');
-  if(diff>0){n.textContent=diff;l.textContent=diff===1?'day to go':'days to go';}
-  else if(diff===0){n.textContent='GO';l.textContent="it's today";}
-  else{n.textContent='✓';l.textContent='trip done';}
+  if(diff>0){n.textContent=diff;l.textContent=diff===1?t('cd.dayToGo','day to go'):t('cd.daysToGo','days to go');}
+  else if(diff===0){n.textContent='GO';l.textContent=t('cd.today',"it's today");}
+  else{n.textContent='✓';l.textContent=t('cd.done','trip done');}
 }
 function renderAll(){
   renderCrew();renderExpenses();renderFood();renderMeals();renderPrep();renderShop();
@@ -2105,11 +2436,16 @@ async function boot(){
   try{ if(localStorage.getItem('ww_banner_hidden'))$('#help-banner').style.display='none'; }catch(e){}
   try{ initTabs(); }catch(e){ console.warn('initTabs',e); }
   try{ initMapViewer(); }catch(e){ console.warn('initMapViewer',e); }
+  try{
+    const tt=document.getElementById('to-top');
+    if(tt) window.addEventListener('scroll',()=>{ tt.classList.toggle('show', window.scrollY>500); },{passive:true});
+  }catch(e){}
   try{ countdown(); }catch(e){}
   try{
     applyGateClasses();
     enforceDisplayDefaults();
     applySimplify(simplifyOn());
+    try{ if(window.i18n){ document.documentElement.lang=window.i18n.getLang(); document.documentElement.dir=window.i18n.LANGS[window.i18n.getLang()].dir; window.i18n.applyI18n(); } renderLangPills(); }catch(e){console.warn('i18n init',e);}
   }catch(e){}
   try{ renderAll(); }catch(e){ console.warn('renderAll',e); }
   try{ setSync('local','Local'); }catch(e){}
