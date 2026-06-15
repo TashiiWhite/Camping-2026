@@ -166,7 +166,7 @@ To share state when Supabase isn't connected: **Export crew data** → send the 
 
 ## Version history
 
-### v9 — June 14, 2026 (current)
+### v8.2 — June 14, 2026 (current)
 
 This release adds a full bilingual interface, a rebuilt admin data-center dashboard with live Supabase analytics, and a round of UX refinements.
 
@@ -198,7 +198,7 @@ This release adds a full bilingual interface, a rebuilt admin data-center dashbo
 - **Dropdown contrast fixed** across all themes — option lists are now always readable (previously some themes rendered option text nearly invisible).
 - The how-to guide now leads with **"Sign in to go live" as step 1**.
 
-### v8 — June 14, 2026
+### v8-v8.1 — June 14, 2026
 
 The big release: a full signed-in/signed-out access model with roles, a private admin control panel, **bilingual (English CA / French CA) support**, an **admin data-center dashboard with live Supabase analytics**, **per-user language**, inline meal editing, auto-sorting timeline, and a privacy pass on locked pages.
 
