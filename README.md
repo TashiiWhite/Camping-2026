@@ -198,7 +198,7 @@ This release adds a full bilingual interface, a rebuilt admin data-center dashbo
 - **Dropdown contrast fixed** across all themes — option lists are now always readable (previously some themes rendered option text nearly invisible).
 - The how-to guide now leads with **"Sign in to go live" as step 1**.
 
-### v8-v8.1 — June 14, 2026
+### v8 — June 14, 2026
 
 The big release: a full signed-in/signed-out access model with roles, a private admin control panel, **bilingual (English CA / French CA) support**, an **admin data-center dashboard with live Supabase analytics**, **per-user language**, inline meal editing, auto-sorting timeline, and a privacy pass on locked pages.
 
@@ -252,7 +252,7 @@ The big release: a full signed-in/signed-out access model with roles, a private 
 
 **Deploy note:** this release adds three files — **`i18n.js`**, **`content-fr.js`**, and (optional, hosted separately) **`whats-new.html`**. Upload `i18n.js` and `content-fr.js` alongside `app.js` / `index.html` / `sw.js` in the same commit. Cache bumped to **v24**.
 
-**Later v8 refinements**
+**Later v8.1 refinements**
 - **Aurora is the default theme for signed-in users** (the old monthly rotation is gone). Pick any theme and it's remembered on your device from then on.
 - **Signed-out users see the trip as empty** — crew, costs and everything look reset until they sign in, at which point the real shared data appears.
 - **Visitors** can browse the crew data, but the **Costs page is private to the crew** — it's blurred with a "link your name to see the numbers" note until they become a camper.
