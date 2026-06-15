@@ -2016,7 +2016,23 @@ function removeCrew(name){
 function refreshCrewSelects(){
   const opts=state.crew.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
   const ew=$('#exp-who');if(ew){const cur=ew.value;ew.innerHTML=`<option value="">${t('cost.whoPaid','Who paid?')}</option>${opts}`;ew.value=cur;}
+  // add-form beneficiary chips (managers, custom split)
+  const sr=$('#exp-share-row');
+  if(sr){
+    sr.innerHTML=state.crew.map(c=>`<span class="chip" data-name="${esc(c)}" onclick="toggleAddShare(this)">${esc(c)}</span>`).join('');
+  }
 }
+// Show/hide the add-form people picker based on the split <select>.
+function syncAddShareRow(){
+  const sEl=$('#exp-split'), row=$('#exp-share-row');
+  if(!row)return;
+  const custom=(canManage()&&sEl&&sEl.value==='custom');
+  row.style.display=custom?'flex':'none';
+  const hint=document.querySelector('.exp-adv .pick-hint'); if(hint) hint.style.display=custom?'inline':'none';
+  if(!custom) row.querySelectorAll('.chip.on').forEach(c=>c.classList.remove('on'));
+}
+function toggleAddShare(el){ el.classList.toggle('on'); }
+function addShareSelection(){ return Array.from(document.querySelectorAll('#exp-share-row .chip.on')).map(c=>c.dataset.name); }
 function renderRoles(){
   const w=$('#role-grid');w.innerHTML='';
   const rolesL=contentArr('ROLES',ROLES);
@@ -2030,31 +2046,133 @@ function renderRoles(){
 function setRole(r,n){if(!requireEdit())return;if(n)state.roles[r]=n;else delete state.roles[r];persist();}
 
 /* ---------- expenses ---------- */
+/* Split model: every expense is split evenly among a set of BENEFICIARIES.
+   - split 'all'    → beneficiaries = whole crew (default / back-compat when field absent)
+   - split 'payer'  → beneficiaries = [payer] (personal; nets to zero)
+   - split 'custom' → beneficiaries = e.shareWith (chosen subset)
+   The payer fronts the money; each beneficiary owes amt / beneficiaries.length. */
+function expBeneficiaries(e){
+  const crew=state.crew||[];
+  const mode=e.split||'all';
+  if(mode==='payer') return (e.who&&crew.includes(e.who))?[e.who]:[];
+  if(mode==='custom'){
+    const list=(e.shareWith||[]).filter(n=>crew.includes(n));
+    return list.length?list:((e.who&&crew.includes(e.who))?[e.who]:[]); // safety fallback
+  }
+  return crew.slice(); // 'all'
+}
+/* Single source of truth for the settle-up math (used by renderSettle + copySettle). */
+function computeBalances(){
+  const bal={}; (state.crew||[]).forEach(c=>bal[c]=0);
+  let total=0, sharedTotal=0, hasCustom=false;
+  (state.expenses||[]).forEach(e=>{
+    const amt=e.amt||0; total+=amt;
+    const bens=expBeneficiaries(e);
+    if(!bens.length) return;
+    if(bal[e.who]!==undefined) bal[e.who]+=amt;           // payer fronted it
+    const each=amt/bens.length;
+    bens.forEach(n=>{ if(bal[n]!==undefined) bal[n]-=each; }); // beneficiaries owe their share
+    const mode=e.split||'all';
+    if(mode==='all') sharedTotal+=amt; else hasCustom=true;
+  });
+  const n=(state.crew||[]).length;
+  return {bal,total,sharedTotal,sharedPerPerson:n?sharedTotal/n:0,hasShared:sharedTotal>0.005,hasCustom};
+}
+
 function addExpense(){
   if(!requireEdit())return;
   const d=$('#exp-desc'),a=$('#exp-amt'),c=$('#exp-cat'),w=$('#exp-who');
   const desc=d.value.trim(),amt=parseFloat(a.value),who=w.value,cat=c.value;
   if(!desc||!amt||amt<=0||!who){toast('Need a description, amount & payer');return;}
-  state.expenses.push({id:Date.now(),desc,amt:Math.round(amt*100)/100,who,cat});
-  d.value='';a.value='';w.value='';persist();renderExpenses();
+  // Split mode (managers only; campers always split evenly = 'all')
+  const sEl=$('#exp-split');
+  const split=(canManage()&&sEl)?sEl.value:'all';
+  const exp={id:Date.now(),desc,amt:Math.round(amt*100)/100,who,cat,split};
+  if(split==='custom'){
+    const picks=addShareSelection();
+    if(!picks.length){toast(t('cost.needShare','Pick at least one person to split with'));return;}
+    exp.shareWith=picks;
+  }
+  state.expenses.push(exp);
+  d.value='';a.value='';w.value='';
+  if(sEl){sEl.value='all';} syncAddShareRow();
+  persist();renderExpenses();
 }
-function delExpense(id){ if(!requireEdit())return; state.expenses=state.expenses.filter(e=>e.id!==id);persist();renderExpenses();}
-function editExpense(id){
-  if(!requireManage()){return;}
+function delExpense(id){ if(!requireEdit())return; if(editingExpId===id)editingExpId=null; state.expenses=state.expenses.filter(e=>e.id!==id);persist();renderExpenses();}
+
+/* ---- inline expense editing (replaces the old prompt() flow) ---- */
+let editingExpId=null;
+function editExpense(id){ if(!requireManage())return; editingExpId=id; renderExpenses(); }
+function cancelEditExpense(){ editingExpId=null; renderExpenses(); }
+function saveEditExpense(id){
+  if(!requireManage())return;
   const e=state.expenses.find(x=>x.id===id);if(!e)return;
-  const nd=prompt('Item name:',e.desc); if(nd===null)return;
-  const na=prompt('Amount ($):',e.amt); if(na===null)return;
+  const nd=($('#ee-desc-'+id)||{}).value, na=($('#ee-amt-'+id)||{}).value;
+  const who=($('#ee-who-'+id)||{}).value, cat=($('#ee-cat-'+id)||{}).value;
+  const split=($('#ee-split-'+id)||{}).value||'all';
   const amt=parseFloat(na);
-  if(!nd.trim()||isNaN(amt)||amt<=0){toast('Enter a valid name & amount');return;}
-  e.desc=nd.trim(); e.amt=Math.round(amt*100)/100;
-  persist();renderExpenses();toast('Expense updated');
+  if(!nd||!nd.trim()||isNaN(amt)||amt<=0){toast('Enter a valid name & amount');return;}
+  if(!who){toast('Pick who paid');return;}
+  if(split==='custom'){
+    const picks=Array.from(document.querySelectorAll('.ee-share-'+id+'.on')).map(x=>x.dataset.name);
+    if(!picks.length){toast(t('cost.needShare','Pick at least one person to split with'));return;}
+    e.shareWith=picks;
+  } else { delete e.shareWith; }
+  e.desc=nd.trim(); e.amt=Math.round(amt*100)/100; e.who=who; e.cat=cat; e.split=split;
+  editingExpId=null; persist(); renderExpenses(); toast(t('cost.updated','Expense updated'));
+}
+// Toggle a beneficiary chip inside the inline editor for expense `id`
+function toggleEditShare(id,name,el){ el.classList.toggle('on'); }
+// Toggle split mode inside the inline editor (show/hide the people picker)
+function onEditSplitChange(id){
+  const v=($('#ee-split-'+id)||{}).value;
+  const row=$('#ee-share-row-'+id); if(row) row.style.display=(v==='custom')?'flex':'none';
+}
+// Short human label of how an expense is split, for the row meta line.
+function splitLabel(e){
+  const mode=e.split||'all';
+  if(mode==='payer') return t('cost.personal','personal');
+  if(mode==='custom'){
+    const names=(e.shareWith||[]).filter(n=>(state.crew||[]).includes(n));
+    return names.length?(t('cost.splitAmong','split among')+' '+names.join(', ')):t('cost.personal','personal');
+  }
+  return t('cost.splitEveryone','split evenly');
 }
 function renderExpenses(){
   const w=$('#exp-list');w.innerHTML='';
   if(!state.expenses.length){w.innerHTML=`<div class="empty">${t('cost.noExpenses','No expenses logged yet.')}</div>`;}
-  state.expenses.forEach(e=>{const r=document.createElement('div');r.className='exp-row';
-    const editBtn=canManage()?`<span class="x" title="${t('cost.edit','Edit')}" onclick="editExpense(${e.id})">✎</span>`:'';
-    r.innerHTML=`<span class="avatar" style="background:${colorFor(e.who)}">${initials(e.who)}</span><div class="ed"><div class="edesc">${esc(e.desc)} <span class="catpill">${esc(catLabel(e.cat||'Other'))}</span></div><div class="emeta">${t('cost.paidBy','paid by')} ${esc(e.who)}</div></div><div class="eamt">$${e.amt.toFixed(2)}</div>${editBtn}<span class="x" onclick="delExpense(${e.id})">✕</span>`;w.appendChild(r);});
+  const crew=state.crew||[];
+  state.expenses.forEach(e=>{
+    const r=document.createElement('div');r.className='exp-row';
+    if(canManage() && editingExpId===e.id){
+      // ---- inline editor ----
+      r.classList.add('editing');
+      const whoOpts=crew.map(c=>`<option value="${esc(c)}"${c===e.who?' selected':''}>${esc(c)}</option>`).join('');
+      const cats=['Site','Food','Gas','Firewood','Gear','Other'];
+      const catOpts=cats.map(c=>`<option value="${c}"${(e.cat||'Other')===c?' selected':''}>${esc(catLabel(c))}</option>`).join('');
+      const mode=e.split||'all';
+      const splitOpts=`<option value="all"${mode==='all'?' selected':''}>${t('cost.splitAll','Everyone')}</option><option value="payer"${mode==='payer'?' selected':''}>${t('cost.splitPayer','Just payer (personal)')}</option><option value="custom"${mode==='custom'?' selected':''}>${t('cost.splitCustom','Choose people…')}</option>`;
+      const chips=crew.map(c=>{const on=(e.shareWith||[]).includes(c);return `<span class="chip ee-share-${e.id}${on?' on':''}" data-name="${esc(c)}" onclick="toggleEditShare(${e.id},'${esc(c).replace(/'/g,"\\'")}',this)">${esc(c)}</span>`;}).join('');
+      r.innerHTML=`<div class="exp-edit">
+        <div class="exp-edit-grid">
+          <input id="ee-desc-${e.id}" value="${esc(e.desc)}" placeholder="${t('cost.whatPh','What was it?')}">
+          <input id="ee-amt-${e.id}" type="number" step="0.01" value="${e.amt}" placeholder="${t('cost.amtPh','$ amount')}">
+          <select id="ee-cat-${e.id}">${catOpts}</select>
+          <select id="ee-who-${e.id}">${whoOpts}</select>
+          <select id="ee-split-${e.id}" onchange="onEditSplitChange(${e.id})">${splitOpts}</select>
+        </div>
+        <div id="ee-share-row-${e.id}" class="exp-share-row" style="display:${mode==='custom'?'flex':'none'}">${chips}</div>
+        <div class="exp-edit-actions">
+          <button class="btn sm" onclick="saveEditExpense(${e.id})">${t('cost.save','Save')}</button>
+          <button class="btn ghost sm" onclick="cancelEditExpense()">${t('cost.cancel','Cancel')}</button>
+        </div>
+      </div>`;
+    } else {
+      const editBtn=canManage()?`<span class="x" title="${t('cost.edit','Edit')}" onclick="editExpense(${e.id})">✎</span>`:'';
+      r.innerHTML=`<span class="avatar" style="background:${colorFor(e.who)}">${initials(e.who)}</span><div class="ed"><div class="edesc">${esc(e.desc)} <span class="catpill">${esc(catLabel(e.cat||'Other'))}</span></div><div class="emeta">${t('cost.paidBy','paid by')} ${esc(e.who)} · ${esc(splitLabel(e))}</div></div><div class="eamt">$${e.amt.toFixed(2)}</div>${editBtn}<span class="x" onclick="delExpense(${e.id})">✕</span>`;
+    }
+    w.appendChild(r);
+  });
   renderCatBars();renderSettle();
 }
 function renderCatBars(){
@@ -2073,11 +2191,15 @@ function renderCatBars(){
 function renderSettle(){
   const w=$('#settle-body');
   if(!state.crew.length||!state.expenses.length){w.innerHTML=`<div class="empty">${t('cost.settleEmpty','Add crew + expenses to see the split.')}</div>`;return;}
-  const total=state.expenses.reduce((s,e)=>s+e.amt,0);
-  const share=total/state.crew.length;
-  const bal={};state.crew.forEach(c=>bal[c]=-share);
-  state.expenses.forEach(e=>{if(bal[e.who]!==undefined)bal[e.who]+=e.amt;});
-  let html=`<div class="settle-row"><span>${t('cost.totalSpent','Total spent')}</span><span class="owe">$${total.toFixed(2)}</span></div><div class="settle-row"><span>${t('cost.perPerson','Per person')} (${state.crew.length})</span><span class="owe">$${share.toFixed(2)}</span></div><div style="height:8px"></div>`;
+  const {bal,total,sharedPerPerson,hasShared,hasCustom}=computeBalances();
+  let html=`<div class="settle-row"><span>${t('cost.totalSpent','Total spent')}</span><span class="owe">$${total.toFixed(2)}</span></div>`;
+  if(hasShared){
+    html+=`<div class="settle-row"><span>${t('cost.splitEvenly','Split evenly')} (${state.crew.length})</span><span class="owe">$${sharedPerPerson.toFixed(2)}</span></div>`;
+  }
+  if(hasCustom){
+    html+=`<div class="settle-note">${t('cost.mixedNote','Some costs are split differently — see each item.')}</div>`;
+  }
+  html+=`<div style="height:8px"></div>`;
   state.crew.forEach(c=>{const b=bal[c];const cls=b>=-0.005?'pos':'neg';const txt=b>=-0.005?`${t('cost.getsBack','gets back')} $${Math.max(0,b).toFixed(2)}`:`${t('cost.owes','owes')} $${Math.abs(b).toFixed(2)}`;
     html+=`<div class="settle-row"><span><span class="avatar" style="width:20px;height:20px;font-size:9px;background:${colorFor(c)};display:inline-flex;vertical-align:middle;margin-right:7px">${initials(c)}</span>${esc(c)}</span><span class="owe ${cls}">${txt}</span></div>`;});
   // minimal transfers (greedy)
@@ -2760,14 +2882,13 @@ function renderProgress(){
 }
 function copySettle(){
   if(!state.crew.length||!state.expenses.length){toast('Nothing to copy yet');return;}
-  const total=state.expenses.reduce((s,e)=>s+e.amt,0);
-  const share=total/state.crew.length;
-  const bal={};state.crew.forEach(c=>bal[c]=-share);
-  state.expenses.forEach(e=>{if(bal[e.who]!==undefined)bal[e.who]+=e.amt;});
+  const {bal,total,sharedPerPerson,hasShared}=computeBalances();
   const debtors=[],creditors=[];
   Object.entries(bal).forEach(([n,b])=>{if(b<-0.005)debtors.push([n,-b]);else if(b>0.005)creditors.push([n,b]);});
   debtors.sort((a,b)=>b[1]-a[1]);creditors.sort((a,b)=>b[1]-a[1]);
-  let lines=['🏕 Camping 2026 — settle up','Total: $'+total.toFixed(2)+' · per person: $'+share.toFixed(2),''];
+  let header='Total: $'+total.toFixed(2);
+  if(hasShared) header+=' · split evenly: $'+sharedPerPerson.toFixed(2)+'/person';
+  let lines=['🏕 Camping 2026 — settle up',header,''];
   let di=0,ci=0;
   while(di<debtors.length&&ci<creditors.length){
     const pay=Math.min(debtors[di][1],creditors[ci][1]);
@@ -2775,6 +2896,7 @@ function copySettle(){
     debtors[di][1]-=pay;creditors[ci][1]-=pay;
     if(debtors[di][1]<0.005)di++;if(creditors[ci][1]<0.005)ci++;
   }
+  if(lines.length===3) lines.push('All settled up — nobody owes anything 🎉');
   const txt=lines.join('\n');
   if(navigator.clipboard){navigator.clipboard.writeText(txt).then(()=>toast('Settle-up copied — paste in the group chat')).catch(()=>toast(txt));}
   else toast(txt);

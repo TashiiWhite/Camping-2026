@@ -166,7 +166,28 @@ To share state when Supabase isn't connected: **Export crew data** → send the 
 
 ## Version history
 
-### v8.2 — June 14, 2026 (current)
+### v8.3 — June 15, 2026 (current)
+
+This release reworks the **Cost splitter** so an expense no longer has to be split evenly across everyone, and replaces the old pop-up editor with **inline editing**.
+
+**Flexible cost splitting (leaders/admins)**
+- When adding a cost, managers can now choose how it's split:
+  - **Everyone** (default) — divided evenly across the whole crew, exactly as before. Campers always use this.
+  - **Just payer (personal)** — the payer covers it for themselves; it stays on the page for the record but **doesn't affect anyone else's balance** (it nets to zero). This answers "what if someone pays but it was just for them."
+  - **Choose people…** — pick exactly who shares the cost; the amount is split evenly **only among the people you pick**. Tap the name chips to select them.
+- This covers every case: *I paid for Qymar's dog fee → Qymar pays me back* (choose Qymar), *I bought a kayak → Dylan & Baha split it back to me* (choose Dylan + Baha), *Qymar bought his own thing* (just payer), and the usual *everyone splits the groceries*.
+- Each expense now shows **how it's split** under its name ("split evenly", "personal", or "split among Dylan, Baha"), and the Settle-up panel adds a small note when costs are split differently.
+
+**Inline editing**
+- Editing a cost (the ✎ button) now happens **right on the row** — description, amount, category, who paid, and the split mode are all editable in place, with **Save / Cancel**. No more text-prompt pop-ups.
+
+**Settle-up math**
+- The per-person balances and the minimal "who pays who" transfers are recomputed from a single beneficiary model that handles all split modes correctly; balances always sum to zero. "Per person" now reads **"Split evenly ($X)"** and only reflects the evenly-shared pool.
+
+**Trip detail**
+- The crew is now renting **one car split among the five of us**; the header and Basecamp now read **1–2 cars** instead of 2.
+
+### v8.2 — June 14, 2026
 
 This release adds a full bilingual interface, a rebuilt admin data-center dashboard with live Supabase analytics, and a round of UX refinements.
 
@@ -252,7 +273,7 @@ The big release: a full signed-in/signed-out access model with roles, a private 
 
 **Deploy note:** this release adds three files — **`i18n.js`**, **`content-fr.js`**, and (optional, hosted separately) **`whats-new.html`**. Upload `i18n.js` and `content-fr.js` alongside `app.js` / `index.html` / `sw.js` in the same commit. Cache bumped to **v24**.
 
-**Later v8.1 refinements**
+**Later v8 refinements**
 - **Aurora is the default theme for signed-in users** (the old monthly rotation is gone). Pick any theme and it's remembered on your device from then on.
 - **Signed-out users see the trip as empty** — crew, costs and everything look reset until they sign in, at which point the real shared data appears.
 - **Visitors** can browse the crew data, but the **Costs page is private to the crew** — it's blurred with a "link your name to see the numbers" note until they become a camper.

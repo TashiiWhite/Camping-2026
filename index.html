@@ -258,6 +258,22 @@ input::placeholder{color:var(--faint)}
 .exp-row .eamt{font-family:var(--display);font-weight:700;font-size:18px;color:var(--amber)}
 .exp-row .x{cursor:pointer;color:var(--faint);font-size:18px}
 .exp-row .x:hover{color:var(--danger)}
+.exp-row.editing{display:block;padding:14px}
+.exp-adv{display:none;flex-wrap:wrap;align-items:center;gap:8px;margin:-6px 0 16px}
+html.can-manage .exp-adv.manage-only{display:flex !important}
+.exp-adv .lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.exp-adv .pick-hint{color:var(--faint)}
+.exp-adv select{padding:7px 10px}
+.exp-share-row{flex-basis:100%;display:flex;flex-wrap:wrap;gap:7px;margin-top:4px}
+.exp-share-row .chip{display:inline-flex;align-items:center;font-size:12.5px;background:var(--surface2);border:1px solid var(--border);border-radius:99px;padding:6px 13px;cursor:pointer;user-select:none;transition:all .12s}
+.exp-share-row .chip:hover{border-color:var(--border-strong)}
+.exp-share-row .chip.on{border-color:var(--green);color:var(--green);background:rgba(155,206,111,.12)}
+.exp-edit{width:100%}
+.exp-edit-grid{display:grid;grid-template-columns:1.4fr 90px 110px 110px 1fr;gap:8px}
+.exp-edit-grid input,.exp-edit-grid select{padding:8px 10px;font-size:13px}
+.exp-edit-actions{display:flex;gap:8px;margin-top:10px}
+@media(max-width:760px){.exp-edit-grid{grid-template-columns:1fr 1fr}}
+.settle-note{font-size:11.5px;color:var(--faint);font-family:var(--mono);margin:2px 0 2px;line-height:1.5}
 .catpill{font-family:var(--mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:5px;background:var(--surface3);color:var(--muted)}
 .settle{background:var(--surface2);border:1px solid var(--border-strong);border-radius:var(--radius);padding:18px;margin-top:18px}
 .settle h4{font-family:var(--display);font-weight:700;font-size:17px;margin-bottom:12px}
@@ -792,7 +808,7 @@ html.signed-out .panel.gated .gate-disable{display:none !important}
       <div class="dash-stats">
         <div class="stat"><div class="v">3<small data-i18n="bc.days"> days</small></div><div class="k">Jun 19–21</div></div>
         <div class="stat"><div class="v">4–5</div><div class="k" data-i18n="bc.crewMembers">crew members</div></div>
-        <div class="stat"><div class="v">2</div><div class="k" data-i18n="bc.cars">cars · convoy</div></div>
+        <div class="stat"><div class="v">1–2</div><div class="k" data-i18n="bc.cars">cars · convoy</div></div>
         <div class="stat"><div class="v">$90<small>–175</small></div><div class="k" data-i18n="bc.perPerson">est. / person</div></div>
       </div>
       <div class="kicker" data-i18n="bc.readiness">◆ Trip readiness</div>
@@ -974,6 +990,16 @@ html.signed-out .panel.gated .gate-disable{display:none !important}
       <select id="exp-cat"><option value="Site" data-i18n="cost.catSite">Site</option><option value="Food" data-i18n="cost.catFood">Food</option><option value="Gas" data-i18n="cost.catGas">Gas</option><option value="Firewood" data-i18n="cost.catFirewood">Firewood</option><option value="Gear" data-i18n="cost.catGear">Gear</option><option value="Other" data-i18n="cost.catOther">Other</option></select>
       <select id="exp-who"><option value="">Who paid?</option></select>
       <button class="btn" onclick="addExpense()">Add</button>
+    </div>
+    <div class="exp-adv manage-only">
+      <span class="lbl" data-i18n="cost.split">Split</span>
+      <select id="exp-split" onchange="syncAddShareRow()">
+        <option value="all" data-i18n="cost.splitAll">Everyone</option>
+        <option value="payer" data-i18n="cost.splitPayer">Just payer (personal)</option>
+        <option value="custom" data-i18n="cost.splitCustom">Choose people…</option>
+      </select>
+      <span class="lbl pick-hint" data-i18n="cost.pickPeople" style="display:none">Pick who shares this cost</span>
+      <div id="exp-share-row" class="exp-share-row" style="display:none"></div>
     </div>
     <div id="exp-list"></div>
     <div class="cat-bars" id="cat-bars"></div>
@@ -1377,8 +1403,8 @@ html.signed-out .panel.gated .gate-disable{display:none !important}
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" onerror="window.__gsapFailed=1"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" onerror="window.__sbFailed=1"></script>
 <script src="config.js"></script>
-<script src="i18n.js?v=3"></script>
-<script src="content-fr.js?v=3"></script>
-<script src="app.js?v=25"></script>
+<script src="i18n.js?v=4"></script>
+<script src="content-fr.js?v=4"></script>
+<script src="app.js?v=26"></script>
 </body>
 </html>
