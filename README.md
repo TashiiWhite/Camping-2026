@@ -166,7 +166,39 @@ To share state when Supabase isn't connected: **Export crew data** → send the 
 
 ## Version history
 
-### v8 — June 14, 2026 (current)
+### v9 — June 14, 2026 (current)
+
+This release adds a full bilingual interface, a rebuilt admin data-center dashboard with live Supabase analytics, and a round of UX refinements.
+
+**Bilingual — English (CA) + French (CA)**
+- **Per-device language toggle** in ⚙ Settings → Language (minimalist flag-pill selector). The choice is saved locally and never synced to the crew.
+- **The entire site translates**, including all trip-content prose: the food matrix, 9-meal plan, expert prep playbook, shopping lists, activities, situations & fixes, FAQ, tips, and roles. Québécois register ("la gang", "papillotes", "guimauves").
+- **Architecture:** a small `i18n.js` engine (DOM-attribute translation + `t()` for dynamic strings) plus a `content-fr.js` data file. Adding another language later = one dictionary block + one content file; the engine is already RTL-ready via the `dir` attribute.
+- Stable English keys are used under the hood for roles and cost categories, so assignments and groupings survive language switches.
+
+**Admin data-center dashboard (Reports tab — owner only)**
+- Rebuilt as a dense, half-scale "data center": live role counters, audience analytics, a visitor log, and trip charts, with animated count-up numbers.
+- **Live now** (from Supabase Presence): online total, signed-out, visitors, campers, leaders, admins. *A leader is counted in the camper tally for live data but keeps its Leader label.*
+- **Audience** (from new analytics tables): visits this month & all-time, unique people (emails vs anonymous), total and average time on site, crew size.
+- **Visitor log:** every email (and anonymous visitor) that has opened the live site, with role, visit count, time-on-site, and last-seen.
+- **Charts:** peak-online-per-day and visits-per-day line charts, plus gear/votes/shopping donuts and packing/spend/items bar charts.
+- **Analytics setup (one-time):** run **`supabase-v8-analytics.sql`** to create the `site_visitors` + `site_daily` tables. The client records visits and session time for signed-in emails and anonymous visitors; the dashboard reads them live (add both tables to Realtime for live counters). Until the SQL runs, the panel shows a small "run the analytics SQL" note and everything else still works.
+
+**Admin guide (owner only)**
+- A new **📖 Admin guide (FAQ)** button in the Data tab opens a private reference covering: what the admin can do, how the hidden admin panel works, how the four roles behave, and exactly how sign-in + email-linking works (including that the online counter tallies everyone on the site). Invisible to all non-owners.
+
+**Access change**
+- **Signed-out users can no longer open the locked pages** (Gear, Food, Shopping, Costs). Previously these were viewable read-only; now their content is hidden and the tabs bounce to Basecamp with a sign-in hint. The unlocked pages (Basecamp, Campsites, Itinerary, Activities, Survival) remain fully browsable signed-out.
+
+**UX refinements**
+- **Inline meal editing** — tap any meal-plan item to edit it directly on the card (Enter or click-away saves, empty removes); each card has a "+ add item". Replaces the old text-prompt editor.
+- **Timeline** — the six default points are now data-driven (editable/hideable), and **new timeline points auto-sort into chronological place** by parsing their "when" (handles EN + FR day/time formats).
+- **Gear page** — the "I'm:" and "Viewing:" selectors now sit **side by side** to save vertical space.
+- **Preview bar** (admin "view as") moved to the **very top** of the page and made translucent with a blur.
+- **Dropdown contrast fixed** across all themes — option lists are now always readable (previously some themes rendered option text nearly invisible).
+- The how-to guide now leads with **"Sign in to go live" as step 1**.
+
+### v8 — June 14, 2026
 
 The big release: a full signed-in/signed-out access model with roles, a private admin control panel, **bilingual (English CA / French CA) support**, an **admin data-center dashboard with live Supabase analytics**, **per-user language**, inline meal editing, auto-sorting timeline, and a privacy pass on locked pages.
 
@@ -218,7 +250,18 @@ The big release: a full signed-in/signed-out access model with roles, a private 
 
 **Analytics setup (one-time):** run **`supabase-v8-analytics.sql`** in the Supabase SQL editor to create the `site_visitors` + `site_daily` tables. The client records visits + session time for both signed-in emails and anonymous visitors; the dashboard reads them live. Until the SQL is run, the dashboard shows a small "run the analytics SQL" note and the rest of the panel still works.
 
-**Deploy note:** this release adds three files — **`i18n.js`**, **`content-fr.js`**, and (optional, hosted separately) **`whats-new.html`**. Upload `i18n.js` and `content-fr.js` alongside `app.js` / `index.html` / `sw.js` in the same commit. Cache bumped to **v23**.
+**Deploy note:** this release adds three files — **`i18n.js`**, **`content-fr.js`**, and (optional, hosted separately) **`whats-new.html`**. Upload `i18n.js` and `content-fr.js` alongside `app.js` / `index.html` / `sw.js` in the same commit. Cache bumped to **v24**.
+
+**Later v8 refinements**
+- **Aurora is the default theme for signed-in users** (the old monthly rotation is gone). Pick any theme and it's remembered on your device from then on.
+- **Signed-out users see the trip as empty** — crew, costs and everything look reset until they sign in, at which point the real shared data appears.
+- **Visitors** can browse the crew data, but the **Costs page is private to the crew** — it's blurred with a "link your name to see the numbers" note until they become a camper.
+- **Reset All is hidden** from visitors and campers (managers only).
+- **Admin-only multi-buyer picker** on Shopping — assign several people who chipped in for the same item (👥 assign).
+- **Restore hidden timeline points** — hiding a default point now shows a "Restore hidden points" button so nothing is lost.
+- **Admin simulations** (Data tab) — preview the site as not-signed-in / visitor / camper / leader, and trigger the sign-in identity pop-up, departure banner, and buyer picker for testing without a second account.
+- **Preview-as-not-signed-in** now correctly shows the "Local — sign in for live" sync state instead of Live.
+- Standalone changelog button fixed ("← Back to website") and made theme-proof with explicit colours.
 
 ### v7 — June 13, 2026
 
@@ -311,16 +354,27 @@ This release focused on sign-in and the iOS home-screen (PWA) experience, plus a
 ```
 .
 ├── index.html              # full UI — all tabs, themes, modals, print CSS
-├── app.js                  # logic, trip data, Supabase sync, auth, Three.js themes
+├── app.js                  # logic, trip data, Supabase sync, auth, analytics, Three.js themes
+├── i18n.js                 # bilingual engine + EN/FR-CA UI dictionary
+├── content-fr.js           # French (CA) translations of all trip-content data
 ├── config.js               # Supabase URL + anon key (already wired, safe to commit)
-├── supabase-schema.sql     # run once in Supabase SQL Editor
-├── sw.js                   # offline-first service worker
+├── supabase-schema.sql     # base tables — run once in Supabase SQL Editor
+├── supabase-v8-admin.sql   # write-lock + admin_config (run once)
+├── supabase-v8-analytics.sql # site_visitors + site_daily analytics tables (run once)
+├── sw.js                   # offline-first service worker (precaches i18n.js + content-fr.js)
 ├── manifest.webmanifest    # PWA manifest (name, icons, theme colour)
+├── whats-new.html          # standalone changelog page (deploys at /whats-new.html for banner links)
 ├── icons/                  # app icons: 192×192, 512×512, apple-touch, favicon
+├── maps/                   # campsite maps (plage.jpg, ivy.jpg)
 ├── netlify.toml            # zero-config Netlify deploy (blank build, root publish)
 ├── .gitignore
 └── README.md
 ```
+
+> **Banner changelog link:** `whats-new.html` is a self-contained page. Once deployed it lives at
+> `https://campingjune2026.netlify.app/whats-new.html` — use that URL in the admin departure/announcement
+> banner so the crew can tap through to see what's new. It is intentionally *not* precached by the service
+> worker (it's a standalone marketing page, not part of the app shell).
 
 ## Future ideas (not built, parked by design)
 

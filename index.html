@@ -585,6 +585,25 @@ html.simplify .simplify-hide{display:none !important}
 .lang-pill:hover{color:var(--text);border-color:var(--border-strong)}
 .lang-pill.on{background:var(--green);border-color:var(--green);color:var(--bg);font-weight:700}
 .lang-pill .lp-flag{font-size:15px}
+/* role-gated controls: hidden unless html has the matching capability class */
+.manage-only{display:none !important}
+html.can-manage .manage-only{display:inline-flex !important}
+.admin-only{display:none !important}
+html[data-access="admin"] .admin-only{display:inline-flex !important}
+.sim-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.sim-grid .btn{font-size:11px;justify-content:flex-start}
+.bought-btn.admin-assign{border-color:rgba(240,180,85,.5);color:var(--amber)}
+.bought-btn.admin-assign:hover{background:var(--amber);border-color:var(--amber);color:var(--bg)}
+.buyer-picker-list{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow:auto}
+.buyer-pick{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:8px 11px;cursor:pointer;font-size:13px;color:var(--text);transition:all .13s}
+.buyer-pick:hover{border-color:var(--border-strong)}
+.buyer-pick.on{background:rgba(155,206,111,.13);border-color:var(--green)}
+.buyer-pick .buyer-check{margin-left:auto;color:var(--green);font-weight:700}
+/* visitor blur: cost data is private — visitors see the page but not the numbers */
+.visitor-blur-wrap{position:relative}
+.visitor-blur-note{display:none}
+html.lvl-visitor .visitor-blur-wrap > :not(.visitor-blur-note){filter:blur(7px);pointer-events:none;user-select:none;opacity:.6}
+html.lvl-visitor .visitor-blur-note{display:flex;align-items:center;gap:8px;position:absolute;inset:0;z-index:3;justify-content:center;text-align:center;padding:24px;background:rgba(16,20,15,.35);border-radius:var(--radius);font-size:13px;color:var(--amber);font-weight:600;backdrop-filter:blur(1px)}
 /* collapsible settings sections */
 .set-sec-head{display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin:16px 0 4px;font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);user-select:none}
 .set-sec-head:hover{color:var(--text)}
@@ -810,7 +829,7 @@ html.signed-out .panel.gated .gate-disable{display:none !important}
       <button class="btn ghost sm" onclick="exportJSON()" data-i18n="bc.exportJson">⬇ Export crew data (.json)</button>
       <button class="btn ghost sm" onclick="document.getElementById('import-file').click()" data-i18n="bc.importData">⬆ Import crew data</button>
       <button class="btn amber sm" onclick="exportPDF()">🖨 Export full site as PDF</button>
-      <button class="btn ghost sm" onclick="resetData()" data-i18n="bc.resetAll">↺ Reset all</button>
+      <button class="btn ghost sm manage-only" onclick="resetData()" data-i18n="bc.resetAll">↺ Reset all</button>
       <input type="file" id="import-file" accept="application/json" style="display:none" onchange="importJSON(this)">
     </div>
     <p style="color:var(--faint);font-size:11.5px;margin-top:10px;font-family:var(--mono)">📱 Add to home screen: iPhone → Share → "Add to Home Screen" · Android → menu ⋮ → "Add to Home screen". The app icon + offline mode are built in.</p>
@@ -946,6 +965,8 @@ html.signed-out .panel.gated .gate-disable{display:none !important}
   <div class="gate-disable">
   <div class="sec-title" data-i18n="cost.title">Cost splitter</div>
   <div class="sec-desc" data-i18n="cost.desc">Log every shared expense with a category. You get per-person balances, totals by category, and the exact minimal transfers to settle up — synced for everyone.</div>
+  <div class="visitor-blur-wrap">
+    <div class="visitor-blur-note">🔒 <span data-i18n="cost.visitorHidden">Costs are private to the crew. Link your name to a crew member to see the numbers.</span></div>
   <div class="card">
     <div class="expense-form">
       <input id="exp-desc" placeholder="What was it? (e.g. firewood)" data-i18n-ph="cost.whatPh">
@@ -958,6 +979,7 @@ html.signed-out .panel.gated .gate-disable{display:none !important}
     <div class="cat-bars" id="cat-bars"></div>
   </div>
   <div class="settle"><h4 style="display:flex;align-items:center;gap:10px">Settle up <button class="btn ghost sm" style="margin-left:auto" onclick="copySettle()">📋 Copy for group chat</button></h4><div id="settle-body"><div class="empty">Add crew + expenses to see the split.</div></div></div>
+  </div>
 </div>
 </section>
 
@@ -1145,6 +1167,17 @@ html.signed-out .panel.gated .gate-disable{display:none !important}
   </div>
 </div>
 
+<!-- BUYER PICKER MODAL (admin-only: assign multiple buyers) -->
+<div class="modal-bg" id="buyer-picker-modal" onclick="if(event.target===this)closeBuyerPicker()">
+  <div class="modal" style="max-width:340px">
+    <span class="close-x" onclick="closeBuyerPicker()">✕</span>
+    <h3 data-i18n="shop.assignTitle">Who bought this?</h3>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:14px" data-i18n="shop.assignDesc">Tap everyone who chipped in for this item. Admin-only.</p>
+    <div id="buyer-picker-list" class="buyer-picker-list"></div>
+    <button class="btn" style="width:100%;margin-top:14px" onclick="closeBuyerPicker()" data-i18n="shop.done">Done</button>
+  </div>
+</div>
+
 <!-- IDENTITY / LINK MODAL (first sign-in) -->
 <div class="modal-bg" id="link-modal">
   <div class="modal" style="max-width:380px">
@@ -1240,7 +1273,23 @@ html.signed-out .panel.gated .gate-disable{display:none !important}
     <div id="admin-sec-data" class="admin-sec" style="display:none">
       <div class="kicker" style="margin-top:4px">◆ Admin guide</div>
       <button class="btn ghost sm" style="width:100%;margin-bottom:14px" onclick="openAdminGuide()">📖 How the admin tools, roles &amp; sign-in work (FAQ)</button>
-      <div class="kicker" style="margin-top:4px">◆ Data tools</div>
+
+      <div class="kicker" style="margin-top:4px">◆ Simulate / preview</div>
+      <p style="font-size:11px;color:var(--faint);margin:0 0 8px">Since you're always admin, use these to experience the site as other roles, and to test the sign-in pop-ups without a second account.</p>
+      <div class="sim-grid">
+        <button class="btn ghost sm" onclick="setViewAs('none')">👤 Preview: not signed-in</button>
+        <button class="btn ghost sm" onclick="setViewAs('visitor')">👀 Preview: visitor</button>
+        <button class="btn ghost sm" onclick="setViewAs('camper')">⛺ Preview: camper</button>
+        <button class="btn ghost sm" onclick="setViewAs('leader')">⭐ Preview: leader</button>
+        <button class="btn ghost sm" onclick="setViewAs(null)">↩ Back to admin</button>
+      </div>
+      <div class="sim-grid" style="margin-top:8px">
+        <button class="btn ghost sm" onclick="simulateLinkPrompt()">🎬 Sign-in identity pop-up</button>
+        <button class="btn ghost sm" onclick="simulateBanner()">🎬 Departure banner</button>
+        <button class="btn ghost sm" onclick="simulateBuyerPicker()">🎬 Buyer picker</button>
+      </div>
+
+      <div class="kicker" style="margin-top:16px">◆ Data tools</div>
       <div class="toolbar">
         <button class="btn ghost sm" onclick="exportJSON()">⬇ Export trip JSON</button>
         <button class="btn ghost sm" onclick="document.getElementById('import-file').click()">⬆ Import trip JSON</button>
@@ -1328,8 +1377,8 @@ html.signed-out .panel.gated .gate-disable{display:none !important}
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" onerror="window.__gsapFailed=1"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" onerror="window.__sbFailed=1"></script>
 <script src="config.js"></script>
-<script src="i18n.js?v=2"></script>
-<script src="content-fr.js?v=2"></script>
-<script src="app.js?v=23"></script>
+<script src="i18n.js?v=3"></script>
+<script src="content-fr.js?v=3"></script>
+<script src="app.js?v=24"></script>
 </body>
 </html>

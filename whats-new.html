@@ -4,107 +4,133 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Camping 2026 — What's New</title>
-<meta name="description" content="What's new in the Camping 2026 crew app — accounts, live sync, your own packing list, bilingual support and more.">
 <style>
   :root{
-    --bg:#10140f; --surface:#171c14; --surface2:#1e241a; --surface3:#28301f; --border:#2c3526;
-    --text:#e8ede2; --muted:#9aaa8c; --faint:#6b7862; --green:#9bce6f; --amber:#f0b455; --river:#6cb6d4;
+    --bg:#10140f; --surface:#171c14; --surface2:#1e241a; --surface3:#262e1f; --border:#2c3526;
+    --text:#e8ede2; --muted:#9aaa8c; --faint:#6b7862; --green:#9bce6f; --amber:#f0b455; --river:#6cb6d4; --violet:#b49ad4;
     --display:'Georgia',serif; --body:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; --mono:'SF Mono',ui-monospace,Menlo,monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{background:var(--bg);color:var(--text);font-family:var(--body);line-height:1.6;padding:28px 18px}
+  body{background:
+     radial-gradient(900px 500px at 80% -8%, rgba(155,206,111,.08), transparent 60%),
+     radial-gradient(700px 400px at 0% 8%, rgba(108,182,212,.06), transparent 55%),
+     var(--bg);
+    color:var(--text);font-family:var(--body);line-height:1.6;padding:30px 18px 60px;min-height:100vh}
   .wrap{max-width:700px;margin:0 auto}
-  .kick{font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--amber)}
-  h1{font-family:var(--display);font-size:34px;line-height:1.1;margin:8px 0 6px}
+  .kick{font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--amber)}
+  h1{font-family:var(--display);font-size:38px;line-height:1.05;margin:8px 0 8px}
   h1 .yr{color:var(--green)}
-  .sub{color:var(--muted);font-size:15px;margin-bottom:26px}
-  .rel{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px 22px;margin-bottom:18px}
-  .rel-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
-  .rel-v{font-family:var(--mono);font-weight:700;font-size:13px;color:var(--bg);background:var(--green);padding:3px 10px;border-radius:99px}
-  .rel-v.cur{box-shadow:0 0 0 3px rgba(155,206,111,.2)}
-  .rel-date{font-family:var(--mono);font-size:12px;color:var(--faint)}
-  .rel-title{font-family:var(--display);font-size:20px;margin:8px 0 2px}
-  .grp{margin-top:14px}
-  .grp-h{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--river);margin-bottom:6px}
+  .sub{color:var(--muted);font-size:15px;margin-bottom:14px;max-width:60ch}
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px}
+  .lg{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:99px;padding:4px 10px}
+  .lg .dot{width:7px;height:7px;border-radius:50%}
+  .rel{background:linear-gradient(165deg,var(--surface),rgba(23,28,20,.6));border:1px solid var(--border);border-radius:18px;padding:22px 24px;margin-bottom:20px;position:relative;overflow:hidden}
+  .rel::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(var(--green),transparent)}
+  .rel.cur::before{background:linear-gradient(var(--green),var(--river))}
+  .rel-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  .rel-v{font-family:var(--mono);font-weight:700;font-size:13px;color:var(--bg);background:var(--green);padding:3px 11px;border-radius:99px}
+  .rel.cur .rel-v{box-shadow:0 0 0 3px rgba(155,206,111,.22)}
+  .rel-date{font-family:var(--mono);font-size:11px;color:var(--faint)}
+  .rel-title{font-family:var(--display);font-size:21px;margin:2px 0 4px}
+  .rel-lead{color:var(--muted);font-size:13.5px;margin-bottom:8px}
+  .grp{margin-top:16px}
+  .grp-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);margin-bottom:7px;display:flex;align-items:center;gap:7px}
+  .grp-h .gi{font-size:13px}
+  .grp.sec .grp-h{color:var(--amber)}
   ul{list-style:none}
-  li{position:relative;padding:5px 0 5px 26px;font-size:14.5px}
-  li::before{content:'';position:absolute;left:4px;top:13px;width:8px;height:8px;border-radius:50%;background:var(--green)}
-  li b{color:var(--text)}
+  li{position:relative;padding:5px 0 5px 22px;font-size:14px}
+  li::before{content:'';position:absolute;left:3px;top:12px;width:7px;height:7px;border-radius:50%;background:var(--green)}
   .grp.sec li::before{background:var(--amber)}
-  .tag{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--river);border:1px solid rgba(108,182,212,.3);background:rgba(108,182,212,.1);border-radius:99px;padding:1px 8px;margin-left:6px;vertical-align:middle}
-  .foot{text-align:center;color:var(--faint);font-size:13px;margin-top:24px;font-family:var(--mono)}
-  .foot a{color:var(--green);text-decoration:none}
-  .cta{display:inline-block;margin-top:6px;background:var(--green);color:var(--bg);font-weight:700;text-decoration:none;padding:10px 20px;border-radius:99px;font-size:14px}
+  li b{color:var(--text)}
+  .tag{display:inline-block;font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--river);border:1px solid rgba(108,182,212,.3);background:rgba(108,182,212,.1);border-radius:99px;padding:1px 7px;margin-left:5px;vertical-align:middle}
+  .foot{text-align:center;color:var(--faint);font-size:13px;margin-top:30px;font-family:var(--mono);line-height:1.8}
+  .foot a{color:var(--green);text-decoration:none;border-bottom:1px solid rgba(155,206,111,.3)}
+  .cta{display:inline-block;margin-top:18px;font-family:var(--mono);font-size:13px;font-weight:700;color:#10140f;background:#9bce6f;padding:11px 22px;border-radius:99px;text-decoration:none;transition:transform .15s,box-shadow .15s}
+  .cta:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(155,206,111,.25)}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="kick">◆ Camping 2026 · Field Plan</div>
   <h1>What's new <span class="yr">'26</span></h1>
-  <p class="sub">Everything added across the big updates — sign in to get the full experience.</p>
+  <p class="sub">Everything added since the early builds — grouped by release. The big themes: live sync, your own packing list, sign-in &amp; roles, and a cleaner, faster site.</p>
+  <div class="legend">
+    <span class="lg"><span class="dot" style="background:var(--green)"></span>Features</span>
+    <span class="lg"><span class="dot" style="background:var(--amber)"></span>Security &amp; sign-in</span>
+    <span class="lg"><span class="dot" style="background:var(--river)"></span>New this release</span>
+  </div>
 
-  <!-- ============ v8 ============ -->
-  <div class="rel">
-    <div class="rel-head"><span class="rel-v cur">v8</span><span class="rel-date">June 2026 · current</span></div>
-    <div class="rel-title">Accounts, your own packing list, bilingual &amp; a cleaner site</div>
-
+  <div class="rel cur">
+    <div class="rel-head"><span class="rel-v">v8</span><span class="rel-date">June 2026 · current</span></div>
+    <div class="rel-title">Accounts, your own packing list &amp; a cleaner site</div>
+    <p class="rel-lead">The trip now has real accounts and roles, plus a lot of quality-of-life polish.</p>
     <div class="grp">
-      <div class="grp-h">For everyone</div>
+      <div class="grp-h"><span class="gi">&#10024;</span> Features</div>
       <ul>
-        <li><b>English &amp; French (CA)</b> <span class="tag">new</span> — switch the whole site between English (CA) and Français (CA) anytime in ⚙ Settings. Your choice is saved on your device.</li>
-        <li><b>Pick who you are</b> and get your <b>own packing list</b> — everything assigned to you, anything marked "all crew", plus your own custom items with optional quantities.</li>
-        <li><b>See the rest of the crew's lists</b> too (read-only), so you know who still has things to pack.</li>
-        <li><b>Add your own food</b> to the matrix, and edit the meal-plan days right on the cards.</li>
-        <li><b>"I bought this" on the shopping list</b> — tap to show the crew you grabbed something, so nobody double-buys.</li>
-        <li><b>Add &amp; auto-sort timeline points</b> — new stops slot into the itinerary in chronological order automatically.</li>
-        <li><b>A cleaner, faster site</b> — a Simplify mode that hides extra tabs, collapsible settings, a back-to-top button, clearer on/off switches, and better-looking menus across every theme.</li>
+        <li><b>Pick who you are</b> and get your <b>own packing list</b> — everything assigned to you, anything marked "all crew", plus your own items with optional quantities.</li>
+        <li><b>See the rest of the crew's lists</b> (read-only) so you know who's still got things to pack.</li>
+        <li><b>Add your own food</b> to the matrix, and <b>edit the meal-plan days right on the card.</b></li>
+        <li><b>"I bought this" on the shopping list</b> <span class="tag">new</span> — tap to show the crew you grabbed something, so nobody double-buys.</li>
+        <li><b>Add timeline points</b> to the itinerary — they sort themselves into the right spot by time.</li>
+        <li><b>Pick your language</b> <span class="tag">new</span> — the whole site in English (CA) or French (CA), saved per device.</li>
+        <li><b>A cleaner, faster site:</b> Simplify mode, collapsible settings, a back-to-top button, and clearer on/off switches.</li>
       </ul>
     </div>
-
     <div class="grp sec">
-      <div class="grp-h">Accounts, sign-in &amp; roles</div>
+      <div class="grp-h"><span class="gi">&#128272;</span> Sign-in, roles &amp; security</div>
       <ul>
-        <li><b>Sign in to sync live.</b> The whole crew shares one trip in real time — gear, votes, costs, everything updates everywhere at once. Signed out, you're in a local, this-device mode.</li>
-        <li><b>First sign-in asks who you are</b> — pick an existing crew member, add yourself as new crew, or just browse.</li>
-        <li><b>Roles:</b> linking your name makes you a <b>camper</b> with full edit access; browsing makes you a <b>visitor</b> who can look but not change anything.</li>
-        <li><b>Edit or rename your own crew name</b> anytime.</li>
-        <li><b>Your privacy:</b> the email you sign in with is kept private — other crew members never see it.</li>
-        <li><b>Locked pages</b> (Gear, Food, Shopping, Costs) are now only shown once you sign in.</li>
+        <li><b>Sign in to sync live</b> — the whole crew shares one trip in real time; gear, votes, and costs update everywhere at once.</li>
+        <li><b>First time you sign in</b>, a quick prompt asks if you're an existing crew member, a new one, or just browsing.</li>
+        <li><b>Roles:</b> link your name to become a <b>camper</b> (full edit access), or browse as a <b>visitor</b> (view-only). Your role shows as a badge.</li>
+        <li><b>Edit or rename your own crew name</b> any time.</li>
+        <li><b>Locked pages</b> (Gear, Food, Shopping, Costs) are now sign-in only — they're hidden until you're in.</li>
+        <li><b>Your sign-in is private</b> — linking your email to a crew name is never shown to other crew members.</li>
       </ul>
     </div>
   </div>
 
-  <!-- ============ v7 ============ -->
   <div class="rel">
     <div class="rel-head"><span class="rel-v">v7</span><span class="rel-date">June 2026</span></div>
-    <div class="rel-title">Campsite maps &amp; smarter links</div>
+    <div class="rel-title">Personal packing, campsite maps &amp; Simplify</div>
     <div class="grp">
+      <div class="grp-h"><span class="gi">&#10024;</span> Features</div>
       <ul>
-        <li><b>In-app campsite maps</b> <span class="tag">new</span> — open a full-screen map for each site, pinch to zoom, drag to pan, and save it to your phone for offline use.</li>
-        <li><b>Quick links that follow your chosen site</b> — booking, info, directions, that town's weather, and the right fire-ban page all switch automatically.</li>
+        <li><b>Personal packing lists</b> — a "who am I" picker gives you your own checklist (your gear + "all crew" items + personal extras) and a progress bar.</li>
+        <li><b>In-app campsite maps</b> <span class="tag">new</span> — full-screen map per site: pinch to zoom, drag to pan, save to your phone for offline use.</li>
+        <li><b>Smart quick links</b> — booking, info, directions, that town's weather, and the right fire-ban page all follow your chosen site.</li>
+        <li><b>Simplify mode</b> — hides the secondary tabs for a cleaner phone view, keeping the essentials.</li>
       </ul>
     </div>
   </div>
 
-  <!-- ============ v4–v6 ============ -->
   <div class="rel">
-    <div class="rel-head"><span class="rel-v">v4–v6</span><span class="rel-date">2025–2026</span></div>
-    <div class="rel-title">The foundations — themes, offline mode, packing &amp; polish</div>
+    <div class="rel-head"><span class="rel-v">v4–v6</span><span class="rel-date">June 2026</span></div>
+    <div class="rel-title">Sign-in, themes, offline mode &amp; the rename</div>
     <div class="grp">
+      <div class="grp-h"><span class="gi">&#10024;</span> Features</div>
       <ul>
-        <li><b>Add it to your home screen</b> for an app icon and full offline access — it re-syncs when you're back online.</li>
-        <li><b>A dozen themes</b> to choose from, with a fresh look each month.</li>
-        <li><b>Personal packing &amp; clothing lists</b>, the campfire-food matrix, the 9-meal plan, the expert prep playbook, and the cost splitter.</li>
-        <li><b>Route planner</b> with custom stops, campsite voting, and the survival kit (situations, FAQ &amp; roles).</li>
-        <li>Smoother performance and a cleaner mobile sign-in throughout.</li>
+        <li><b>A dozen themes</b> to choose from, with a fresh look that rotates each month — animated scenes on desktop, light versions on mobile.</li>
+        <li><b>Add it to your home screen</b> for an app icon and full offline access; it re-syncs when you're back online.</li>
+        <li><b>Trip-readiness meters</b> (crew / site / gear / shopping %), motion-on-scroll, and Compact mode.</li>
+        <li>Renamed to <b>Camping 2026</b>, and fixed stale deploys so everyone always gets the latest version.</li>
+      </ul>
+    </div>
+    <div class="grp sec">
+      <div class="grp-h"><span class="gi">&#128272;</span> Sign-in &amp; security</div>
+      <ul>
+        <li><b>Google sign-in</b> arrived and now gates live access — signed-out is a local, device-only mode; signing in unlocks live sync, presence, and all themes.</li>
+        <li><b>Email magic-link sign-in</b> as an alternative to Google — works everywhere, including the installed app.</li>
+        <li><b>Online presence counter</b> showing how many of the crew are live right now.</li>
+        <li>Hardened, offline-resilient startup so the app is always responsive even if the network drops.</li>
       </ul>
     </div>
   </div>
 
-  <p class="foot">
-    <a class="cta" href="https://campingjune2026.netlify.app">Open the app →</a><br><br>
-    <a href="https://campingjune2026.netlify.app">campingjune2026.netlify.app</a> · tap the <b>?</b> in the app for the full guide
-  </p>
+  <div style="text-align:center">
+    <a class="cta" href="https://campingjune2026.netlify.app">← Back to website</a>
+    <p class="foot">Tap the <b>?</b> in the app for the full how-to guide.<br>
+    <a href="https://campingjune2026.netlify.app">campingjune2026.netlify.app</a></p>
+  </div>
 </div>
 </body>
 </html>

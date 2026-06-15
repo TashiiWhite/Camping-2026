@@ -1,114 +1,2868 @@
 /* ============================================================
-   French (Canada) translations of the trip CONTENT data.
-   Parallel to the EN arrays in app.js. Render functions pick
-   the right set via contentArr(name). Index-aligned with EN.
+   WildWeekend app — live-synced crew field plan
+   Modes:
+   - LIVE  : Supabase configured -> one shared trip, realtime
+   - LOCAL : placeholders in config.js -> localStorage only
    ============================================================ */
-window.CONTENT_FR = {
-  FOOD: [
-    {n:'Steaks / burgers marinés',why:'Mariner à la maison dans des sacs scellés, déposer à plat dans la glacière. Zéro préparation au camp — juste griller. Le repas le plus rassasiant du voyage.'},
-    {n:'Saucisses / hot-dogs',why:'La protéine la plus facile, pas besoin de couteau. Repas d\'installation parfait pour le jour 1. Les saucisses précuites sont les plus sûres.'},
-    {n:'Repas en papillote',why:'Préassembler à la maison : légumes + protéine + beurre + assaisonnement. 15–20 min sur les braises. Aucune vaisselle.'},
-    {n:'Bacon + œufs brouillés',why:'Casser les œufs d\'avance dans un pot Mason. La fonte est parfaite. Le déjeuner le plus rassasiant.'},
-    {n:'Patates au feu de camp',why:'Emballer dans du papier alu avec beurre et ail, enfouir dans les braises 45–60 min. Incroyablement rassasiant, va avec tout.'},
-    {n:'Blé d\'Inde',why:'Garder les feuilles, tremper 30 min, griller 15 min. Sucré, fumé, aucune préparation.'},
-    {n:'Pâtes + sauce en pot',why:'Une seule ébullition. Ajouter du thon ou du salami pour la protéine. Le meilleur plan B les jours de pluie si le gril flanche.'},
-    {n:'Salade de pâtes / grains préparée',why:'Préparer à la maison; se conserve 48 h scellée dans la glacière. Accompagnement parfait pour le soir de l\'arrivée.'},
-    {n:'Wraps de charcuterie',why:'Tortillas + charcuterie + fromage. Dîner rapide et rassasiant, zéro cuisson. Les tortillas survivent mieux que le pain dans une glacière.'},
-    {n:'Gruau instantané',why:'Juste ajouter de l\'eau bouillante. Mélanger du beurre d\'arachide + miel pour de vraies calories. Bon déjeuner de secours.'},
-    {n:'Fèves / chili en conserve',why:'Ouvrir, réchauffer, rouler dans une tortilla avec du fromage. Pas cher, rassasiant, aucun espace de glacière. Le meilleur repas d\'urgence.'},
-    {n:'Mélange du randonneur + barres granola',why:'Riche en calories, à l\'épreuve du transport, sans frigo. Un sac par personne dans le sac de jour.'},
-    {n:'Fromage + craquelins + salami',why:'Les fromages fermes survivent 2–4 h hors de la glacière. Excellente planche de charcuterie au coin du feu.'},
-    {n:'S\'mores',why:'Utiliser des barres de chocolat (pas des pépites), de grosses guimauves, des biscuits Graham à la cannelle. Garder au sec dans un sac scellé.'},
-    {n:'Crêpes au feu de camp',why:'Pré-mélanger les ingrédients secs à la maison dans un sac; ajouter eau + œuf au camp. Faire une grosse fournée.'}
-  ],
-  MEALS: [
-    {h:'Jour 1 · Souper',t:'Arrivée facile',items:['Légumes + saucisse en papillote','Salade de pâtes préparée','Pain à l\'ail sur le feu','Bières / boissons'],tip:'Papillotes préparées à la maison → directement sur le gril'},
-    {h:'Jour 2 · Déjeuner',t:'Matinée tranquille',items:['Bacon + œufs brouillés (fonte)','Rôties sur la grille','Fruits frais + jus d\'orange','Café filtre / piston'],tip:'Œufs cassés d\'avance dans un pot Mason'},
-    {h:'Jour 2 · Dîner',t:'Sans cuisson, relax',items:['Wraps de charcuterie + chips','Fromage, craquelins, trempettes','Cornichons, olives, grignotines','Eau pétillante / limonade'],tip:''},
-    {h:'Jour 2 · Souper ★',t:'Soirée grillades — l\'événement',items:['Steaks ou burgers marinés','Blé d\'Inde (dans le feu)','Patates au feu de camp','Salade de chou maison'],tip:'Mariner la viande à la maison, à plat dans des sacs scellés'},
-    {h:'Jour 3 · Brunch',t:'Finir les restes',items:['Crêpes / pain doré au feu','Restes de saucisse + œufs','Fruits + grignotines restants','Le reste du café'],tip:''},
-    {h:'Toujours sous la main',t:'Accessible tout le voyage',items:['Mélange du randonneur, barres, jerky','Chips, bretzels, popcorn','S\'mores : chocolat, Graham, guimauves','Eau + électrolytes'],tip:'Garder un bac de grignotines hors de la glacière'}
-  ],
-  PREP: [
-    {tag:'Glacière',title:'Bloc de glace, pas en cubes',body:'Un bloc de glace dure 2–3× plus longtemps. Achète un bloc de 5–10 lb avant de partir; ajoute des cubes autour. Pré-refroidis la glacière vide la veille avec un sac de glace sacrifié.'},
-    {tag:'Glacière',title:'Empile à l\'envers des repas',body:'Fond : glace → Jour 3 → Jour 2 → Jour 1 sur le dessus. Les boissons vont dans une glacière séparée — ce couvercle s\'ouvre 20× plus que celui de la nourriture.'},
-    {tag:'Glacière',title:'Ombre + vidange quotidienne',body:'Ne jamais la laisser dans un coffre chaud (peut atteindre 50 °C). Garde-la à l\'ombre et emballée. Vide l\'eau de fonte chaque matin.'},
-    {tag:'Prépa',title:'Œufs en pot Mason',body:'Casse et fouette tous les œufs à la maison dans un pot à large ouverture ou une Nalgene. Au camp : brasse et verse. Pas de coquilles, pas de dégât.'},
-    {tag:'Prépa',title:'Mariner d\'avance en sacs',body:'Le jeudi soir, mets la viande en sac avec la marinade, chasse l\'air, dépose à plat dans la glacière. Elle marine pendant la route.'},
-    {tag:'Prépa',title:'Enlève les emballages',body:'Sors tout du carton à la maison, remballe dans des sacs étiquetés. Moins de déchets au camp, plus d\'espace.'},
-    {tag:'Camp',title:'Cuisine à deux bacs + bac à grignotines',body:'Bac 1 = glacière (froid), Bac 2 = caisse sèche (attachée contre les ratons). Garde un bac à grignotines ouvert pour que personne n\'ouvre sans cesse la glacière.'},
-    {tag:'Sécurité',title:'Bases de salubrité alimentaire',body:'Garde viande/produits laitiers ≤4 °C, jamais sortis >2 h à la chaleur (1 h si >30 °C). Double-emballe la viande crue au fond de la glacière. Désinfecte tes mains avant chaque repas.'}
-  ],
-  SHOP: [
-    {tag:'Phase 1 — Maison (DDO)',title:'🍳 Nourriture — acheter avant de partir',note:'Maxi ou IGA dans l\'Ouest-de-l\'Île. Jeudi soir ou vendredi matin. L\'épicerie est la moins chère ici.',
-     items:[{n:'Toute la viande (mariner la veille)'},{n:'Œufs (casser d\'avance dans un pot)'},{n:'Produits laitiers : beurre, fromage, crème sure'},{n:'Sec : pâtes, riz, gruau, mélange du randonneur'},{n:'Conserves : fèves, maïs, tomates'},{n:'Condiments + huile de cuisson'},{n:'Provisions à s\'mores'},{n:'Café (moulu) + filtres'},{n:'Boissons : bière, cidre, eau pétillante'},{n:'Grignotines : chips, jerky, noix'},{n:'Pain / tortillas / pita'},{n:'Papier alu, sacs zip, essuie-tout'},{n:'Savon à vaisselle biodégradable'},{n:'Sacs à ordures + compost'}]},
-    {tag:'Phase 2 — Arrêt en route',title:'🍳 Nourriture — acheter en chemin',note:'Rivière-Rouge : IGA Saint-Jérôme. Ivy Lea : Foodland Gananoque / Metro Kingston.',
-     items:[{n:'Produits frais (tomates, petits fruits, maïs)'},{n:'Glace (remplir la glacière à une station-service)'},{n:'Pains frais pour les burgers'},{n:'Tout article oublié'},{n:'Sandwichs déjeuner pour la route'},{n:'Réappro d\'alcool (SAQ / LCBO)'}]},
-    {tag:'Phase 3 — Sur place',title:'🍳 Nourriture — au camping',note:'30–50 % plus cher — essentiels locaux seulement.',
-     items:[{n:'Bois de chauffage — toujours acheter local'},{n:'Glace (si tu en manques)'},{n:'Grignotines du dépanneur'}]},
-    {tag:'Phase 1 — Maison · commander tôt',title:'🎒 Équipement — kit de base (commander cette semaine)',note:'Meilleur magasin surligné par article. Amazon = livraison rapide; Canadian Tire = bases de camping et soldes; Decathlon = meilleur rapport qualité-prix en plein air.',
-     items:[{n:'Sac de couchage (coté 10 °C)'},{n:'Matelas de sol / matelas gonflable'},{n:'Lampe frontale'},{n:'Chaise de camp'},{n:'Glacière (grande, rigide)'},{n:'Réchaud + propane'},{n:'Bâche + corde/paracorde'},{n:'Lanterne DEL'},{n:'Hamac'}]},
-    {tag:'Phase 1 — Maison · préventif',title:'🛡 Préventif et sécurité (à ne pas sauter)',note:'Le petit stock pas glamour qui sauve la fin de semaine. Petit, pas cher, essentiel.',
-     items:[{n:'Chasse-moustiques — DEET 25–30 % ou picaridine'},{n:'Après-piqûre + antihistaminiques'},{n:'Trousse de premiers soins (complète)'},{n:'Crème solaire FPS 50'},{n:'Serpentins anti-moustiques / Thermacell'},{n:'Ruban gris + attaches'},{n:'Allumettes imperméables / allume-feu'},{n:'Poncho de pluie compact (secours)'},{n:'Bidons d\'eau / 10 L réutilisable'}]},
-    {tag:'Phase 2 — Arrêt en route',title:'🎒 Équipement — à prendre en route si oublié',note:'Il y a des Canadian Tire à Saint-Jérôme ET à Kingston — filet de sécurité parfait à mi-chemin pour tout oubli.',
-     items:[{n:'Cartouches de propane'},{n:'Piles (AA/AAA)'},{n:'Matelas mousse pas cher (si quelqu\'un a oublié le sien)'},{n:'Tendeurs élastiques'},{n:'Liquide à briquet / allume-feu'}]}
-  ],
-  AREA: {
-    plage:{title:'Autour de Rivière-Rouge (QC)',items:['Canot ou kayak sur la rivière Rouge — location sur place','Baignade à la plage de la rivière, directement au camp','Excursions de rafting en eau vive (pourvoyeurs de la Rouge)','Village de Mont-Tremblant — 25 min au nord : remontées, luge, terrasses','Randonnée dans les Laurentides (sentiers du parc régional)','Soirées de musique en direct au camping (fins de semaine)']},
-    ivy:{title:'Autour d\'Ivy Lea / Mille-Îles (ON)',items:['Croisière dans les Mille-Îles depuis Gananoque ou Rockport','Visite du château Boldt (apporte ton passeport — c\'est côté É.-U.)','Tour des Mille-Îles — plateforme d\'observation au-dessus du fleuve','Marche sur le pont suspendu Skydeck','Plongée sous-marine — célèbres épaves d\'eau douce','Pêche du quai ou de la rampe de mise à l\'eau','Vie nocturne de Kingston — 30 min à l\'ouest pour une grosse soirée']}
-  },
-  BRING: [
-    {t:'Spikeball / volleyball',p:'Le meilleur jeu de camping pour 4–5 personnes. Léger, compact.'},
-    {t:'Frisbee / ballon de football',p:'Aucune installation, des heures de plaisir. Flotte s\'il tombe à l\'eau.'},
-    {t:'Cannes à pêche + agrès de base',p:'Les deux sites sont sur des eaux poissonneuses. Vérifie les règles de permis (QC/ON).'},
-    {t:'Flotteurs / matelas gonflable',p:'Pour flâner sur la rivière. Pas cher chez Canadian Tire en juin.'},
-    {t:'Jumelles',p:'Observation des bateaux aux Mille-Îles ou des oiseaux des Laurentides. Sous-estimé.'},
-    {t:'Appareil photo instantané / jetable',p:'De meilleures photos que les téléphones — et personne ne scrolle.'},
-    {t:'Slackline',p:'Deux arbres + 15 minutes = des heures de plaisir pour la gang.'},
-    {t:'Bâtons lumineux',p:'Jeux de nuit, marquer les haubans de tente pour que personne ne s\'enfarge.'}
-  ],
-  GAMES: [
-    {t:'Cartes : Président / Poker',p:'Apporte des jetons ou joue pour les corvées de camp. Format classique au coin du feu.'},
-    {t:'Loup-garou / Mafia',p:'Parfait pour exactement 4–5 personnes autour d\'un feu la nuit.'},
-    {t:'Quiz au coin du feu',p:'Une personne prépare 20 questions sur la gang — chaos garanti.'},
-    {t:'Histoire un mot chacun',p:'Bâtir une histoire un mot par personne. Ça devient niaiseux vite. C\'est le but.'},
-    {t:'Cache-cache à la lampe de poche',p:'Ça a l\'air enfantin. C\'est incroyable. Fixe les limites avant la noirceur.'},
-    {t:'Cinéma sous la tente',p:'Télécharge un film d\'avance, cale un téléphone/tablette, plan B les soirs de pluie.'},
-    {t:'Dés poker / Yahtzee',p:'Un gobelet + cinq dés = tout un après-midi pluvieux réglé.'},
-    {t:'Concours de sculpture sur bois',p:'Chacun sculpte une cuillère ou un piquet. Juge au dernier feu.'}
-  ],
-  SITUATIONS: [
-    {tag:'Pluie',title:'Il se met à pleuvoir fort',body:'Installe la bâche au-dessus de la cuisine EN PREMIER (ligne de crête entre les arbres, angle prononcé pour que l\'eau s\'écoule). Vérification : ne creuse jamais, mais assure-toi que la tente n\'est pas dans un creux. Garde l\'équipement loin des parois de la tente — toucher le double-toit fait passer l\'eau. Les vêtements mouillés vont dans un sac à ordures, pas dans la tente.'},
-    {tag:'Pluie',title:'Prévenir une tente mouillée avant que ça arrive',body:'Toile de sol SOUS la tente, légèrement plus petite que le plancher (trop grande, elle ramasse l\'eau). Double-toit tendu et piqueté, portes fermées, évents ouverts pour éliminer la condensation. Monte sur un terrain élevé. Scelle les coutures des vieilles tentes à la maison la semaine d\'avant.'},
-    {tag:'Insectes',title:'Des moustiques dans la tente la nuit',body:'Règle 1 : lumières ÉTEINTES avant d\'ouvrir la fermeture — la lumière les attire. Ouvre le minimum, entre vite. Tue ceux à l\'intérieur avec un balayage de lampe frontale avant de dormir. Ne vaporise jamais de DEET dans la tente (ça abîme les enduits); un Thermacell à la porte 15 min avant le coucher dégage la zone.'},
-    {tag:'Insectes',title:'Réduire les piqûres au camp, surtout au crépuscule',body:'Le crépuscule = pic d\'attaque. Manches longues + pantalon dès 19 h, DEET/picaridine sur la peau exposée, le côté fumée du feu est le côté sans bibittes. Évite déodorant/savon parfumé. Traite les piqûres avec de l\'après-piqûre ou un antihistaminique — ne gratte pas, gratter = risque d\'infection en camping.'},
-    {tag:'Feu',title:'Le feu ne part pas / le bois est humide',body:'Fends les bûches humides — l\'intérieur est sec. Fais des bâtons d\'allumage du cœur sec au couteau. Bâtis une vraie échelle : allume-feu → brindilles fines comme un crayon → grosses comme un pouce → comme un poignet. Ne l\'étouffe pas avec de grosses bûches trop tôt. Carton + huile de cuisson est la triche d\'urgence.'},
-    {tag:'Chaud/Froid',title:'Nuit froide, quelqu\'un gèle',body:'Habille-le AVANT que les frissons commencent. Une tuque pour dormir vaut plus qu\'une couverture de plus. De l\'eau chaude dans une Nalgene au pied du sac de couchage = radiateur de camp. Être isolé du sol compte plus que par-dessus — double les matelas.'},
-    {tag:'Faune',title:'Des ratons ont pillé le camp',body:'Ils ont eu de la nourriture parce qu\'elle traînait — règle la cause. Tout ce qui est comestible va dans l\'auto ou une glacière verrouillée la nuit, y compris le dentifrice et les déchets. Ne les nourris jamais et ne leur laisse pas de vaisselle sale. Ils se souviennent des sites payants.'},
-    {tag:'Blessure',title:'Coupures, brûlures et entorses',body:'Brûlures : eau froide 10 min et plus, jamais de glace, jamais de beurre. Coupures : pression, nettoyer, fermer, panser — et garder au sec (difficile en camping; refaire le pansement chaque jour). Entorses : repos + élévation + compression, pas de « ça va passer ». Tout ce qui est profond, béant ou qui ne cesse de saigner = direction l\'urgence. Sache où elle est AVANT le voyage.'}
-  ],
-  FAQ: [
-    {q:'Comment faire un feu de camp qui prend vraiment?',a:'Trois grosseurs de combustible, par étapes : amadou (cube allume-feu, écorce de bouleau, mousse de sécheuse), petit bois (crayon → pouce), puis bûches (poignet et plus). Bâtis un tipi ou une cabane autour de l\'amadou, allume du côté au vent, et n\'ajoute pas de grosses bûches avant que le petit bois rugisse. La plupart des feux ratés meurent parce qu\'on saute de l\'amadou aux bûches.'},
-    {q:'Combien de bois de chauffage nous faut-il?',a:'Pour deux longues soirées de feu, prévois 2–3 fagots par nuit pour un feu de groupe (donc 5–6 au total). Achète-le au camping ou en ville — transporter du bois entre régions est interdit car ça propage des ravageurs envahissants.'},
-    {q:'Et s\'il y a une interdiction de feu cette fin de semaine?',a:'Vérifie sopfeu.qc.ca (QC) ou ontario.ca/page/forest-fires (ON) la veille. Une interdiction signifie généralement pas de feu ouvert, mais les appareils au propane restent permis — donc le réchaud gère la cuisson, et tu pivotes les soirées vers lanterne + jeux. Apporte le réchaud peu importe.'},
-    {q:'Quel sac de couchage me faut-il en juin?',a:'Les nuits près de l\'eau dans les Laurentides ou sur le Saint-Laurent peuvent descendre à 8–12 °C même après une journée à 25 °C. Un sac coté 10 °C ou moins est le choix sûr, plus une polaire et une tuque en secours.'},
-    {q:'Ai-je vraiment besoin d\'un matelas de sol?',a:'Oui — et pas surtout pour le confort. Le sol te pompe la chaleur toute la nuit; un matelas est d\'abord de l\'isolation, du rembourrage ensuite. Un matelas gonflable sans isolation peut dormir plus froid qu\'un matelas mousse.'},
-    {q:'Comment garder la nourriture froide 3 jours?',a:'Bloc de glace (dure 2–3× plus que des cubes), une glacière pré-refroidie, emballer dans l\'ordre inverse des repas, une glacière à boissons séparée, l\'ombre, et vider l\'eau de fonte chaque jour. Bien fait, une bonne glacière rigide tient des températures sûres toute la fin de semaine.'},
-    {q:'L\'eau au camping est-elle potable?',a:'Camping de la Plage et Ivy Lea ont tous deux de l\'eau du robinet potable. Apporte quand même 10–15 L en bidons en secours, et ne bois jamais directement de la rivière ou du lac sans filtre.'},
-    {q:'C\'est quoi l\'affaire avec les ratons et la nourriture?',a:'Les deux parcs ont des ratons (et des écureuils) effrontés. Tout ce qui a une odeur — nourriture, déchets, dentifrice — va dans une auto ou une glacière verrouillée la nuit. Un tendeur sur le couvercle de la glacière est le minimum.'},
-    {q:'Peut-on se baigner aux deux sites?',a:'Oui. Camping de la Plage a une plage sur la rivière Rouge. Ivy Lea est sur le Saint-Laurent avec accès au quai et à la rive — l\'eau est plus froide et les courants sont réels, alors baigne-toi près du bord et jamais seul après avoir bu.'},
-    {q:'Faut-il un permis de pêche?',a:'Oui, dans les deux provinces. Le Québec et l\'Ontario exigent chacun leur propre permis (journalier ou annuel), achetable en ligne en quelques minutes. Ne le saute pas — les amendes sont salées.'},
-    {q:'Signal cellulaire aux campings?',a:'Faible à correct aux deux — utilisable en zones dégagées, faible sous le couvert d\'arbres. C\'est exactement pourquoi ce site fonctionne hors ligne et pourquoi une carte d\'urgence imprimée par auto compte.'},
-    {q:'Heures d\'arrivée / de départ?',a:'Camping de la Plage : couvre-feu 23 h, départ 11 h. Ivy Lea : départ 13 h, arrivée généralement en début-milieu d\'après-midi. Arriver avant l\'heure d\'arrivée est habituellement correct — tu peux te garer et aller à la plage.'}
-  ],
-  TIPS: [
-    {i:'🌙',t:'Les nuits de juin sont froides',p:'Même avec des journées chaudes, ça baisse près de l\'eau. Apporte une polaire et un sac coté au moins 10 °C.'},
-    {i:'🦟',t:'Les bibittes culminent en juin',p:'Moustiques et mouches noires pires début juin près des lacs. DEET, manches longues le soir, toile moustiquaire.'},
-    {i:'🔥',t:'Achète le bois local',p:'Ne transporte jamais de bois entre régions — ça propage des ravageurs envahissants. Achète sur place ou en ville. ~10–15 $/nuit.'},
-    {i:'⏱️',t:'Prépare la veille',p:'Charge l\'auto, portionne la nourriture, pré-mélange les épices, fais les marinades. Arriver prêt = zéro stress le jour 1.'},
-    {i:'🗑️',t:'Ne laisse aucune trace',p:'Rapporte tous les déchets, ne laisse jamais de nourriture dehors, savon biodégradable à 60 m de l\'eau. Laisse mieux que tu as trouvé.'},
-    {i:'🌧️',t:'Plan B météo',p:'Une bâche au-dessus de la cuisine change tout. Apporte des cartes + du divertissement intérieur pour un jour de pluie.'}
-  ],
-  ROLES: ['Maître du feu','Responsable des repas','Coordonnateur d\'équipement','Conducteur principal','Navigateur (auto 2)','Intendant (collations/eau)']
+'use strict';
+
+const CFG = window.WW_CONFIG || {};
+const TRIP_ID = CFG.TRIP_ID || 'camping-june-2026';
+const LS_KEY = 'wildweekend_' + TRIP_ID;
+const CLIENT_ID = Math.random().toString(36).slice(2);
+
+let sb = null;           // supabase client
+let live = false;        // realtime connected
+let user = null;         // signed-in user
+let saveTimer = null;
+let lastRev = 0;
+
+let state = defaultState();
+function defaultState(){
+  return { rev:0, by:'', crew:[], crewMeta:{}, gear:null, gearArchive:[], gearClaims:{}, gearPacked:{}, personalItems:{},
+    expenses:[], votes:{}, roles:{}, checks:{}, stops:[], chosenSite:'',
+    customFood:[], timelineExtra:[], timelineEdits:{}, shopBought:{}, prepEdits:{}, mealEdits:{} };
+}
+
+/* "Who am I" — per device, never synced. Drives the personal packing list + progress. */
+function whoAmI(){ try{ return isSignedIn()?(localStorage.getItem('ww_whoami')||''):''; }catch(e){ return ''; } }
+function setWhoAmI(name){ if(!isSignedIn()){toast('🔒 Sign in to use the crew features');return;} try{ localStorage.setItem('ww_whoami',name||''); }catch(e){} renderGear(); renderProgress(); renderMyPacking(); }
+
+/* Build the packing list for a given crew member:
+   - every gear item assigned to them specifically
+   - every gear item assigned to "All crew" (everyone needs their own)
+   - their personal custom items
+   Returns [{key, name, note, packed, kind}] where key is unique per person+item. */
+function packingListFor(name){
+  if(!name) return [];
+  const out=[];
+  gearData().forEach(cat=>cat.items.forEach(it=>{
+    const claims=state.gearClaims[it.id]||[];
+    const mine = claims.includes(name) || claims.includes('ALL');
+    if(mine){
+      const pk = state.gearPacked[it.id];
+      const packed = (pk && typeof pk==='object') ? !!pk[name] : (claims.includes('ALL') ? false : !!pk);
+      out.push({key:it.id, name:it.n, note:it.note||'', packed, kind:claims.includes('ALL')?'all':'assigned', cat:cat.cat});
+    }
+  }));
+  (state.personalItems[name]||[]).forEach(pi=>{
+    out.push({key:'personal:'+pi.id, name:pi.name, note:'personal', packed:!!pi.packed, kind:'personal', qty:pi.qty||0});
+  });
+  return out;
+}
+function packStatsFor(name){
+  const list=packingListFor(name);
+  return {total:list.length, packed:list.filter(x=>x.packed).length};
+}
+
+/* ---------- utils ---------- */
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+const palette=['#9bce6f','#f0b455','#6cb6d4','#e8896b','#b49ad4','#7bb661'];
+function colorFor(n){let h=0;for(let i=0;i<n.length;i++)h=n.charCodeAt(i)+((h<<5)-h);return palette[Math.abs(h)%palette.length];}
+function initials(n){return n.trim().slice(0,2).toUpperCase();}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function uid(){return 'g'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2600);}
+
+/* ---------- persistence: local + supabase ---------- */
+function saveLocal(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){} }
+function loadLocal(){ try{ const r=localStorage.getItem(LS_KEY); if(r) state=Object.assign(defaultState(), JSON.parse(r)); }catch(e){} }
+
+function persist(){
+  if(!isSignedIn()){ // signed-out is read-only; never save the clean state over cached data
+    try{renderProgress();}catch(e){}
+    return;
+  }
+  state.rev=(state.rev||0)+1; state.by=CLIENT_ID; lastRev=state.rev;
+  saveLocal();
+  try{renderProgress();}catch(e){}
+  if(sb&&user&&liveReady){
+    clearTimeout(saveTimer);
+    saveTimer=setTimeout(async()=>{
+      try{
+        const {error}=await sb.from('trips').upsert({id:TRIP_ID, data:state, updated_at:new Date().toISOString()});
+        if(error){ console.warn('supabase save:',error.message); setSync('local','Local (save failed)'); }
+        else setSync('live','Live');
+      }catch(e){ setSync('local','Offline — will retry'); }
+    },700);
+  } else if(sb&&user){
+    // signed in but no live channel (offline): keep working locally, will sync on reconnect
+    setSync('off','Offline — changes saved locally');
+  }
+}
+
+const SYNC_TIPS={
+  live:'Live — you are signed in. Every change syncs instantly to the whole crew on every device.',
+  local:'Local — data saves to this device only. Sign in with Google (top right) to join the live shared trip.',
+  off:'Offline — no connection right now. Changes are saved locally and will sync when you reconnect.'
+};
+function setSync(mode,text,tip){
+  const p=$('#sync-pill');p.className='sync-pill sync-'+(mode==='live'?'live':mode==='off'?'off':'local');
+  p.setAttribute('data-tip',tip||SYNC_TIPS[mode==='live'?'live':mode==='off'?'off':'local']);
+  $('#sync-text').textContent=text;
+  const ex=$('#sync-explainer');
+  if(!ex)return;
+  if(mode==='live') ex.innerHTML='🟢 <b>Live sync is on.</b> You are signed in — every change is shared instantly with everyone signed into the trip, on every device. Everything also caches for offline use.';
+  else ex.innerHTML='🟡 <b>Local mode.</b> Data saves to this device only. <b>Sign in with Google</b> (top right) to join the live shared trip, sync with the crew, and unlock all themes. You can still share state manually with Export/Import below.';
+}
+
+let liveChannel=null,liveReady=false,onlineCount=0;
+let presenceList=[];           // [{name,email,tab,at}] of everyone currently online
+let adminConfig={};            // app-wide admin settings (banner, signups, leaders, blocked, traffic)
+let adminChannel=null;
+let viewAs=null;               // owner impersonation: null | 'none' | 'visitor' | 'camper' | 'leader'
+const OWNER_EMAIL='tashiiwhite@gmail.com';
+function isOwnerReal(){ return !!(user && (user.email||'').toLowerCase()===OWNER_EMAIL); }
+function isSignedInReal(){ return !!user; }
+function myEmail(){ return (user&&user.email||'').toLowerCase(); }
+function leaderEmails(){ return (adminConfig.leaders||[]).map(e=>(e||'').toLowerCase()); }
+function isLeaderReal(){ return !!(user && leaderEmails().includes((user.email||'').toLowerCase())); }
+function blockedEmails(){ return (adminConfig.blocked||[]).map(e=>(e||'').toLowerCase()); }
+function isBlocked(){ return !!(user && !isOwnerReal() && blockedEmails().includes(myEmail())); }
+// Is this email linked to a crew member? (linked => "camper", not => "visitor")
+function crewForEmail(email){ email=(email||'').toLowerCase(); if(!email)return null; return state.crew.find(c=>((state.crewMeta&&state.crewMeta[c]||{}).email||'').toLowerCase()===email)||null; }
+function myCrew(){ return crewForEmail(myEmail()); }
+function crewOwnedBy(email){ email=(email||'').toLowerCase(); return state.crew.filter(c=>((state.crewMeta&&state.crewMeta[c]||{}).email||'').toLowerCase()===email); }
+
+// REAL access level, ignoring impersonation.
+// none(signed out) | visitor(signed in, no crew) | camper(linked to crew) | leader | admin(owner)
+function realLevel(){
+  if(!user) return 'none';
+  if(isOwnerReal()) return 'admin';
+  if(isLeaderReal()) return 'leader';
+  return myCrew() ? 'camper' : 'visitor';
+}
+// EFFECTIVE level — what the UI behaves as. Owner can temporarily "view as" a lower role.
+function accessLevel(){
+  const real=realLevel();
+  if(real==='admin' && viewAs && viewAs!=='admin') return viewAs;
+  return real;
+}
+function isSignedIn(){ const l=accessLevel(); return l!=='none'; }
+function isOwner(){ return accessLevel()==='admin'; }
+function isLeader(){ return accessLevel()==='leader'; }
+function isCamper(){ return accessLevel()==='camper'; }
+function isVisitor(){ return accessLevel()==='visitor'; }
+// Editing trip data (crew, gear, votes, costs, food, etc.): campers, leaders, admins. NOT visitors.
+function canEdit(){ if(isBlocked())return false; const l=accessLevel(); return l==='camper'||l==='leader'||l==='admin'; }
+// Only admin or leader can reset the shared trip data, edit costs after add, add itinerary points.
+function canManage(){ const l=accessLevel(); return l==='leader'||l==='admin'; }
+function canReset(){ return canManage(); }
+function currentTabName(){
+  const t=document.querySelector('.tab.active');
+  return t?(t.textContent||'').trim():'Basecamp';
+}
+// Reflect access on <html> so CSS can gate the UI by role.
+function applyGateClasses(){
+  const h=document.documentElement;
+  const l=accessLevel();
+  h.classList.toggle('signed-out', l==='none');
+  h.classList.toggle('signed-in', l!=='none');
+  h.classList.toggle('lvl-visitor', l==='visitor');
+  h.classList.toggle('can-edit', canEdit());
+  h.classList.toggle('can-manage', canManage());
+  h.dataset.access=l;
+  // If signed out while on a locked page, bounce to Basecamp (can't view locked pages).
+  if(l==='none'){
+    const active=document.querySelector('.panel.active');
+    if(active && ['gear','food','shop','money'].includes(active.id)){
+      const dash=document.querySelector('.tab[data-p="dash"]'); if(dash) dash.click();
+    }
+  }
+}
+// Regular campers/visitors may own only 1 crew member; leaders/admins unlimited.
+function canAddCrew(){
+  if(isBlocked()) return false;
+  const l=accessLevel();
+  if(l==='leader'||l==='admin') return true;
+  if(l==='none') return false;
+  return crewOwnedBy(myEmail()).length<1;
+}
+
+async function initSupabase(){
+  const url=CFG.SUPABASE_URL||'', key=CFG.SUPABASE_ANON_KEY||'';
+  if(!url||url.includes('YOUR_')||!key||key.includes('YOUR_')){ setSync('local','Local'); renderAuth(); return; }
+  if(!window.supabase||typeof window.supabase.createClient!=='function'){ setSync('local','Local'); renderAuth(); return; }
+  try{
+    sb = supabase.createClient(url,key,{auth:{flowType:'implicit',detectSessionInUrl:true,persistSession:true,autoRefreshToken:true,storage:window.localStorage}});
+    await recoverSessionFromUrl();
+    sb.auth.onAuthStateChange((_e,session)=>{ user=session?.user||null; applyAccess(); });
+    const {data:{session}}=await sb.auth.getSession(); user=session?.user||null;
+    await applyAccess();
+  }catch(e){ console.warn('supabase init:',e.message||e); setSync('local','Local (no connection)'); renderAuth(); }
+}
+
+async function applyAccess(){
+  if(user){ try{closeSignin();}catch(e){} }
+  viewAs=null; // any auth change clears impersonation
+  applyGateClasses();
+  renderAuth();
+  enforceThemeAccess();
+  enforceDisplayDefaults();
+  if(user){ applyMonthlyDefaultOnSignIn(); }
+  renderSettingsUI();
+  if(user){
+    await connectLive();
+    applyGateClasses(); // re-evaluate now that crew data (camper vs visitor) is loaded
+    renderAuth();
+    try{ maybePromptLink(); }catch(e){}
+  } else {
+    disconnectLive();
+    setSync('local','Local — sign in for live');
+    state=defaultState();
+    try{ await loadAdminConfig(); }catch(e){}
+    // Track anonymous visitors too (so the admin sees signed-out traffic).
+    try{ if(sb){ recordVisit(); startSessionTimer(); } }catch(e){}
+  }
+  renderAll();
+}
+
+// First-sign-in identity prompt: existing crew / add new / just browsing.
+function maybePromptLink(){
+  if(!user||isOwnerReal()||isLeaderReal()) return;       // owner/leaders don't need linking
+  if(myCrew()) return;                                   // already linked
+  try{ if(localStorage.getItem('ww_link_dismissed')==='1') return; }catch(e){}
+  renderLinkPrompt();
+  $('#link-modal').classList.add('open');
+}
+function renderLinkPrompt(){
+  const sel=$('#link-existing-select'); if(!sel)return;
+  const unlinked=state.crew.filter(c=>!((state.crewMeta&&state.crewMeta[c]||{}).email));
+  sel.innerHTML='<option value="">Choose your name…</option>'+unlinked.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  const exWrap=$('#link-existing-wrap'); if(exWrap) exWrap.style.display=unlinked.length?'block':'none';
+}
+function linkChooseExisting(){
+  const name=$('#link-existing-select').value;
+  if(!name){toast('Pick your name');return;}
+  linkMeToCrew(name);
+}
+function linkCreateNew(){
+  const v=($('#link-new-name').value||'').trim();
+  if(!v){toast('Enter your name');return;}
+  if(state.crew.includes(v)){ linkMeToCrew(v); return; }
+  state.crew.push(v);
+  if(!state.crewMeta)state.crewMeta={};
+  state.crewMeta[v]={email:myEmail(),by:myEmail(),at:Date.now()};
+  persist();
+  finishLink(v);
+}
+function linkMeToCrew(name){
+  if(!state.crewMeta)state.crewMeta={};
+  // don't steal someone else's linked name
+  const existing=state.crewMeta[name]||{};
+  if(existing.email && existing.email.toLowerCase()!==myEmail()){ toast('That name is already linked to someone else'); return; }
+  state.crewMeta[name]=Object.assign(existing,{email:myEmail(),at:Date.now()});
+  persist();
+  finishLink(name);
+}
+function finishLink(name){
+  try{ localStorage.setItem('ww_whoami',name); localStorage.removeItem('ww_link_dismissed'); }catch(e){}
+  closeLink();
+  applyGateClasses(); renderAuth(); renderAll();
+  toast('✓ Linked as '+name+' — you can edit the trip now');
+}
+function linkJustBrowsing(){
+  try{ localStorage.setItem('ww_link_dismissed','1'); }catch(e){}
+  closeLink();
+  applyGateClasses(); renderAuth(); renderAll();
+  toast('Browsing as a visitor — you can look around. Link your name anytime in Basecamp.');
+}
+function closeLink(){ const m=$('#link-modal'); if(m)m.classList.remove('open'); }
+function openLinkPrompt(){ renderLinkPrompt(); $('#link-modal').classList.add('open'); } // manual trigger from Basecamp
+
+// Owner "view as" impersonation (preview the site as another role)
+function setViewAs(level){
+  if(!isOwnerReal())return;
+  viewAs=(level==='admin'||!level)?null:level;
+  applyGateClasses(); renderAuth(); enforceThemeAccess(); renderSettingsUI(); renderAll();
+  renderViewAsBar();
+  applyPreviewSyncIndicator();
+  toast(viewAs?('Viewing as: '+viewAs):'Back to admin view');
+}
+// While previewing a lower role, make the sync + presence indicators match what that role sees.
+function applyPreviewSyncIndicator(){
+  if(viewAs==='none'){
+    setSync('local','Local — sign in for live');
+    const pp=$('#presence-pill'); if(pp) pp.style.display='none';
+  } else {
+    // restore the real (admin) live state
+    if(liveReady){ setSync('live','Live'); }
+    renderPresence();
+  }
+}
+function renderViewAsBar(){
+  const bar=$('#viewas-bar');if(!bar)return;
+  if(isOwnerReal() && viewAs){
+    bar.style.display='flex';
+    $('#viewas-label').textContent='👁 Previewing as '+viewAs.toUpperCase();
+  } else bar.style.display='none';
+}
+
+async function connectLive(){
+  if(!sb||!user)return;
+  try{
+    const {data,error}=await sb.from('trips').select('data').eq('id',TRIP_ID).maybeSingle();
+    if(error) throw error;
+    if(data && data.data && Object.keys(data.data).length){
+      const remote=Object.assign(defaultState(),data.data);
+      if((remote.rev||0) >= (state.rev||0)) state=remote;
+    } else {
+      await sb.from('trips').upsert({id:TRIP_ID,data:state});
+    }
+    saveLocal();
+    // If this email is already linked to a crew member, sync "who am I" to it.
+    try{
+      const mine=myCrew();
+      if(mine){ localStorage.setItem('ww_whoami',mine); }
+    }catch(e){}
+    if(liveChannel){try{sb.removeChannel(liveChannel);}catch(e){}}
+    liveChannel=sb.channel('trip-'+TRIP_ID,{config:{presence:{key:CLIENT_ID}}})
+      .on('postgres_changes',{event:'*',schema:'public',table:'trips',filter:'id=eq.'+TRIP_ID},payload=>{
+        const d=payload.new?.data; if(!d)return;
+        if(d.by===CLIENT_ID && d.rev<=lastRev) return;
+        state=Object.assign(defaultState(),d); saveLocal(); renderAll();
+      })
+      .on('presence',{event:'sync'},()=>{
+        try{
+          const st=liveChannel.presenceState();
+          presenceList=[];
+          Object.values(st).forEach(arr=>{ if(arr&&arr[0]) presenceList.push(arr[0]); });
+          onlineCount=presenceList.length;
+        }catch(e){ onlineCount=1; presenceList=[]; }
+        renderPresence(); if(isOwner()){ recordTraffic(); renderAdminPresence(); }
+      })
+      .subscribe(async status=>{
+        if(status==='SUBSCRIBED'){
+          liveReady=true; setSync('live','Live');
+          try{await trackPresence();}catch(e){}
+          try{ recordVisit(); startSessionTimer(); }catch(e){}
+        }
+      });
+    // admin config (banner + signup flag) — load + subscribe for everyone
+    await loadAdminConfig();
+    subscribeAdminConfig();
+    setSync('live','Live');
+  }catch(e){ console.warn('connectLive:',e.message||e); liveReady=false; setSync('local','Local (no connection)'); }
+}
+function disconnectLive(){
+  liveReady=false;onlineCount=0;presenceList=[];renderPresence();
+  if(liveChannel&&sb){try{sb.removeChannel(liveChannel);}catch(e){} liveChannel=null;}
+  if(adminChannel&&sb){try{sb.removeChannel(adminChannel);}catch(e){} adminChannel=null;}
+}
+async function trackPresence(){
+  if(!liveChannel||!liveReady)return;
+  try{
+    await liveChannel.track({
+      name:user?.user_metadata?.full_name||user?.email||'crew',
+      email:user?.email||'',
+      role:realLevel(),
+      tab:currentTabName(),
+      at:Date.now()
+    });
+  }catch(e){}
+}
+
+/* ============================================================
+   ANALYTICS — per-visitor visits + time-on-site, written to Supabase.
+   Works for signed-in emails AND anonymous visitors (anon:<clientid>).
+   Counters are computed live in the admin dashboard from presence + these rows.
+   ============================================================ */
+let _sessionStart=Date.now(), _analyticsFlushT=null, _visitRecorded=false, _secondsBank=0;
+function analyticsId(){ return myEmail() ? myEmail() : ('anon:'+CLIENT_ID); }
+function analyticsRole(){ return realLevel(); } // none|visitor|camper|leader|admin
+// Record a visit (one per page load / session) and ensure the visitor row exists.
+async function recordVisit(){
+  if(!sb||_visitRecorded)return;
+  _visitRecorded=true;
+  const id=analyticsId(), email=myEmail()||null, isAnon=!email;
+  const now=new Date().toISOString();
+  try{
+    const {data}=await sb.from('site_visitors').select('visits,seconds,first_seen').eq('id',id).maybeSingle();
+    if(data){
+      await sb.from('site_visitors').update({
+        last_seen:now, visits:(data.visits||0)+1, role:analyticsRole(),
+        display_name:(user?.user_metadata?.full_name||user?.email||'visitor'), updated_at:now
+      }).eq('id',id);
+    }else{
+      await sb.from('site_visitors').insert({
+        id, email, is_anon:isAnon, role:analyticsRole(),
+        display_name:(user?.user_metadata?.full_name||user?.email||'visitor'),
+        first_seen:now, last_seen:now, visits:1, seconds:0, updated_at:now
+      });
+    }
+    // bump the daily rollup
+    const day=now.slice(0,10);
+    const {data:d}=await sb.from('site_daily').select('visits').eq('day',day).maybeSingle();
+    if(d) await sb.from('site_daily').update({visits:(d.visits||0)+1,updated_at:now}).eq('day',day);
+    else  await sb.from('site_daily').insert({day,visits:1,uniques:1,updated_at:now});
+  }catch(e){ console.warn('recordVisit',e.message||e); }
+}
+// Periodically flush accumulated seconds-on-site to the visitor row.
+function startSessionTimer(){
+  _sessionStart=Date.now();
+  clearInterval(_analyticsFlushT);
+  _analyticsFlushT=setInterval(flushSeconds, 60000); // every 60s
+  window.addEventListener('beforeunload', flushSecondsSync);
+  document.addEventListener('visibilitychange',()=>{ if(document.hidden) flushSeconds(); });
+}
+async function flushSeconds(){
+  if(!sb)return;
+  const add=Math.round((Date.now()-_sessionStart)/1000);
+  if(add<=0)return; _sessionStart=Date.now();
+  const id=analyticsId();
+  try{
+    const {data}=await sb.from('site_visitors').select('seconds').eq('id',id).maybeSingle();
+    const total=((data&&data.seconds)||0)+add;
+    await sb.from('site_visitors').update({seconds:total,last_seen:new Date().toISOString()}).eq('id',id);
+  }catch(e){}
+}
+function flushSecondsSync(){
+  // best-effort on unload using sendBeacon-style fire-and-forget
+  try{ flushSeconds(); }catch(e){}
+}
+// Live counts by role, computed from current presence list (everyone online right now).
+function liveRoleCounts(){
+  const c={signedOut:0,visitor:0,camper:0,leader:0,admin:0,online:0};
+  presenceList.forEach(p=>{
+    c.online++;
+    const r=p.role||(p.email?'camper':'none');
+    if(r==='none') c.signedOut++;
+    else if(r==='visitor') c.visitor++;
+    else if(r==='leader'){ c.leader++; } // leader counts as camper for the "camper" tally too
+    else if(r==='admin') c.admin++;
+    else c.camper++;
+  });
+  // Per spec: leader counts as a camper for live data (but keeps its own role label).
+  c.camperIncLeaders=c.camper+c.leader;
+  return c;
+}
+async function loadAdminConfig(){
+  if(!sb)return;
+  try{
+    const {data,error}=await sb.from('admin_config').select('data').eq('id','global').maybeSingle();
+    if(!error && data && data.data){ adminConfig=data.data; renderDepartureBanner(); }
+  }catch(e){ console.warn('loadAdminConfig',e.message||e); }
+}
+function subscribeAdminConfig(){
+  if(!sb||adminChannel)return;
+  try{
+    adminChannel=sb.channel('admin-'+TRIP_ID)
+      .on('postgres_changes',{event:'*',schema:'public',table:'admin_config',filter:'id=eq.global'},payload=>{
+        const d=payload.new?.data; if(d){ adminConfig=d; renderDepartureBanner(); if(isOwner())renderAdminConfigUI(); }
+      })
+      .subscribe();
+  }catch(e){ console.warn('subscribeAdminConfig',e.message||e); }
+}
+async function saveAdminConfig(){
+  if(!sb||!isOwner()){toast('Owner only');return;}
+  try{
+    const {error}=await sb.from('admin_config').upsert({id:'global',data:adminConfig,updated_at:new Date().toISOString()});
+    if(error)throw error;
+    toast('Admin settings saved');
+    renderDepartureBanner();
+  }catch(e){ toast('Save failed: '+(e.message||e)); }
+}
+function renderPresence(){
+  const p=$('#presence-pill');if(!p)return;
+  if(liveReady&&onlineCount>0){
+    p.style.display='flex';
+    $('#presence-count').textContent=onlineCount+(onlineCount===1?' online':' online');
+  } else p.style.display='none';
+}
+
+/* ============================================================
+   ADMIN (owner-only: tashiiwhite@gmail.com)
+   Not referenced anywhere visible to other users.
+   ============================================================ */
+function openAdmin(){
+  if(!isOwner()){return;}
+  renderAdminPresence();
+  renderAdminConfigUI();
+  renderAdminStats();
+  renderAdminUsers();
+  adminTab('presence');
+  $('#admin-modal').classList.add('open');
+}
+function closeAdmin(){ $('#admin-modal').classList.remove('open'); adminStatsOpen=false; }
+function openAdminGuide(){
+  if(!isOwnerReal())return;
+  const o=$('#ag-owner'); if(o)o.textContent=OWNER_EMAIL;
+  $('#admin-guide-modal').classList.add('open');
+}
+function closeAdminGuide(){ $('#admin-guide-modal').classList.remove('open'); }
+// --- Admin simulations: preview the pop-ups other users see, without changing real state ---
+function simulateLinkPrompt(){
+  if(!isOwnerReal())return;
+  closeAdmin();
+  renderLinkPrompt();
+  $('#link-modal').classList.add('open');
+  toast('Simulating the first-sign-in identity pop-up');
+}
+function simulateBanner(){
+  if(!isOwnerReal())return;
+  closeAdmin();
+  // show a temporary preview banner without persisting
+  const prev=adminConfig.banner;
+  adminConfig.banner={on:true,title:'Heads up — trip details updated',text:'This is a preview of how the departure banner looks to the crew.',link:'',linkLabel:''};
+  renderDepartureBanner();
+  adminConfig.banner=prev; // restore in memory (not persisted)
+  toast('Previewing the departure banner (not saved)');
+}
+function simulateBuyerPicker(){
+  if(!isOwnerReal())return;
+  closeAdmin();
+  // open the buyer picker on the first shop item as a demo
+  openBuyerPicker('shop-0-0');
+}
+
+function adminTab(name){
+  ['presence','banner','users','reports','data'].forEach(t=>{
+    const sec=$('#admin-sec-'+t), btn=$('#admin-tab-'+t);
+    if(sec)sec.style.display=(t===name)?'block':'none';
+    if(btn)btn.classList.toggle('on',t===name);
+  });
+  adminStatsOpen=(name==='reports');
+  if(name==='reports') renderAdminStats();
+}
+
+/* --- live presence: who's online + what tab they're viewing --- */
+function renderAdminPresence(){
+  const w=$('#admin-presence');if(!w)return;
+  if(!presenceList.length){w.innerHTML='<div class="empty">Nobody else is online right now.</div>';return;}
+  const rows=presenceList.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  w.innerHTML=rows.map(p=>{
+    const nm=p.name||p.email||'crew';
+    const me=(p.email&&user&&p.email===user.email)?' <span style="color:var(--faint)">(you)</span>':'';
+    return `<div class="admin-row"><span class="avatar" style="width:26px;height:26px;font-size:11px;background:${colorFor(nm)}">${initials(nm)}</span>
+      <div style="flex:1"><div style="font-size:13px;font-weight:600">${esc(nm)}${me}</div><div style="font-size:11px;color:var(--faint);font-family:var(--mono)">${esc(p.email||'')}</div></div>
+      <span class="admin-tab-badge">👁 ${esc(p.tab||'—')}</span></div>`;
+  }).join('');
+}
+
+/* --- departure banner config (shown to ALL users) --- */
+function renderAdminConfigUI(){
+  if(!isOwner())return;
+  const b=adminConfig.banner||{};
+  const set=(id,val)=>{const el=$(id);if(el&&el.value!==val)el.value=val||'';};
+  const tog=$('#adm-banner-on'); if(tog){tog.classList.toggle('done',!!b.on); const s=tog.querySelector('.tg-state'); if(s)s.textContent=b.on?'ON':'OFF';}
+  set('#adm-banner-title',b.title);
+  set('#adm-banner-text',b.text);
+  set('#adm-banner-link',b.link);
+  set('#adm-banner-linklabel',b.linkLabel);
+  const su=$('#adm-signup-on'); if(su){const on=adminConfig.signupsOpen!==false; su.classList.toggle('done',on); const s=su.querySelector('.tg-state'); if(s)s.textContent=on?'ON':'OFF';}
+}
+function adminToggleBanner(){ if(!adminConfig.banner)adminConfig.banner={}; adminConfig.banner.on=!adminConfig.banner.on; renderAdminConfigUI(); }
+function adminToggleSignups(){ adminConfig.signupsOpen=(adminConfig.signupsOpen===false)?true:false; renderAdminConfigUI(); }
+async function adminSaveBanner(){
+  if(!adminConfig.banner)adminConfig.banner={};
+  adminConfig.banner.title=$('#adm-banner-title').value.trim();
+  adminConfig.banner.text=$('#adm-banner-text').value.trim();
+  adminConfig.banner.link=$('#adm-banner-link').value.trim();
+  adminConfig.banner.linkLabel=$('#adm-banner-linklabel').value.trim();
+  await saveAdminConfig();
+}
+
+/* --- the departure banner shown to everyone (top of Basecamp) --- */
+function renderDepartureBanner(){
+  const host=$('#departure-banner');if(!host)return;
+  const b=adminConfig.banner||{};
+  if(!b.on||(!b.title&&!b.text)){ host.style.display='none'; host.innerHTML=''; return; }
+  const link=b.link?`<a href="${esc(b.link)}" target="_blank" rel="noopener" class="dep-link">${esc(b.linkLabel||'Open link')} ↗</a>`:'';
+  host.style.display='block';
+  host.innerHTML=`<div class="dep-inner"><div class="dep-ico">📣</div><div class="dep-body">
+    ${b.title?`<div class="dep-title">${esc(b.title)}</div>`:''}
+    ${b.text?`<div class="dep-text">${esc(b.text).replace(/\n/g,'<br>')}</div>`:''}
+    ${link}</div></div>`;
+}
+
+/* --- traffic history: owner records the daily peak concurrent online count --- */
+let _trafficSaveT=null;
+function recordTraffic(){
+  if(!isOwner())return;
+  const today=new Date().toISOString().slice(0,10);
+  if(!adminConfig.traffic)adminConfig.traffic={};
+  const peak=adminConfig.traffic[today]||0;
+  if(onlineCount>peak){
+    adminConfig.traffic[today]=onlineCount;
+    // prune to last 60 days
+    const keys=Object.keys(adminConfig.traffic).sort();
+    while(keys.length>60){ delete adminConfig.traffic[keys.shift()]; }
+    clearTimeout(_trafficSaveT);
+    _trafficSaveT=setTimeout(()=>{ saveAdminConfig(); },1500);
+  }
+}
+/* --- tiny dependency-free SVG charts --- */
+function svgBarChart(data,opts){ // data:[{label,value}]
+  opts=opts||{}; const w=opts.w||440,h=opts.h||150,pad=28,bw=data.length?(w-pad*2)/data.length:0;
+  const max=Math.max(1,...data.map(d=>d.value));
+  const bars=data.map((d,i)=>{
+    const bh=Math.round((d.value/max)*(h-pad*2));
+    const x=pad+i*bw+bw*0.15, y=h-pad-bh, bwid=bw*0.7;
+    return `<rect x="${x.toFixed(1)}" y="${y}" width="${bwid.toFixed(1)}" height="${bh}" rx="3" fill="var(--green)"/>
+      <text x="${(x+bwid/2).toFixed(1)}" y="${h-pad+13}" font-size="9" fill="var(--faint)" text-anchor="middle" font-family="var(--mono)">${esc(String(d.label).slice(0,6))}</text>
+      <text x="${(x+bwid/2).toFixed(1)}" y="${y-4}" font-size="9" fill="var(--muted)" text-anchor="middle" font-family="var(--mono)">${d.value}</text>`;
+  }).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;display:block"><line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="var(--border)"/>${bars}</svg>`;
+}
+function svgLineChart(points,opts){ // points:[{label,value}]
+  opts=opts||{}; const w=opts.w||440,h=opts.h||160,pad=30;
+  if(!points.length) return '<div class="empty">No data yet.</div>';
+  const max=Math.max(1,...points.map(p=>p.value));
+  const stepX=points.length>1?(w-pad*2)/(points.length-1):0;
+  const xy=points.map((p,i)=>[pad+i*stepX, h-pad-(p.value/max)*(h-pad*2)]);
+  const path=xy.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  const area=path+` L ${(pad+(points.length-1)*stepX).toFixed(1)} ${h-pad} L ${pad} ${h-pad} Z`;
+  const dots=xy.map((p)=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.5" fill="var(--green)"/>`).join('');
+  // sparse x labels (first, mid, last)
+  const idxs=[0,Math.floor(points.length/2),points.length-1].filter((v,i,a)=>a.indexOf(v)===i);
+  const labels=idxs.map(i=>`<text x="${xy[i][0].toFixed(1)}" y="${h-pad+14}" font-size="9" fill="var(--faint)" text-anchor="middle" font-family="var(--mono)">${esc(points[i].label.slice(5))}</text>`).join('');
+  const gridY=[0,.5,1].map(f=>{const y=h-pad-f*(h-pad*2);return `<line x1="${pad}" y1="${y.toFixed(1)}" x2="${w-pad}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-dasharray="2 3"/><text x="${pad-5}" y="${(y+3).toFixed(1)}" font-size="8" fill="var(--faint)" text-anchor="end" font-family="var(--mono)">${Math.round(f*max)}</text>`;}).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;display:block">${gridY}<path d="${area}" fill="var(--green)" opacity="0.12"/><path d="${path}" fill="none" stroke="var(--green)" stroke-width="2"/>${dots}${labels}</svg>`;
+}
+function svgDonut(segments,opts){ // segments:[{label,value,color}]
+  opts=opts||{}; const size=opts.size||120,r=size/2-6,cx=size/2,cy=size/2,C=2*Math.PI*r;
+  const total=segments.reduce((s,x)=>s+x.value,0)||1;
+  let off=0;
+  const rings=segments.map(s=>{
+    const frac=s.value/total, len=frac*C;
+    const el=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${s.color}" stroke-width="12" stroke-dasharray="${len.toFixed(2)} ${(C-len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 ${cx} ${cy})"/>`;
+    off+=len; return el;
+  }).join('');
+  const legend=segments.map(s=>`<div style="display:flex;align-items:center;gap:6px;font-size:11px"><span style="width:10px;height:10px;border-radius:2px;background:${s.color};display:inline-block"></span>${esc(s.label)} <span style="color:var(--faint)">${s.value}</span></div>`).join('');
+  return `<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap"><svg viewBox="0 0 ${size} ${size}" style="width:${size}px;height:${size}px;flex-shrink:0">${rings}<text x="${cx}" y="${cy+4}" font-size="16" font-weight="700" fill="var(--text)" text-anchor="middle" font-family="var(--display)">${total}</text></svg><div style="display:flex;flex-direction:column;gap:6px">${legend}</div></div>`;
+}
+
+/* --- reports / stats dashboard (admin data center) --- */
+let _analyticsCache=null, _analyticsLoading=false, _analyticsChannel=null, adminStatsOpen=false;
+async function loadAnalytics(){
+  if(!sb||!isOwnerReal())return null;
+  _analyticsLoading=true;
+  try{
+    const {data:visitors}=await sb.from('site_visitors').select('*');
+    const {data:daily}=await sb.from('site_daily').select('*');
+    _analyticsCache={visitors:visitors||[],daily:daily||[]};
+  }catch(e){ console.warn('loadAnalytics',e.message||e); _analyticsCache={visitors:[],daily:[],error:true}; }
+  _analyticsLoading=false;
+  return _analyticsCache;
+}
+function subscribeAnalytics(){
+  if(!sb||_analyticsChannel||!isOwnerReal())return;
+  try{
+    _analyticsChannel=sb.channel('analytics-'+TRIP_ID)
+      .on('postgres_changes',{event:'*',schema:'public',table:'site_visitors'},()=>{ loadAnalytics().then(()=>{ if(adminStatsOpen) renderAdminStats(); }); })
+      .subscribe();
+  }catch(e){}
+}
+function fmtDuration(sec){
+  sec=Math.round(sec||0);
+  if(sec<60) return sec+'s';
+  const m=Math.round(sec/60); if(m<60) return m+' min';
+  const h=Math.floor(m/60), rm=m%60; return h+'h'+(rm?(' '+rm+'m'):'');
+}
+function renderAdminStats(){
+  const w=$('#admin-reports');if(!w)return;
+  adminStatsOpen=true;
+  if(_analyticsCache===null && !_analyticsLoading){ loadAnalytics().then(()=>{ if(adminStatsOpen) renderAdminStats(); }); subscribeAnalytics(); }
+
+  const lc=liveRoleCounts();
+  const A=_analyticsCache||{visitors:[],daily:[]};
+  const visitors=A.visitors||[], daily=A.daily||[];
+  const totalVisitsAll = daily.reduce((s,d)=>s+(d.visits||0),0) || visitors.reduce((s,v)=>s+(v.visits||0),0);
+  const monthKey=new Date().toISOString().slice(0,7);
+  const visitsMonth = daily.filter(d=>String(d.day).slice(0,7)===monthKey).reduce((s,d)=>s+(d.visits||0),0);
+  const uniqueEmails = visitors.filter(v=>!v.is_anon && v.email).length;
+  const uniqueAnon   = visitors.filter(v=>v.is_anon).length;
+  const totalSeconds = visitors.reduce((s,v)=>s+(v.seconds||0),0);
+  const avgSeconds   = visitors.length? totalSeconds/visitors.length : 0;
+
+  const crew=state.crew.length;
+  let gearTotal=0,claimed=0;
+  gearData().forEach(c=>c.items.forEach(it=>{gearTotal++;if((state.gearClaims[it.id]||[]).length)claimed++;}));
+  const packRows=state.crew.map(n=>{const s=packStatsFor(n);return {n,...s};});
+  const total=state.expenses.reduce((s,e)=>s+e.amt,0);
+  const votes={};Object.values(state.votes).forEach(v=>votes[v]=(votes[v]||0)+1);
+
+  const sCard=(v,k,sub)=>`<div class="dc-stat"><div class="dc-v">${v}</div><div class="dc-k">${k}</div>${sub?`<div class="dc-sub">${sub}</div>`:''}</div>`;
+  const liveCard=(v,k,cls)=>`<div class="dc-live ${cls||''}"><span class="dc-live-dot"></span><div class="dc-v">${v}</div><div class="dc-k">${k}</div></div>`;
+  const sec=(x)=>`<div class="dc-sec">${x}</div>`;
+
+  let html='<div class="datacenter">';
+
+  html+=sec('<span class="dc-pulse">●</span> '+t('rep.liveNow','Live now')+(A.error?' <span class="dc-warn">'+t('rep.analyticsOffline','analytics table not found — run the v9 SQL')+'</span>':''));
+  html+=`<div class="dc-live-grid">
+    ${liveCard(lc.online,t('rep.online','online total'),'g')}
+    ${liveCard(lc.signedOut,t('rep.signedOut','signed-out'))}
+    ${liveCard(lc.visitor,t('rep.visitors','visitors'))}
+    ${liveCard(lc.camperIncLeaders,t('rep.campers','campers'))}
+    ${liveCard(lc.leader,t('rep.leaders','leaders'))}
+    ${liveCard(lc.admin,t('rep.admins','admins'))}
+  </div>`;
+
+  const totalPeople = visitors.length;
+  html+=sec('◆ '+t('rep.audience','Audience'));
+  html+=`<div class="dc-grid">
+    ${sCard(totalVisitsAll||'—',t('rep.visitsAll','visits all-time'))}
+    ${sCard(visitsMonth||'—',t('rep.visitsMonth','visits this month'))}
+    ${sCard(totalPeople||'—',t('rep.uniquePeople','unique people'),uniqueEmails+' '+t('rep.emails','emails')+' · '+uniqueAnon+' '+t('rep.anon','anon'))}
+    ${sCard(fmtDuration(totalSeconds),t('rep.totalTime','total time on site'))}
+    ${sCard(fmtDuration(avgSeconds),t('rep.avgTime','avg per visitor'))}
+    ${sCard(crew,t('rep.crewSize','crew size'))}
+  </div>`;
+
+  if(visitors.length){
+    const rows=visitors.slice().sort((a,b)=>(b.seconds||0)-(a.seconds||0)).slice(0,40).map(v=>{
+      const who=v.is_anon?('<span class="dc-anon">'+t('rep.anonVisitor','anonymous visitor')+'</span>'):esc(v.email||v.display_name||'—');
+      const roleBadge=`<span class="role-badge role-${v.role||'visitor'}">${esc((v.role||'visitor'))}</span>`;
+      const last=v.last_seen?new Date(v.last_seen).toLocaleString():'—';
+      return `<tr><td>${who}</td><td>${roleBadge}</td><td>${v.visits||0}</td><td>${fmtDuration(v.seconds)}</td><td class="dc-dim">${esc(last)}</td></tr>`;
+    }).join('');
+    html+=sec('◆ '+t('rep.visitorLog','Visitor log')+' <span class="dc-count">'+visitors.length+'</span>');
+    html+=`<div class="dc-tablewrap"><table class="dc-table"><thead><tr>
+      <th>${t('rep.thWho','Who (email)')}</th><th>${t('rep.thRole','Role')}</th><th>${t('rep.thVisits','Visits')}</th><th>${t('rep.thTime','Time')}</th><th>${t('rep.thLast','Last seen')}</th>
+    </tr></thead><tbody>${rows}</tbody></table></div>`;
+  } else if(!A.error){
+    html+=`<div class="empty" style="font-size:12px">${t('rep.noVisitors','No visitor analytics yet — this fills in as people open the live site.')}</div>`;
+  }
+
+  const traffic=adminConfig.traffic||{};
+  const days=Object.keys(traffic).sort();
+  html+=sec('◆ '+t('rep.trafficPeak','Peak online per day'));
+  if(days.length<1){ html+=`<div class="empty" style="font-size:12px">${t('rep.noTraffic','No traffic recorded yet.')}</div>`; }
+  else html+=svgLineChart(days.map(d=>({label:d,value:traffic[d]})),{h:140});
+  if(daily.length){
+    html+=sec('◆ '+t('rep.visitsPerDay','Visits per day'));
+    const dd=daily.slice().sort((a,b)=>String(a.day).localeCompare(String(b.day)));
+    html+=svgLineChart(dd.map(d=>({label:String(d.day),value:d.visits||0})),{h:140});
+  }
+
+  html+=sec('◆ '+t('rep.tripData','Trip data'));
+  html+='<div class="dc-charts">';
+  html+=`<div class="dc-chart"><div class="dc-chart-h">${t('rep.gearClaimed','Gear claimed')}</div>${svgDonut([
+    {label:t('rep.claimed','Claimed'),value:claimed,color:'var(--green)'},
+    {label:t('rep.unclaimed','Unclaimed'),value:Math.max(0,gearTotal-claimed),color:'var(--surface3)'}
+  ],{size:104})}</div>`;
+  if(Object.keys(votes).length){
+    html+=`<div class="dc-chart"><div class="dc-chart-h">${t('rep.votes','Campsite votes')}</div>${svgDonut(Object.entries(votes).map(([k,v],i)=>({label:k==='ivy'?'Ivy Lea':'Plage',value:v,color:i===0?'var(--green)':'var(--river)'})),{size:104})}</div>`;
+  }
+  let shopTotal=0,shopDone=0; SHOP.forEach((s,si)=>s.items.forEach((_,ii)=>{shopTotal++;if(state.checks['shop-'+si+'-'+ii])shopDone++;}));
+  if(shopTotal){
+    html+=`<div class="dc-chart"><div class="dc-chart-h">${t('rep.shopping','Shopping done')}</div>${svgDonut([
+      {label:t('rep.done','Done'),value:shopDone,color:'var(--green)'},{label:t('rep.toBuy','To buy'),value:Math.max(0,shopTotal-shopDone),color:'var(--surface3)'}
+    ],{size:104})}</div>`;
+  }
+  html+='</div>';
+
+  if(packRows.length){
+    html+=sec('◆ '+t('rep.packingByCrew','Packing progress by crew (%)'));
+    html+=svgBarChart(packRows.map(r=>({label:r.n,value:r.total?Math.round(r.packed/r.total*100):0})),{h:130});
+  }
+  const spendBy={};state.expenses.forEach(e=>{spendBy[e.who]=(spendBy[e.who]||0)+e.amt;});
+  if(Object.keys(spendBy).length){
+    html+=sec('◆ '+t('rep.spendByPerson','Spend by person ($)'));
+    html+=svgBarChart(Object.entries(spendBy).map(([k,v])=>({label:k,value:Math.round(v)})),{h:130});
+  }
+  const boughtBy={}; Object.values(state.shopBought||{}).forEach(arr=>(arr||[]).forEach(n=>{boughtBy[n]=(boughtBy[n]||0)+1;}));
+  if(Object.keys(boughtBy).length){
+    html+=sec('◆ '+t('rep.itemsBought','Items bought by crew'));
+    html+=svgBarChart(Object.entries(boughtBy).map(([k,v])=>({label:k,value:v})),{h:120});
+  }
+  if(Object.keys(state.roles||{}).length){
+    html+=sec('◆ '+t('rep.rolesAssigned','Roles assigned'));
+    html+='<div class="dc-roles">'+Object.entries(state.roles).map(([r,n])=>`<div class="dc-role-row"><span>${esc(r)}</span><span class="owe pos">${esc(n)}</span></div>`).join('')+'</div>';
+  }
+
+  html+=`<div class="dc-foot">${t('rep.refreshed','Refreshed')} ${new Date().toLocaleTimeString()} · ${t('rep.liveNote','live counters update automatically')}</div>`;
+  html+='</div>';
+  w.innerHTML=html;
+  try{ animateDashCounts(w); }catch(e){}
+}
+// Animate numeric .dc-v values counting up — gives the dashboard a live, dynamic feel.
+function animateDashCounts(root){
+  try{ if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return; }catch(e){}
+  root.querySelectorAll('.dc-v').forEach(el=>{
+    const raw=(el.textContent||'').trim();
+    const m=raw.match(/^(\d[\d,]*)$/); // pure integer cards only (skip "3h 23m", "—", "$")
+    if(!m)return;
+    const target=parseInt(m[1].replace(/,/g,''),10);
+    if(!isFinite(target)||target<=0)return;
+    const dur=620, t0=performance.now();
+    const step=(now)=>{
+      const k=Math.min(1,(now-t0)/dur);
+      const eased=1-Math.pow(1-k,3); // easeOutCubic
+      el.textContent=Math.round(target*eased).toLocaleString();
+      if(k<1)requestAnimationFrame(step);
+      else el.textContent=target.toLocaleString();
+    };
+    requestAnimationFrame(step);
+  });
+}
+
+/* --- user / crew management (within the trip) --- */
+function renderAdminUsers(){
+  const w=$('#admin-users');if(!w)return;
+  let html='';
+  // --- Live access: signed-in emails currently online ---
+  html+='<div class="kicker" style="margin-top:4px">◆ Live access — emails online now</div>';
+  const online=presenceList.filter(p=>p.email);
+  if(!online.length) html+='<div class="empty" style="margin-bottom:8px">No signed-in users online right now.</div>';
+  else html+=online.map(p=>{
+    const em=(p.email||'').toLowerCase();
+    const blocked=blockedEmails().includes(em);
+    const isYou=em===myEmail();
+    return `<div class="admin-row"><span class="avatar" style="width:26px;height:26px;font-size:11px;background:${colorFor(p.name||em)}">${initials(p.name||em)}</span>
+      <div style="flex:1"><div style="font-size:13px;font-weight:600">${esc(p.name||'crew')}${isYou?' <span style="color:var(--faint)">(you)</span>':''} <span class="admin-tab-badge">👁 ${esc(p.tab||'—')}</span></div>
+      <div style="font-size:11px;color:var(--faint);font-family:var(--mono)">${esc(p.email)}</div></div>
+      ${isYou?'':`<button class="btn ghost sm" onclick="adminToggleBlock('${esc(em).replace(/'/g,"\\'")}')">${blocked?'Unblock':'Block'}</button>`}</div>`;
+  }).join('');
+
+  // --- Crew members (with linked email) ---
+  html+='<div class="kicker" style="margin:16px 0 8px">◆ Crew members &amp; linked emails</div>';
+  if(!state.crew.length){html+='<div class="empty">No crew members yet.</div>';}
+  else html+=state.crew.map(c=>{
+    const meta=state.crewMeta&&state.crewMeta[c]||{};
+    const role=Object.entries(state.roles).filter(([,n])=>n===c).map(([r])=>r).join(', ')||'—';
+    const linked=meta.email?`<span style="font-family:var(--mono);font-size:11px;color:var(--river)">🔗 ${esc(meta.email)}</span>`:'<span style="font-size:11px;color:var(--faint)">no email linked</span>';
+    return `<div class="admin-row"><span class="avatar" style="width:26px;height:26px;font-size:11px;background:${colorFor(c)}">${initials(c)}</span>
+      <div style="flex:1"><div style="font-size:13px;font-weight:600">${esc(c)}</div><div>${linked} · <span style="font-size:11px;color:var(--faint)">role: ${esc(role)}</span></div></div>
+      <div style="display:flex;gap:4px"><button class="btn ghost sm" onclick="adminLinkCrew('${esc(c).replace(/'/g,"\\'")}')">Link email</button>
+      <button class="btn ghost sm" onclick="adminRemoveCrew('${esc(c).replace(/'/g,"\\'")}')">Remove</button></div></div>`;
+  }).join('');
+
+  // --- Blocked emails ---
+  const blk=adminConfig.blocked||[];
+  if(blk.length){
+    html+='<div class="kicker" style="margin:16px 0 8px">◆ Blocked emails</div>';
+    html+=blk.map(e=>`<div class="admin-row"><span class="admin-tab-badge" style="color:var(--danger);background:rgba(224,90,90,.14);border-color:rgba(224,90,90,.3)">⛔ Blocked</span><div style="flex:1;font-size:13px;font-family:var(--mono)">${esc(e)}</div><button class="btn ghost sm" onclick="adminToggleBlock('${esc(e).replace(/'/g,"\\'")}')">Unblock</button></div>`).join('');
+  }
+
+  // --- Leaders ---
+  html+='<div class="kicker" style="margin:16px 0 8px">◆ Leaders — full access (no admin panel)</div>';
+  const leaders=adminConfig.leaders||[];
+  if(!leaders.length) html+='<div class="empty" style="margin-bottom:8px">No leaders yet. Grant by email below — they get full edit access, unlimited crew, and can reset the trip.</div>';
+  else html+=leaders.map(e=>`<div class="admin-row"><span class="admin-tab-badge" style="color:var(--amber);background:rgba(240,180,85,.14);border-color:rgba(240,180,85,.3)">★ Leader</span><div style="flex:1;font-size:13px;font-family:var(--mono)">${esc(e)}</div><button class="btn ghost sm" onclick="adminRemoveLeader('${esc(e).replace(/'/g,"\\'")}')">Revoke</button></div>`).join('');
+  html+=`<div style="display:flex;gap:6px;margin-top:10px"><input id="adm-leader-in" type="email" placeholder="leader@email.com" style="flex:1" onkeydown="if(event.key==='Enter')adminAddLeader()"><button class="btn sm" onclick="adminAddLeader()">Grant</button></div>`;
+  w.innerHTML=html;
+}
+function adminToggleBlock(email){
+  if(!isOwner())return; email=(email||'').toLowerCase();
+  if(!adminConfig.blocked)adminConfig.blocked=[];
+  const i=adminConfig.blocked.map(e=>e.toLowerCase()).indexOf(email);
+  if(i>-1){adminConfig.blocked.splice(i,1);toast('Unblocked '+email);}
+  else{adminConfig.blocked.push(email);toast('Blocked '+email);}
+  saveAdminConfig();renderAdminUsers();
+}
+function adminLinkCrew(name){
+  if(!isOwner())return;
+  const cur=(state.crewMeta&&state.crewMeta[name]&&state.crewMeta[name].email)||'';
+  const email=prompt('Link "'+name+'" to which email? (leave blank to unlink)',cur);
+  if(email===null)return;
+  if(!state.crewMeta)state.crewMeta={};
+  const e=email.trim().toLowerCase();
+  if(e&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)){toast('Enter a valid email');return;}
+  state.crewMeta[name]=Object.assign(state.crewMeta[name]||{},{email:e,linkedByAdmin:true});
+  persist();renderAdminUsers();renderCrew();
+  toast(e?('Linked '+name+' → '+e):('Unlinked '+name));
+}
+function adminRemoveCrew(name){
+  if(!isOwner())return;
+  if(!confirm('Remove '+name+' from the trip? This clears their gear claims, votes, role and expenses.'))return;
+  removeCrew(name);
+  renderAdminUsers();renderAdminPresence();
+}
+// Leaders: emails granted full-site access (same as admin minus the admin panel).
+function adminAddLeader(){
+  if(!isOwner())return;
+  const inp=$('#adm-leader-in'); const email=(inp&&inp.value||'').trim().toLowerCase();
+  if(!email||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){toast('Enter a valid email');return;}
+  if(!adminConfig.leaders)adminConfig.leaders=[];
+  if(!adminConfig.leaders.map(e=>e.toLowerCase()).includes(email)){ adminConfig.leaders.push(email); }
+  if(inp)inp.value='';
+  saveAdminConfig(); renderAdminUsers();
+}
+function adminRemoveLeader(email){
+  if(!isOwner())return;
+  adminConfig.leaders=(adminConfig.leaders||[]).filter(e=>e.toLowerCase()!==email.toLowerCase());
+  saveAdminConfig(); renderAdminUsers();
+}
+
+function renderAuth(){
+  const area=$('#auth-area'); if(!area)return;
+  if(!sb){ area.innerHTML=''; return; }
+  if(user){
+    const name=user.user_metadata?.full_name||user.email||'Signed in';
+    const pic=user.user_metadata?.avatar_url;
+    const adminBtn=isOwnerReal()?`<button class="btn ghost sm" style="margin-left:6px" onclick="openAdmin()" title="Admin">🛠 Admin</button>`:'';
+    const lvl=accessLevel();
+    const roleBadge=`<span class="role-badge role-${lvl}">${lvl==='admin'?'Admin':lvl==='leader'?'Leader':lvl==='camper'?'Camper':'Visitor'}</span>`;
+    area.innerHTML=`<span class="user-chip">${pic?`<img src="${esc(pic)}" alt="">`:''}${esc(name.split(' ')[0])} ${roleBadge} <span class="x" style="cursor:pointer;color:var(--faint)" onclick="signOut()" title="Sign out">⎋</span></span>${adminBtn}`;
+  } else {
+    area.innerHTML=`<button class="btn ghost sm" onclick="openSignin()">Sign in</button>`;
+  }
+  renderViewAsBar();
+}
+function isStandalonePWA(){
+  return (window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone===true;
+}
+
+// On return from Google, the token arrives in the URL hash (implicit flow).
+// A standalone iOS PWA can read this even though it can't share PKCE storage.
+async function recoverSessionFromUrl(){
+  try{
+    const h=window.location.hash||'';
+    if(h.includes('access_token')){
+      const p=new URLSearchParams(h.replace(/^#/,''));
+      const access_token=p.get('access_token'), refresh_token=p.get('refresh_token');
+      if(access_token&&refresh_token){
+        const {error}=await sb.auth.setSession({access_token,refresh_token});
+        if(error) console.warn('setSession:',error.message);
+      }
+      // strip the token from the URL so it isn't left in history
+      history.replaceState(null,'',location.origin+location.pathname);
+    } else if(h.includes('error')){
+      const p=new URLSearchParams(h.replace(/^#/,''));
+      toast('Sign-in error: '+(p.get('error_description')||p.get('error')||'unknown'));
+      history.replaceState(null,'',location.origin+location.pathname);
+    }
+  }catch(e){ console.warn('recoverSessionFromUrl:',e.message||e); }
+}
+
+async function signIn(){
+  if(!sb){toast('Connect Supabase first (see README)');return;}
+  const redirectTo=location.origin+location.pathname;
+  try{
+    // Plain full-page redirect. Implicit flow returns the token in the hash on the way back,
+    // which works in Safari AND in the standalone home-screen app.
+    const {error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo}});
+    if(error) throw error;
+  }catch(e){ toast('Sign-in failed: '+(e.message||e)); }
+}
+function openSignin(){
+  if(!sb){toast('Connect Supabase first (see README)');return;}
+  const st=document.getElementById('signin-email-status'); if(st) st.style.display='none';
+  const inp=document.getElementById('signin-email'); if(inp) inp.value='';
+  document.getElementById('signin-modal').classList.add('open');
+}
+function closeSignin(){ document.getElementById('signin-modal').classList.remove('open'); }
+async function sendEmailLink(){
+  if(!sb){toast('Connect Supabase first');return;}
+  const inp=document.getElementById('signin-email');
+  const status=document.getElementById('signin-email-status');
+  const email=(inp&&inp.value||'').trim();
+  if(!email||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){
+    if(status){status.style.display='block';status.style.color='var(--danger)';status.textContent='Please enter a valid email address.';}
+    return;
+  }
+  try{
+    const allowNew = adminConfig.signupsOpen!==false; // default open unless admin turned off
+    const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+location.pathname,shouldCreateUser:allowNew}});
+    if(error) throw error;
+    if(status){status.style.display='block';status.style.color='var(--green)';status.textContent='✓ Link sent! Check your email and tap it on this device.';}
+  }catch(e){
+    const msg=(e.message||e)+'';
+    if(status){status.style.display='block';status.style.color='var(--danger)';status.textContent=/Signups not allowed|not allowed for otp/i.test(msg)?'New sign-ups are currently closed. Ask the organizer for access.':'Could not send: '+msg;}
+  }
+}
+async function signOut(){ if(sb){await sb.auth.signOut(); user=null; await applyAccess();} }
+
+/* ============================================================
+   DATA
+   ============================================================ */
+const SITES=[
+ {key:'plage',flag:'🇨🇦 Quebec · Laurentians',name:'Camping de la Plage',meta:'Rivière-Rouge, QC · Route 117',
+  mapsQ:'Camping de la Plage, Riviere-Rouge, QC', weatherUrl:'https://www.theweathernetwork.com/en/city/ca/quebec/riviere-rouge/14-days',
+  mapImg:'maps/plage.jpg', phone:'819-275-7757',
+  bookUrl:'http://www.campingdelaplage-qc.ca/plan-eng.html', fireUrl:'https://sopfeu.qc.ca/', fireLabel:'QC fire ban (SOPFEU)',
+  facilities:['🚿 Showers','🧺 Laundry','🏪 Store','📶 Wi-Fi','🛶 Canoe/kayak','🏖 River beach','🔥 Firewood'],
+  rows:[['Drive from DDO','~2 h · 170 km'],['Setting','Rivière Rouge bank'],['Tent site','~$40–55 · call'],['Open','May 10–Sep 22'],['Curfew','11:00 PM'],['Checkout','11:00 AM']],
+  pros:['Closest — only ~2 hrs north of DDO','River beach + canoe/kayak rentals','Showers, laundry, store, Wi-Fi, firewood','Live music weekends · ~25 min to Mont-Tremblant'],
+  cons:['Call 819-275-7757 to confirm June rates','Reviews note a strict noise policy — keep it chill'],
+  url:'http://www.campingdelaplage-qc.ca/plan-eng.html'},
+ {key:'ivy',flag:'🇨🇦 Ontario · 1000 Islands',name:'Ivy Lea Campground',meta:'Lansdowne, ON · Thousand Islands Pkwy',
+  mapsQ:'Ivy Lea Campground, 649 Thousand Islands Parkway, Lansdowne, ON', weatherUrl:'https://www.theweathernetwork.com/en/city/ca/ontario/gananoque/14-days',
+  mapImg:'maps/ivy.jpg', phone:'613-659-3057',
+  bookUrl:'https://reservations.parks.on.ca/', infoUrl:'https://www.stlawrenceparks.com/to-do/camping/ivy-lea-campground/', fireUrl:'https://www.ontario.ca/page/forest-fires', fireLabel:'ON fire ban status',
+  facilities:['🚿 Showers','🧺 Laundromat','🏪 Store','⛵ Boat launch','🤿 Scuba','🥾 Trails','🌉 Suspension bridge'],
+  rows:[['Drive from DDO','~3–3.5 h'],['Basic site','$47.32 +HST'],['Waterfront','$55.30 +HST'],['Premium WF','$63.08 +HST'],['Extra vehicle','$13.00 / night'],['Reservation fee','$13.25 (n/r)'],['Checkout','1:00 PM']],
+  pros:['Stunning 1000 Islands / St. Lawrence setting','Boat launch, scuba, trails, suspension bridge','Near Gananoque cruises + Boldt Castle','Premium waterfront sites available'],
+  cons:['~1 hr farther than Rivière-Rouge','HST adds ~13% · some sites under the bridge'],
+  url:'https://www.stlawrenceparks.com/to-do/camping/ivy-lea-campground/'},
+];
+const ORIGIN='Dollard-des-Ormeaux, QC';
+
+const DEFAULT_GEAR=[
+ {cat:'Shelter & sleep',items:[
+  {id:'tent',n:'Tent(s)',t:'someone',note:'1×4-person or 2×2-person — confirm who has one'},
+  {id:'sleepbag',n:'Sleeping bag + pad',t:'each',note:'Rate to at least 10°C for June nights'},
+  {id:'pillow',n:'Pillow + extra blanket',t:'each',note:'Nights get genuinely cold'},
+  {id:'tarp',n:'Tarp + rope',t:'someone',note:'Rain backup shelter over the kitchen'},
+  {id:'lantern',n:'Lantern',t:'someone',note:'LED battery or propane'},
+  {id:'headlamp',n:'Headlamp',t:'each',note:'Non-negotiable — phone torch doesn\'t cut it'}]},
+ {cat:'Kitchen & fire',items:[
+  {id:'stove',n:'Camp stove + fuel',t:'someone',note:'Check fuel compatibility before packing'},
+  {id:'cooler',n:'Cooler (large)',t:'someone',note:'Pre-chill the night before with block ice'},
+  {id:'castiron',n:'Cast iron / grill grate',t:'someone',note:'Ideal for campfire cooking'},
+  {id:'pots',n:'Pots + pans',t:'someone',note:'1 large pot, 1 frying pan minimum'},
+  {id:'dishes',n:'Plates / cups / cutlery',t:'shared',note:'One person brings a set for the group'},
+  {id:'utensils',n:'Cooking utensils + knife + board',t:'someone',note:'Dedicated board for raw meat'},
+  {id:'lighter',n:'Lighter + matches + firestarter',t:'shared',note:'Two ignition methods, always'},
+  {id:'sticks',n:'Roasting sticks',t:'shared',note:'For s\'mores & sausages'}]},
+ {cat:'Comfort & fun',items:[
+  {id:'chair',n:'Camp chair',t:'each',note:'Everyone brings their own'},
+  {id:'speaker',n:'Bluetooth speaker',t:'shared',note:'One waterproof for daytime + one for camp'},
+  {id:'powerbank',n:'Power bank(s)',t:'shared',note:'At least one per car'},
+  {id:'hammock',n:'Hammock',t:'someone',note:'Ideal for riverside lounging'},
+  {id:'games',n:'Cards / board games',t:'shared',note:'Rain-day insurance'},
+  {id:'coffee',n:'French press / AeroPress + kettle',t:'someone',note:'Morning ritual = good vibes'}]},
+ {cat:'Clothing & attire',items:[
+  {id:'cl1',n:'Fleece / warm layer',t:'each',note:'June nights near water drop to 8–12°C'},
+  {id:'cl2',n:'Rain jacket',t:'each',note:'Always — even on a sunny forecast'},
+  {id:'cl3',n:'Swimsuit + quick-dry towel',t:'each',note:'River/lake time both sites'},
+  {id:'cl4',n:'Hiking shoes + camp shoes',t:'each',note:'Closed shoes for trails, slides/crocs at camp'},
+  {id:'cl5',n:'Hat + sunglasses',t:'each',note:'Sun bounces hard off the water'},
+  {id:'cl6',n:'Toque (yes, in June)',t:'each',note:'Worth more than an extra blanket at night'},
+  {id:'cl7',n:'Long sleeves + pants for dusk',t:'each',note:'Mosquito armor from 7 PM'},
+  {id:'cl8',n:'2–3 outfit changes + extra socks',t:'each',note:'Wet socks ruin a trip — pack double'}]},
+ {cat:'Personal kit',items:[
+  {id:'pk1',n:'Toiletries bag',t:'each',note:'Toothbrush, paste, deodorant, soap (biodegradable)'},
+  {id:'pk2',n:'Sunscreen + after-sun cream',t:'each',note:'SPF 50 + aloe for the inevitable'},
+  {id:'pk3',n:'Lip balm + moisturizer',t:'each',note:'Sun and campfire smoke dry you out'},
+  {id:'pk4',n:'Personal meds + allergy pills',t:'each',note:'Plus antihistamines for bites'},
+  {id:'pk5',n:'Phone charger + cable',t:'each',note:'One per person, power banks are shared'},
+  {id:'pk6',n:'Earplugs + eye mask',t:'each',note:'5 AM birds and early sun are real'},
+  {id:'pk7',n:'Garbage bag for dirty clothes',t:'each',note:'Keeps the wet/smoky stuff contained'},
+  {id:'pk8',n:'ID, health card + some cash',t:'each',note:'Campground stores are often cash-friendly'}]},
+ {cat:'Safety & health',items:[
+  {id:'firstaid',n:'First aid kit',t:'shared',note:'Keep it in the lead car'},
+  {id:'bugspray',n:'Bug spray (DEET/picaridin)',t:'shared',note:'June is peak mosquito + blackfly'},
+  {id:'sunscreen',n:'Sunscreen',t:'each',note:'Plus a hat'},
+  {id:'sanitizer',n:'Hand sanitizer',t:'shared',note:'Use before every meal'},
+  {id:'water',n:'Water jugs (10–15 L)',t:'shared',note:'Backup to site tap water'}]},
+];
+
+const FOOD=[
+ {n:'Marinated steaks / burgers',store:'cooler',cook:'fire',why:'Marinate at home in sealed bags, lay flat in cooler. Zero camp prep — just grill. Most filling meal of the trip.'},
+ {n:'Sausages / hot dogs',store:'cooler',cook:'fire',why:'Easiest protein, no knife needed. Perfect Day-1 setup meal. Pre-cooked sausages are safest.'},
+ {n:'Foil packet meals',store:'cooler',cook:'fire',why:'Pre-assemble at home: veg + protein + butter + seasoning. 15–20 min on coals. Zero dishes.'},
+ {n:'Bacon + scrambled eggs',store:'cooler',cook:'stove',why:'Pre-crack eggs into a mason jar. Cast iron is perfect. Most filling breakfast.'},
+ {n:'Campfire baked potatoes',store:'dry',cook:'fire',why:'Foil-wrap with butter & garlic, bury in coals 45–60 min. Incredibly filling, pairs with anything.'},
+ {n:'Corn on the cob',store:'dry',cook:'fire',why:'Keep husks on, soak 30 min, grill 15 min. Sweet, smoky, no prep.'},
+ {n:'Pasta + jarred sauce',store:'dry',cook:'stove',why:'Boil once. Add tuna or salami for protein. Best rain-day backup if the grill fails.'},
+ {n:'Pre-made pasta / grain salad',store:'cooler',cook:'none',why:'Make at home; keeps 48 hrs sealed in the cooler. Perfect arrival-night side.'},
+ {n:'Deli wraps',store:'cooler',cook:'none',why:'Tortillas + deli meat + cheese. Fast filling lunch, zero cooking. Tortillas beat bread in a cooler.'},
+ {n:'Instant oatmeal',store:'dry',cook:'stove',why:'Just add boiling water. Stir in peanut butter + honey for serious calories. Solid backup breakfast.'},
+ {n:'Canned beans / chili',store:'dry',cook:'stove',why:'Open, heat, wrap in a tortilla with cheese. Cheap, filling, no cooler space. Best emergency meal.'},
+ {n:'Trail mix + granola bars',store:'dry',cook:'none',why:'High-calorie, travel-proof, no fridge. One bag per person in the day pack.'},
+ {n:'Cheese + crackers + salami',store:'cooler',cook:'none',why:'Hard cheeses survive 2–4 hrs out of the cooler. Great fireside charcuterie board.'},
+ {n:'S\'mores',store:'dry',cook:'fire',why:'Use chocolate bars (not chips), big marshmallows, cinnamon grahams. Keep dry in a sealed bag.'},
+ {n:'Campfire pancakes',store:'dry',cook:'stove',why:'Pre-mix dry ingredients at home in a bag; add water + egg at camp. Make a big batch.'},
+];
+const MEALS=[
+ {h:'Day 1 · Dinner',t:'Easy arrival',items:['Foil-packet veggies + sausage','Pre-made pasta salad','Garlic bread on the fire','Beers / drinks'],tip:'Foil packets prepped at home → straight on the grill'},
+ {h:'Day 2 · Breakfast',t:'Slow morning',items:['Bacon + scrambled eggs (cast iron)','Toast on the grill grate','Fresh fruit + OJ','Pour-over / French press'],tip:'Eggs pre-cracked in a mason jar'},
+ {h:'Day 2 · Lunch',t:'No-cook, relaxed',items:['Deli wraps + chips','Cheese, crackers, dips','Pickles, olives, snacks','Sparkling water / lemonade'],tip:''},
+ {h:'Day 2 · Dinner ★',t:'Grill night — main event',items:['Marinated steaks or burgers','Corn on the cob (in fire)','Campfire baked potatoes','Coleslaw from home'],tip:'Marinate meat at home, packed flat in sealed bags'},
+ {h:'Day 3 · Brunch',t:'Use up leftovers',items:['Campfire pancakes / French toast','Leftover sausage + eggs','Remaining fruit + snacks','Last of the coffee'],tip:''},
+ {h:'Always-haves',t:'Accessible all trip',items:['Trail mix, granola bars, jerky','Chips, pretzels, popcorn','S\'mores: chocolate, grahams, mallows','Water + electrolytes'],tip:'Keep a snack bin outside the cooler'},
+];
+const PREP=[
+ {tag:'Cooler',c:'it-log',title:'Block ice, not cubed',body:'Block ice lasts 2–3× longer. Buy a 5–10 lb block before leaving; add cubes around it. Pre-chill the empty cooler overnight with a sacrificial bag of ice.'},
+ {tag:'Cooler',c:'it-log',title:'Layer in reverse meal order',body:'Bottom: ice → Day 3 → Day 2 → Day 1 on top. Drinks go in a separate cooler — that lid opens 20× more than the food cooler.'},
+ {tag:'Cooler',c:'it-log',title:'Shade + drain daily',body:'Never leave it in a hot trunk (can hit 50°C). Keep it shaded and wrapped. Drain meltwater every morning.'},
+ {tag:'Prep',c:'it-prep',title:'Mason jar eggs',body:'Crack & whisk all eggs at home into a wide-mouth jar or Nalgene. At camp: shake and pour. No shells, no mess.'},
+ {tag:'Prep',c:'it-prep',title:'Pre-marinate in zip-locks',body:'Thursday night, bag the meat with marinade, squeeze out air, lay flat in the cooler. It marinates on the drive.'},
+ {tag:'Prep',c:'it-prep',title:'Strip the packaging',body:'Pull everything from cardboard at home, repack in labelled zip-locks. Less trash at camp, more pack space.'},
+ {tag:'Camp',c:'it-food',title:'Two-bin kitchen + snack bin',body:'Bin 1 = cooler (cold), Bin 2 = dry tote (bungee\'d shut against raccoons). Keep an open snack bin so nobody keeps opening the food cooler.'},
+ {tag:'Safety',c:'it-safe',title:'Food safety basics',body:'Keep meat/dairy ≤4°C, never out >2 hrs in heat (1 hr if >30°C). Double-bag raw meat at the bottom of the cooler. Sanitize hands before every meal.'},
+];
+
+/* retailer search links: amz / ct / dec; best = our pick */
+function lang(){ try{ return (window.i18n&&window.i18n.getLang())||'en'; }catch(e){ return 'en'; } }
+// Merge an EN content array with its FR overrides (index-aligned) when language is FR.
+// Handles arrays of objects (merge fields) and arrays of strings (replace).
+function contentArr(name, enArr){
+  if(lang()!=='fr' || !window.CONTENT_FR || !window.CONTENT_FR[name]) return enArr;
+  const fr=window.CONTENT_FR[name];
+  return enArr.map((item,i)=>{
+    if(fr[i]==null) return item;
+    if(typeof item==='string') return fr[i];          // string arrays (ROLES): replace
+    if(typeof fr[i]==='string') return fr[i];
+    return Object.assign({}, item, fr[i]);             // object arrays: merge fields
+  });
+}
+// Translate a stored (English) expense category for display.
+function catLabel(cat){
+  const map={Site:'cost.catSite',Food:'cost.catFood',Gas:'cost.catGas',Firewood:'cost.catFirewood',Gear:'cost.catGear',Other:'cost.catOther'};
+  return map[cat]?t(map[cat],cat):cat;
+}
+function rlinks(q,best,reason){
+  const e=encodeURIComponent(q);
+  return {amz:`https://www.amazon.ca/s?k=${e}`,ct:`https://www.canadiantire.ca/en/search-results.html?q=${e}`,dec:`https://www.decathlon.ca/en/search?q=${e}`,best,reason};
+}
+const SHOP=[
+ // FOOD
+ {cat:'food',tag:'Phase 1 — Home (DDO)',c:'it-log',title:'🍳 Food — buy before you leave',note:'Maxi or IGA in the West Island. Thu evening or Fri morning. Groceries are cheapest here.',
+  items:[{n:'All meat (marinate overnight)'},{n:'Eggs (pre-crack into a jar)'},{n:'Dairy: butter, cheese, sour cream'},{n:'Dry: pasta, rice, oats, trail mix'},{n:'Canned: beans, corn, tomatoes'},{n:'Condiments + cooking oil'},{n:'S\'mores supplies'},{n:'Coffee (ground) + filters'},{n:'Drinks: beer, cider, sparkling water'},{n:'Snacks: chips, jerky, nuts'},{n:'Bread / tortillas / pita'},{n:'Foil, zip-locks, paper towels'},{n:'Biodegradable dish soap'},{n:'Garbage + compost bags'}]},
+ {cat:'food',tag:'Phase 2 — Road stop',c:'it-prep',title:'🍳 Food — buy en route',note:'Rivière-Rouge: IGA Saint-Jérôme. Ivy Lea: Foodland Gananoque / Metro Kingston.',
+  items:[{n:'Fresh produce (tomatoes, berries, corn)'},{n:'Ice (top up cooler at a gas station)'},{n:'Fresh buns for burgers'},{n:'Any forgotten item'},{n:'Breakfast sandwiches for the drive'},{n:'Alcohol top-ups (SAQ / LCBO)'}]},
+ {cat:'food',tag:'Phase 3 — On site',c:'it-food',title:'🍳 Food — at the campground',note:'30–50% pricier — local essentials only.',
+  items:[{n:'Firewood — always buy local'},{n:'Ice (if you run out)'},{n:'Convenience-store snacks'}]},
+ // GEAR
+ {cat:'gear',tag:'Phase 1 — Home · order early',c:'it-log',title:'🎒 Gear — core kit (order this week)',note:'Best store highlighted per item. Amazon = fast delivery; Canadian Tire = camping basics & sales; Decathlon = best value on real outdoor gear.',
+  items:[
+   {n:'Sleeping bag (10°C rated)',l:rlinks('sleeping bag 10 degree','dec','Decathlon Quechua bags are the value king')},
+   {n:'Sleeping pad / air mattress',l:rlinks('camping sleeping pad','dec','Decathlon pads punch above their price')},
+   {n:'Headlamp',l:rlinks('LED headlamp','amz','Amazon multipacks are cheapest')},
+   {n:'Camp chair',l:rlinks('folding camp chair','ct','Canadian Tire constantly has chairs on sale')},
+   {n:'Cooler (large hard-side)',l:rlinks('hard cooler 50qt','ct','Coleman/Igloo deals at Canadian Tire')},
+   {n:'Camp stove + propane',l:rlinks('camping propane stove','ct','Coleman 2-burner is the CT classic')},
+   {n:'Tarp + rope/paracord',l:rlinks('camping tarp paracord','ct','Cheap utility tarps in-store')},
+   {n:'LED lantern',l:rlinks('LED camping lantern','amz','Amazon lantern multipacks are unbeatable')},
+   {n:'Hammock',l:rlinks('camping hammock with straps','dec','Decathlon hammocks: solid + cheap')},
+  ]},
+ {cat:'gear',tag:'Phase 1 — Home · preventative',c:'it-safe',title:'🛡 Preventative & safety (do not skip)',note:'The unglamorous stuff that saves the weekend. All small, all cheap, all critical.',
+  items:[
+   {n:'Bug spray — DEET 25–30% or picaridin',l:rlinks('deet insect repellent','ct','Watkins/OFF! deals at Canadian Tire')},
+   {n:'After-bite + antihistamines',l:rlinks('after bite antihistamine','amz','Pharmacy basket — Amazon is easiest')},
+   {n:'First aid kit (full)',l:rlinks('first aid kit camping','amz','Best selection of compact kits')},
+   {n:'Sunscreen SPF 50',l:rlinks('sunscreen spf 50','ct','Grab with the rest of the CT run')},
+   {n:'Mosquito coils / thermacell',l:rlinks('thermacell mosquito repellent','ct','Thermacell units cheapest at CT')},
+   {n:'Duct tape + zip ties',l:rlinks('duct tape zip ties','ct','Hardware aisle, two minutes')},
+   {n:'Waterproof matches / firestarter',l:rlinks('waterproof matches fire starter','dec','Decathlon fire kit is great value')},
+   {n:'Compact rain poncho (backup)',l:rlinks('rain poncho','dec','Decathlon ponchos: $5–10')},
+   {n:'Water jugs / refillable 10 L',l:rlinks('water container 10l camping','ct','Reliance jugs at CT')},
+  ]},
+ {cat:'gear',tag:'Phase 2 — Road stop',c:'it-prep',title:'🎒 Gear — grab en route if forgotten',note:'Canadian Tire locations exist in Saint-Jérôme AND Kingston — perfect mid-route safety net for anything missed.',
+  items:[{n:'Propane canisters'},{n:'Batteries (AA/AAA)'},{n:'Cheap foam pad (if someone forgot theirs)'},{n:'Bungee cords'},{n:'Lighter fluid / firestarters'}]},
+];
+
+const AREA={
+ plage:{title:'Around Rivière-Rouge (QC)',items:['Canoe or kayak the Rouge River — rentals on-site','River beach swimming right at camp','Whitewater rafting day trips (Rouge River outfitters)','Mont-Tremblant village — 25 min north: lifts, luge, terrasses','Hiking in the Laurentians (Parc régional trails)','Live music nights at the campground (weekends)']},
+ ivy:{title:'Around Ivy Lea / 1000 Islands (ON)',items:['1000 Islands boat cruise from Gananoque or Rockport','Boldt Castle visit (bring passports — it\'s US side)','1000 Islands Tower — viewing deck over the river','Skydeck suspension bridge walks','Scuba diving — famous freshwater wrecks','Fishing off the dock or boat launch','Kingston nightlife — 30 min west for a big night']},
+};
+const BRING=[
+ {t:'Spikeball / volleyball',p:'The single best 4–5 person campsite game. Light, packs small.'},
+ {t:'Frisbee / football',p:'Zero setup, infinite hours. Floats if it lands in the river.'},
+ {t:'Fishing rods + basic tackle',p:'Both sites are on fishable water. Check licence rules (QC/ON).'},
+ {t:'Water floaties / inflatable',p:'River lounging upgrade. Cheap at Canadian Tire in June.'},
+ {t:'Binoculars',p:'1000 Islands ship-spotting or Laurentian birdlife. Underrated.'},
+ {t:'Instant camera / disposables',p:'Better trip photos than phones — and nobody doomscrolls.'},
+ {t:'Slackline',p:'Two trees + 15 minutes = hours of crew entertainment.'},
+ {t:'Glow sticks',p:'Night games, marking tent lines so nobody faceplants.'},
+];
+const GAMES=[
+ {t:'Cards: President / Poker',p:'Bring chips or play for camp chores. Classic fire-side format.'},
+ {t:'Werewolf / Mafia',p:'Perfect for exactly 4–5 people around a fire at night.'},
+ {t:'Campfire trivia',p:'One person preps 20 questions on the crew — guaranteed chaos.'},
+ {t:'Story one-word-each',p:'Build a story one word per person. Gets dumb fast. That\'s the point.'},
+ {t:'Flashlight hide & seek',p:'Sounds childish. Is incredible. Set boundaries before dark.'},
+ {t:'Tent cinema',p:'Pre-download a movie, prop a phone/tablet, rain-night backup.'},
+ {t:'Poker dice / Yahtzee',p:'One cup + five dice = entire rainy afternoon handled.'},
+ {t:'Wood-carving contest',p:'Everyone carves a spoon or stake. Judge at the last fire.'},
+];
+const SITUATIONS=[
+ {tag:'Rain',c:'it-log',title:'It starts raining hard',body:'Rig the tarp over the kitchen FIRST (ridgeline between trees, steep angle so water runs off). Trench check: never dig, but make sure the tent isn\'t in a depression. Keep gear off the tent walls — touching the fly wicks water through. Wet clothes go in a garbage bag, not the tent.'},
+ {tag:'Rain',c:'it-log',title:'Prevent a wet tent before it happens',body:'Footprint UNDER the tent, slightly smaller than the floor (oversize collects water). Fly staked taut, doors zipped, vents open to kill condensation. Pitch on high ground. Seam-seal old tents at home the week before.'},
+ {tag:'Bugs',c:'it-safe',title:'Mosquitos in the tent at night',body:'Rule 1: lights OFF before unzipping — light pulls them in. Open the zipper minimum, enter fast. Kill the ones inside with a headlamp sweep before bed. Never spray DEET inside the tent (it damages coatings); a Thermacell at the door 15 min before bed clears the zone.'},
+ {tag:'Bugs',c:'it-safe',title:'Reduce bites at camp, especially at dusk',body:'Dusk = peak attack. Long sleeves + pants from 7 PM, DEET/picaridin on exposed skin, smoke side of the fire is the bug-free side. Avoid scented deodorant/soap. Treat bites with after-bite or antihistamine — don\'t scratch, scratching = infection risk while camping.'},
+ {tag:'Fire',c:'it-prep',title:'Fire won\'t start / wood is damp',body:'Split damp logs — the inside is dry. Feather-stick the dry core with a knife. Build a proper ladder: firestarter → pencil-thin twigs → thumb-thick → wrist-thick. Don\'t smother it with big logs early. Cardboard + cooking oil is the emergency cheat.'},
+ {tag:'Heat/Cold',c:'it-prep',title:'Cold night, someone\'s freezing',body:'Layer them up BEFORE shivering starts. A toque while sleeping is worth more than an extra blanket. Hot water in a Nalgene at the foot of the sleeping bag = camp radiator. Off the ground matters more than over the top — double the pads.'},
+ {tag:'Wildlife',c:'it-safe',title:'Raccoons raided the camp',body:'They got food because food was out — fix the cause. Everything edible into the car or a latched cooler at night, including toothpaste and garbage. Never feed them or leave them dirty dishes. They remember sites that pay out.'},
+ {tag:'Injury',c:'it-safe',title:'Cuts, burns & sprains',body:'Burns: cool water 10+ min, never ice, never butter. Cuts: pressure, clean, close, dress — and keep it dry (hard while camping; redress daily). Sprains: rest + elevate + compress, no "walking it off." Anything deep, gaping, or won\'t-stop-bleeding = drive to urgent care. Know where it is BEFORE the trip.'},
+];
+const FAQ=[
+ {q:'How do I build a campfire that actually lights?',a:'Three sizes of fuel, staged: tinder (firestarter cube, birch bark, dryer lint), kindling (pencil → thumb thickness), then fuel logs (wrist+). Build a teepee or log-cabin around the tinder, light it from the upwind side, and don\'t add big logs until the kindling is roaring. Most failed fires die because people skip straight from tinder to logs.'},
+ {q:'How much firewood do we need?',a:'For two long campfire nights, budget 2–3 bundles per night for a group fire (so 5–6 total). Buy it at the campground or the nearest town — transporting wood across regions is prohibited because it spreads invasive pests.'},
+ {q:'What if there\'s a fire ban that weekend?',a:'Check sopfeu.qc.ca (QC) or ontario.ca/page/forest-fires (ON) the night before. A ban usually means no open fires but propane appliances are still allowed — so the camp stove handles cooking, and you pivot evenings to lantern + games. Pack the stove regardless.'},
+ {q:'What temperature sleeping bag do I need in June?',a:'Nights near water in the Laurentians or on the St. Lawrence can drop to 8–12°C even after a 25°C day. A bag rated to 10°C (50°F) or lower is the safe call, plus a fleece and toque as backup.'},
+ {q:'Do I really need a sleeping pad?',a:'Yes — and not mainly for comfort. The ground pulls heat out of you all night; a pad is insulation first, cushioning second. An air mattress with no insulation can actually sleep colder than a foam pad.'},
+ {q:'How do we keep food cold for 3 days?',a:'Block ice (lasts 2–3× longer than cubes), a pre-chilled cooler, packing in reverse meal order, a separate drinks cooler, shade, and draining meltwater daily. Done right, a decent hard cooler holds safe temps the whole weekend.'},
+ {q:'Is the water at the campsite drinkable?',a:'Both Camping de la Plage and Ivy Lea have potable tap water. Still bring 10–15 L in jugs as backup, and never drink straight from the river or lake without a filter.'},
+ {q:'What\'s the deal with raccoons and food?',a:'Both parks have bold raccoons (and squirrels). Anything with a scent — food, garbage, toothpaste — goes into a car or latched cooler overnight. A bungee cord on the cooler lid is the minimum.'},
+ {q:'Can we swim at both sites?',a:'Yes. Camping de la Plage has a river beach on the Rouge. Ivy Lea is on the St. Lawrence with dock and shoreline access — water is colder and currents are real, so swim near shore and never alone after drinks.'},
+ {q:'Do we need a fishing licence?',a:'Yes, in both provinces. Quebec and Ontario each require their own licence (day or annual), buyable online in minutes. Don\'t skip it — fines are steep.'},
+ {q:'Cell signal at the campsites?',a:'Spotty to fair at both — usable in open areas, weak in tree cover. That\'s exactly why this site works offline and why one printed emergency card per car matters.'},
+ {q:'Check-in / check-out times?',a:'Camping de la Plage: curfew 11 PM, checkout 11 AM. Ivy Lea: checkout 1 PM, check-in typically early-mid afternoon. Arriving before check-in is usually fine — you can park and hit the beach.'},
+];
+const TIPS=[
+ {i:'🌙',t:'June nights get cold',p:'Even with warm days, temps drop near water. Pack a fleece and a bag rated to at least 10°C (50°F).'},
+ {i:'🦟',t:'Bugs peak in June',p:'Mosquitoes & blackflies are worst early June near lakes. DEET, long sleeves for evenings, mesh footprint.'},
+ {i:'🔥',t:'Buy firewood local',p:'Never transport firewood across regions — it spreads invasive pests. Buy on-site or in town. ~$10–15/night.'},
+ {i:'⏱️',t:'Prep the night before',p:'Pack the car, pre-portion food, pre-mix spices, make marinades. Arriving ready = zero stress on Day 1.'},
+ {i:'🗑️',t:'Leave No Trace',p:'Pack out all trash, never leave food out, biodegradable soap 200 ft from water. Leave it better than you found it.'},
+ {i:'🌧️',t:'Weather backup plan',p:'A tarp rigged over the kitchen is a game-changer. Pack cards + indoor entertainment for a rain day.'},
+];
+const ROLES=['Fire master','Meal lead','Gear coordinator','Lead driver','Navigator (car 2)','Quartermaster (snacks/water)'];
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function gearData(){
+  if(!state.gear){state.gear=JSON.parse(JSON.stringify(DEFAULT_GEAR));return state.gear;}
+  // migration: merge any new default categories/items into existing synced data
+  const have=new Set();state.gear.forEach(c=>c.items.forEach(i=>have.add(i.id)));
+  const archived=new Set(state.gearArchive.map(a=>a.id));
+  DEFAULT_GEAR.forEach(dc=>{
+    let cat=state.gear.find(c=>c.cat===dc.cat);
+    dc.items.forEach(di=>{
+      if(have.has(di.id)||archived.has(di.id))return;
+      if(!cat){cat={cat:dc.cat,items:[]};state.gear.push(cat);}
+      cat.items.push(JSON.parse(JSON.stringify(di)));have.add(di.id);
+    });
+  });
+  return state.gear;
+}
+
+function renderSites(){
+  const grid=$('#sites-grid');grid.innerHTML='';
+  let pv=0,iv=0;Object.values(state.votes).forEach(v=>{if(v==='plage')pv++;if(v==='ivy')iv++;});
+  SITES.forEach(s=>{
+    const votes=Object.entries(state.votes).filter(([,v])=>v===s.key).map(([n])=>n);
+    const isChosen=state.chosenSite===s.key;
+    const isWin=!state.chosenSite&&((s.key==='plage'&&pv>iv&&pv>0)||(s.key==='ivy'&&iv>=pv&&(iv>0)));
+    const card=document.createElement('div');card.className='site'+(isChosen?' chosen':isWin?' win':'');
+    const opts=state.crew.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+    const faces=votes.map(n=>`<span class="avatar" style="background:${colorFor(n)}" title="${esc(n)}">${initials(n)}</span>`).join('');
+    card.innerHTML=`
+      <span class="chosen-badge">★ Chosen site</span>
+      <div class="site-top"><div class="site-flag">${s.flag}</div><h3>${s.name}</h3><div class="site-meta">${s.meta}</div>
+        <div class="facility-row">${s.facilities.map(f=>`<span class="fac">${f}</span>`).join('')}</div></div>
+      <div class="site-body">
+        ${s.rows.map(r=>`<div class="drow"><span class="dl">${r[0]}</span><span class="dv">${r[1]}</span></div>`).join('')}
+        <div class="plist">${s.pros.map(p=>`<div class="pli pro">${p}</div>`).join('')}${s.cons.map(c=>`<div class="pli con">${c}</div>`).join('')}</div>
+      </div>
+      <div class="site-foot">
+        <button class="btn sm ghost" onclick="window.open('${s.url}','_blank')">Visit ↗</button>
+        <button class="btn sm ghost" onclick="window.open('https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.mapsQ)}','_blank')">📍 Directions</button>
+        ${s.mapImg?`<button class="btn sm ghost" onclick="openSiteMap('${s.key}')">🗺 Site map</button>`:''}
+        <button class="btn sm ghost" onclick="window.open('${s.weatherUrl}','_blank')">⛅ Weather</button>
+        <select onchange="castVote('${s.key}',this.value)"><option value="">Vote as…</option>${opts}</select>
+        <button class="btn sm ${isChosen?'amber':''}" onclick="chooseSite('${s.key}')">${isChosen?'✓ Chosen':'Choose this site'}</button>
+        <span class="vote-tally"><span class="vote-faces">${faces}</span> ${votes.length} vote${votes.length===1?'':'s'}</span>
+      </div>`;
+    grid.appendChild(card);
+  });
+  renderRouteEndpoints();
+}
+function castVote(site,name){if(!requireEdit())return;if(!name)return;state.votes[name]=site;persist();renderSites();}
+function chooseSite(key){state.chosenSite=state.chosenSite===key?'':key;persist();renderSites();renderQuickLinks();toast(state.chosenSite?'Site locked in — links & route updated':'Site un-chosen');}
+
+/* ---------- dynamic quick links (follow the chosen site) ---------- */
+function renderQuickLinks(){
+  const w=$('#quicklinks');if(!w)return;
+  const chosen=SITES.find(s=>s.key===state.chosenSite);
+  const link=(href,ico,title,desc)=>`<a class="quicklink" href="${href}" target="_blank" rel="noopener"><div class="ico">${ico}</div><div><div class="qt">${title}</div><div class="qd">${desc}</div></div><div class="arr">↗</div></a>`;
+  let html='';
+  if(chosen){
+    // chosen-site-specific links first
+    html+=link(chosen.bookUrl||chosen.url,'🏕',(chosen.key==='ivy'?'Ivy Lea — Book now':'Camping de la Plage'),(chosen.key==='ivy'?'reservations.parks.on.ca':'campingdelaplage-qc.ca')+(chosen.phone?' · '+chosen.phone:''));
+    if(chosen.infoUrl) html+=link(chosen.infoUrl,'ℹ️',chosen.name+' — info & rates','stlawrenceparks.com');
+    html+=link('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(chosen.mapsQ),'📍','Directions to '+chosen.name,'Google Maps');
+    html+=link(chosen.weatherUrl,'⛅','14-day weather','theweathernetwork.com · '+(chosen.key==='ivy'?'Gananoque':'Rivière-Rouge'));
+    html+=link(chosen.fireUrl,'🔥',chosen.fireLabel,'check before you leave');
+    html+=link('https://weather.gc.ca/','🌡','Environment Canada','weather.gc.ca');
+  } else {
+    // no site chosen yet -> show both options + general links
+    html+=link('http://www.campingdelaplage-qc.ca/plan-eng.html','🏞️','Camping de la Plage','campingdelaplage-qc.ca · 819-275-7757');
+    html+=link('https://reservations.parks.on.ca/','🛶','Ivy Lea — Book now','reservations.parks.on.ca · 613-659-3057');
+    html+=link('https://www.stlawrenceparks.com/to-do/camping/ivy-lea-campground/','ℹ️','Ivy Lea — info & rates','stlawrenceparks.com');
+    html+=link('https://sopfeu.qc.ca/','🔥','QC fire ban (SOPFEU)','sopfeu.qc.ca');
+    html+=link('https://www.ontario.ca/page/forest-fires','🔥','ON fire ban status','ontario.ca');
+    html+=link('https://weather.gc.ca/','⛅','Weather','weather.gc.ca · pick your site first for direct links');
+  }
+  w.innerHTML=html;
+}
+
+/* ---------- zoomable / pannable site map viewer ---------- */
+let _mapState=null;
+function openSiteMap(key){
+  const s=SITES.find(x=>x.key===key);if(!s||!s.mapImg)return;
+  const m=$('#map-modal');
+  $('#map-title').textContent=s.name+' — site map';
+  const img=$('#map-img');
+  img.src=s.mapImg; img.alt=s.name+' campground map';
+  _mapState={scale:1,x:0,y:0,key};
+  applyMapTransform();
+  m.classList.add('open');
+}
+function closeSiteMap(){ $('#map-modal').classList.remove('open'); }
+function applyMapTransform(){
+  const img=$('#map-img');if(!img||!_mapState)return;
+  img.style.transform=`translate(${_mapState.x}px,${_mapState.y}px) scale(${_mapState.scale})`;
+}
+function mapZoom(delta,cx,cy){
+  if(!_mapState)return;
+  const old=_mapState.scale;
+  let ns=Math.min(6,Math.max(1,old*(delta>0?1.2:1/1.2)));
+  _mapState.scale=ns;
+  if(ns===1){_mapState.x=0;_mapState.y=0;}
+  applyMapTransform();
+}
+async function saveMap(){
+  if(!_mapState)return;
+  const s=SITES.find(x=>x.key===_mapState.key);if(!s)return;
+  try{
+    const res=await fetch(s.mapImg); const blob=await res.blob();
+    const fname=(s.key==='ivy'?'ivy-lea':'camping-de-la-plage')+'-map.jpg';
+    // Use Web Share with files if available (best on iOS — lets you save to Photos)
+    if(navigator.canShare){
+      const file=new File([blob],fname,{type:blob.type});
+      if(navigator.canShare({files:[file]})){
+        try{ await navigator.share({files:[file],title:s.name+' map'}); return; }catch(e){ if(e&&e.name==='AbortError') return; }
+      }
+    }
+    // Fallback: trigger a download
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=fname;document.body.appendChild(a);a.click();a.remove();
+    URL.revokeObjectURL(url);
+    toast('Map saved');
+  }catch(e){
+    // last resort: open in new tab so user can long-press to save
+    window.open(s.mapImg,'_blank');
+  }
+}
+function initMapViewer(){
+  const img=$('#map-img'), stage=$('#map-stage');
+  if(!img||!stage)return;
+  // wheel zoom (desktop)
+  stage.addEventListener('wheel',e=>{e.preventDefault();mapZoom(-e.deltaY,e.clientX,e.clientY);},{passive:false});
+  // drag to pan
+  let dragging=false,sx=0,sy=0,ox=0,oy=0;
+  const start=(x,y)=>{if(!_mapState||_mapState.scale<=1)return;dragging=true;sx=x;sy=y;ox=_mapState.x;oy=_mapState.y;};
+  const move=(x,y)=>{if(!dragging||!_mapState)return;_mapState.x=ox+(x-sx);_mapState.y=oy+(y-sy);applyMapTransform();};
+  const end=()=>{dragging=false;};
+  stage.addEventListener('mousedown',e=>start(e.clientX,e.clientY));
+  window.addEventListener('mousemove',e=>move(e.clientX,e.clientY));
+  window.addEventListener('mouseup',end);
+  // touch: drag + pinch
+  let pinchDist=0,pinchScale=1;
+  stage.addEventListener('touchstart',e=>{
+    if(e.touches.length===1)start(e.touches[0].clientX,e.touches[0].clientY);
+    else if(e.touches.length===2){pinchDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);pinchScale=_mapState?_mapState.scale:1;}
+  },{passive:true});
+  stage.addEventListener('touchmove',e=>{
+    if(e.touches.length===1)move(e.touches[0].clientX,e.touches[0].clientY);
+    else if(e.touches.length===2&&_mapState){
+      e.preventDefault();
+      const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+      _mapState.scale=Math.min(6,Math.max(1,pinchScale*(d/pinchDist)));
+      if(_mapState.scale===1){_mapState.x=0;_mapState.y=0;}
+      applyMapTransform();
+    }
+  },{passive:false});
+  stage.addEventListener('touchend',end);
+  // double-tap / double-click to toggle zoom
+  stage.addEventListener('dblclick',()=>{if(!_mapState)return;_mapState.scale=_mapState.scale>1?1:2.5;if(_mapState.scale===1){_mapState.x=0;_mapState.y=0;}applyMapTransform();});
+}
+
+/* ---------- route planner ---------- */
+function chosenSiteObj(){ return SITES.find(s=>s.key===state.chosenSite)||null; }
+function renderRouteEndpoints(){
+  const el=$('#route-endpoints');if(!el)return;
+  const dest=chosenSiteObj();
+  el.innerHTML=`<span class="endpoint">🏠 ${ORIGIN}</span><span style="color:var(--faint)">→ ${state.stops.length} stop${state.stops.length===1?'':'s'} →</span><span class="endpoint dest">${dest?'⛺ '+dest.name:'⛺ Choose a site in the Campsites tab'}</span>`;
+}
+function renderStops(){
+  const w=$('#stops-list');w.innerHTML='';
+  if(!state.stops.length){w.innerHTML='<div class="empty">No stops yet — straight shot. Add gas/grocery/coffee stops above if you want them.</div>';}
+  state.stops.forEach((s,i)=>{
+    const r=document.createElement('div');r.className='stop-row';
+    r.innerHTML=`<div class="num">${i+1}</div><div class="sd"><div class="sn">${esc(s.name)}</div><div class="sa">${esc(s.addr)}</div></div>
+      <span class="mv" onclick="moveStop(${i},-1)" title="Move up">▲</span><span class="mv" onclick="moveStop(${i},1)" title="Move down">▼</span>
+      <span class="x" onclick="delStop(${i})">✕</span>`;
+    w.appendChild(r);
+  });
+  renderRouteEndpoints();
+  renderTimelineExtra();
+}
+// Default timeline points. `sort` is an epoch ms used purely for ordering.
+// Titles/bodies use i18n keys (kept in sync with the it.* dictionary entries).
+const TIMELINE_DEFAULT=[
+  {id:'d1',sort:Date.parse('2026-06-18T20:00'),amber:true, wk:'it.t1when',tk:'it.t1title',bk:'it.t1body'},
+  {id:'d2',sort:Date.parse('2026-06-19T08:30'),amber:false,wk:'it.t2when',tk:'it.t2title',bk:'it.t2body'},
+  {id:'d3',sort:Date.parse('2026-06-19T10:00'),amber:false,wk:'it.t3when',tk:'it.t3title',bk:'it.t3body'},
+  {id:'d4',sort:Date.parse('2026-06-19T12:30'),amber:false,wk:'it.t4when',tk:'it.t4title',bk:'it.t4body'},
+  {id:'d5',sort:Date.parse('2026-06-20T09:00'),amber:false,wk:'it.t5when',tk:'it.t5title',bk:'it.t5body'},
+  {id:'d6',sort:Date.parse('2026-06-21T09:00'),amber:true, wk:'it.t6when',tk:'it.t6title',bk:'it.t6body'}
+];
+// Best-effort parse of a free-text "when" into a sortable epoch for auto-ordering.
+// Understands day tokens (Thu/Fri/Sat/Sun or Jun 18-21) + a clock time (10am, 3 PM, 14:30).
+function parseWhenToSort(when){
+  if(!when) return Number.MAX_SAFE_INTEGER; // undated -> end
+  const s=when.toLowerCase();
+  let day=19; // default to Friday (trip start day) if no day found
+  const dayMap={'18':18,'jun 18':18,'thu':18,'thursday':18,'jeu':18,
+                '19':19,'jun 19':19,'fri':19,'friday':19,'ven':19,
+                '20':20,'jun 20':20,'sat':20,'saturday':20,'sam':20,
+                '21':21,'jun 21':21,'sun':21,'sunday':21,'dim':21};
+  for(const k in dayMap){ if(s.includes(k)){ day=dayMap[k]; break; } }
+  // time: match "10am", "10 am", "3pm", "12:30", "14h", "8–9 am" (take first number)
+  let hour=12,min=0;
+  const ampm=s.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/);
+  const h24=s.match(/(\d{1,2})\s*h(?:(\d{2}))?/);     // québécois "14 h", "8 h 30"
+  const plain=s.match(/(\d{1,2}):(\d{2})/);
+  if(ampm){ hour=parseInt(ampm[1],10)%12; if(ampm[3]==='pm')hour+=12; if(ampm[2])min=parseInt(ampm[2],10); }
+  else if(h24){ hour=parseInt(h24[1],10); if(h24[2])min=parseInt(h24[2],10); }
+  else if(plain){ hour=parseInt(plain[1],10); min=parseInt(plain[2],10); }
+  else if(/morning|matin|am\b/.test(s)) hour=8;
+  else if(/night|soir|evening|pm\b/.test(s)) hour=20;
+  const d=new Date(2026,5,day,hour,min,0);
+  return d.getTime();
+}
+// Build the merged, time-sorted list of default + custom timeline points.
+function buildTimeline(){
+  const defaults=TIMELINE_DEFAULT.map(p=>{
+    const ov=(state.timelineEdits&&state.timelineEdits[p.id])||{};
+    const when = ov.when!=null?ov.when:t(p.wk,'');
+    const title= ov.title!=null?ov.title:t(p.tk,'');
+    const body = ov.body!=null?ov.body:t(p.bk,'');
+    const hidden = !!ov.hidden;
+    return {id:p.id,kind:'default',amber:p.amber,when,title,body,hidden,
+            sort: ov.sort!=null?ov.sort:p.sort};
+  }).filter(p=>!p.hidden);
+  const extras=(state.timelineExtra||[]).map(p=>({
+    id:p.id,kind:'extra',amber:false,when:p.when||'',title:p.title||'',body:p.desc||'',
+    sort: (p.sort!=null?p.sort:parseWhenToSort(p.when))
+  }));
+  return defaults.concat(extras).sort((a,b)=>a.sort-b.sort);
+}
+function renderTimelineExtra(){ renderTimeline(); } // back-compat alias
+function renderTimeline(){
+  const w=$('#tl-list'); const addCard=$('#tl-add-card');
+  if(addCard) addCard.style.display=canManage()?'block':'none';
+  if(!w)return;
+  const manage=canManage();
+  let html=buildTimeline().map(p=>{
+    const ctrls=manage?`<span class="tl-ctrls">${p.kind==='extra'
+        ?`<span class="x" title="${t('it.removePoint','Remove')}" onclick="delTimelinePoint('${esc(p.id)}')">✕</span>`
+        :`<span class="x" title="${t('it.hidePoint','Hide')}" onclick="hideDefaultPoint('${esc(p.id)}')">✕</span>`}</span>`:'';
+    return `<div class="tl-item${p.amber?' amber':''}">${ctrls}<div class="tl-time">${esc(p.when)}</div><h4>${esc(p.title)}</h4>${p.body?`<p>${esc(p.body)}</p>`:''}</div>`;
+  }).join('');
+  // restore-hidden control (managers only) when any default point is hidden
+  const hidden=Object.keys(state.timelineEdits||{}).filter(id=>state.timelineEdits[id] && state.timelineEdits[id].hidden);
+  if(manage && hidden.length){
+    html+=`<button class="btn ghost sm" style="margin-top:6px" onclick="restoreHiddenPoints()">↺ ${t('it.restoreHidden','Restore hidden points')} (${hidden.length})</button>`;
+  }
+  w.innerHTML=html;
+}
+function restoreHiddenPoints(){
+  if(!requireManage())return;
+  Object.keys(state.timelineEdits||{}).forEach(id=>{
+    if(state.timelineEdits[id] && state.timelineEdits[id].hidden){
+      delete state.timelineEdits[id].hidden;
+      if(Object.keys(state.timelineEdits[id]).length===0) delete state.timelineEdits[id];
+    }
+  });
+  persist();renderTimeline();toast(t('it.restored','Hidden points restored'));
+}
+function addTimelinePoint(){
+  if(!requireManage())return;
+  const when=$('#tl-when').value.trim(), title=$('#tl-title').value.trim(), desc=$('#tl-desc').value.trim();
+  if(!title){toast(t('it.needTitle','Give the point a title'));return;}
+  if(!state.timelineExtra)state.timelineExtra=[];
+  state.timelineExtra.push({id:'tl'+Date.now(),when,title,desc,sort:parseWhenToSort(when)});
+  $('#tl-when').value='';$('#tl-title').value='';$('#tl-desc').value='';
+  persist();renderTimeline();toast(t('it.pointAdded','Timeline point added — sorted into place'));
+}
+function delTimelinePoint(id){
+  if(!requireManage())return;
+  state.timelineExtra=(state.timelineExtra||[]).filter(p=>p.id!==id);
+  persist();renderTimeline();
+}
+// Hiding/restoring a built-in default point (stored as an edit override).
+function hideDefaultPoint(id){
+  if(!requireManage())return;
+  if(!confirm(t('it.confirmHide','Hide this default timeline point?')))return;
+  if(!state.timelineEdits)state.timelineEdits={};
+  state.timelineEdits[id]=Object.assign({},state.timelineEdits[id],{hidden:true});
+  persist();renderTimeline();
+}
+function addStop(){
+  if(!requireEdit())return;
+  const n=$('#stop-name').value.trim(), a=$('#stop-addr').value.trim();
+  if(!n||!a){toast('Stop needs a name and an address');return;}
+  state.stops.push({name:n,addr:a});$('#stop-name').value='';$('#stop-addr').value='';persist();renderStops();
+}
+function delStop(i){state.stops.splice(i,1);persist();renderStops();}
+function moveStop(i,d){const j=i+d;if(j<0||j>=state.stops.length)return;[state.stops[i],state.stops[j]]=[state.stops[j],state.stops[i]];persist();renderStops();}
+function openRoute(reverse){
+  const dest=chosenSiteObj();
+  if(!dest){toast('Choose a campsite first (Campsites tab)');return;}
+  let origin=ORIGIN, destination=dest.mapsQ, ws=state.stops.map(s=>s.addr);
+  if(reverse){[origin,destination]=[destination,origin];ws=ws.slice().reverse();}
+  let url=`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&travelmode=driving`;
+  if(ws.length)url+=`&waypoints=${ws.map(encodeURIComponent).join('%7C')}`;
+  window.open(url,'_blank');
+}
+
+/* ---------- gear ---------- */
+function renderGear(){
+  const wrap=$('#gear-list');wrap.innerHTML='';
+  $('#arch-count').textContent=state.gearArchive.length;
+  // team packing overview (counts each "All crew" item once per crew member)
+  let claimedUnits=0,packedUnits=0;
+  gearData().forEach(cat=>cat.items.forEach(it=>{
+    const claims=state.gearClaims[it.id]||[];
+    if(!claims.length)return;
+    const pk=state.gearPacked[it.id];
+    if(claims.includes('ALL')){
+      const n=Math.max(1,state.crew.length);
+      claimedUnits+=n;
+      packedUnits+=(pk&&typeof pk==='object')?Object.keys(pk).filter(k=>state.crew.includes(k)).length:0;
+    }else{
+      claimedUnits+=1;
+      if(pk&&typeof pk!=='object')packedUnits+=1;
+    }
+  }));
+  const ps=$('#pack-summary');
+  if(ps){
+    if(claimedUnits===0){ps.innerHTML='<div style="font-size:13px;color:var(--muted)">📦 Claim gear below, then each person marks their items <b>Packed</b>. Pick who you are on the Basecamp tab to track your own list.</div>';}
+    else{
+      const pct=Math.round(packedUnits/claimedUnits*100);
+      ps.innerHTML=`<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><div style="font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)">Team packed</div><div style="font-family:var(--display);font-weight:700;font-size:18px">${packedUnits}/${claimedUnits}</div><div class="progress-track" style="flex:1;min-width:120px"><div class="progress-fill" style="width:${pct}%"></div></div><div style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--green)">${pct}%</div></div>`;
+    }
+  }
+  gearData().forEach((cat,ci)=>{
+    if(!cat.items.length)return;
+    const g=document.createElement('div');
+    g.innerHTML=`<div class="kicker" style="margin-top:0">◆ ${esc(cat.cat)}</div>`;
+    cat.items.forEach(it=>{
+      const claims=state.gearClaims[it.id]||[];
+      const row=document.createElement('div');row.className='gear-item'+(claims.length?' claimed':'');
+      const tcls=it.t==='shared'?'gt-shared':it.t==='each'?'gt-each':'gt-someone';
+      const chips=claims.map(n=>n==='ALL'
+        ?`<span class="assignee all">👥 All crew <span class="x" onclick="unassign('${it.id}','ALL')">✕</span></span>`
+        :`<span class="assignee"><span class="avatar" style="width:18px;height:18px;font-size:9px;background:${colorFor(n)}">${initials(n)}</span>${esc(n)} <span class="x" onclick="unassign('${it.id}','${esc(n).replace(/&#39;/g,"\\'")}')">✕</span></span>`).join('');
+      const avail=state.crew.filter(c=>!claims.includes(c));
+      const opts=avail.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+      const allOpt=claims.includes('ALL')?'':'<option value="ALL">👥 All crew</option>';
+      const isAll=claims.includes('ALL');
+      const me=whoAmI();
+      let packed=false, packLabel='Pack';
+      const pk=state.gearPacked[it.id];
+      if(isAll){
+        // per-person: reflect the current "who am I" selection
+        const cnt = (pk&&typeof pk==='object') ? Object.keys(pk).length : 0;
+        packed = !!(me && pk && typeof pk==='object' && pk[me]);
+        packLabel = me ? (packed?'✓ Packed':'Pack (you)') : `Packed ${cnt}/${state.crew.length}`;
+      } else {
+        packed = !!(pk && typeof pk!=='object');
+        packLabel = packed?'✓ Packed':'Pack';
+      }
+      const packBtn=claims.length?`<button class="pack-btn ${packed?'on':''}" onclick="togglePacked('${it.id}')" title="${isAll&&!me?'Pick who you are on Basecamp to pack your copy':'Mark as packed'}">${packLabel}</button>`:'';
+      if(packed) row.className+=' packed';
+      row.innerHTML=`
+        <div class="gear-info"><div class="gear-name">${esc(it.n)} <span class="gtype ${tcls}">${it.t}</span></div><div class="gear-note">${esc(it.note||'')}</div></div>
+        <div class="gear-claim">${chips}
+          <select onchange="assign('${it.id}',this.value);this.value=''"><option value="">${state.crew.length?'+ Assign…':'Add crew first'}</option>${allOpt}${opts}</select>
+          ${packBtn}
+        </div>
+        <span class="gear-x" title="Remove (goes to archive)" onclick="archiveGear('${it.id}')">🗑</span>`;
+      g.appendChild(row);
+    });
+    wrap.appendChild(g);
+  });
+}
+function assign(id,name){
+  if(!requireEdit())return;
+  if(!name)return;
+  const arr=state.gearClaims[id]||(state.gearClaims[id]=[]);
+  if(name==='ALL'){state.gearClaims[id]=['ALL'];}
+  else{const i=arr.indexOf('ALL');if(i>-1)arr.splice(i,1);if(!arr.includes(name))arr.push(name);}
+  persist();renderGear();renderMyPacking();renderProgress();
+}
+function unassign(id,name){
+  const arr=state.gearClaims[id]||[];const i=arr.indexOf(name);if(i>-1)arr.splice(i,1);
+  if(!arr.length)delete state.gearClaims[id];
+  persist();renderGear();renderMyPacking();renderProgress();
+}
+// Toggle packed for a gear item. If the item is assigned to "All crew", track per-person
+// (each person packs their own); otherwise a single shared flag.
+// Who can edit a given person's packing list?
+// leaders/admins: anyone. campers: only their own linked name. visitors: none.
+function canEditPacking(person){
+  if(!canEdit())return false;
+  if(canManage())return true;
+  const mine=myCrew();
+  return !!(mine && person===mine);
+}
+function togglePacked(id, person){
+  const isAll=(state.gearClaims[id]||[]).includes('ALL');
+  const who=person||whoAmI();
+  if(isAll){ if(!canEditPacking(who)){toast('You can only pack your own items');return;} }
+  else { if(!requireEdit())return; }
+  if(!state.gearPacked)state.gearPacked={};
+  const claims=state.gearClaims[id]||[];
+  if(isAll){
+    if(!who){toast('Pick who you are first');return;}
+    let m=state.gearPacked[id];
+    if(!m||typeof m!=='object'){m={};state.gearPacked[id]=m;}
+    if(m[who])delete m[who];else m[who]=true;
+    if(Object.keys(m).length===0)delete state.gearPacked[id];
+  }else{
+    if(state.gearPacked[id]&&typeof state.gearPacked[id]!=='object')delete state.gearPacked[id];
+    else state.gearPacked[id]=true;
+  }
+  persist();renderGear();renderMyPacking();renderProgress();
+}
+
+// Toggle a packing-list line from the personal "My packing list" view (handles both gear + personal items)
+function toggleMyPack(key, person){
+  const me=person||whoAmI();if(!me)return;
+  if(!canEditPacking(me)){toast('You can only edit your own list');return;}
+  if(key.startsWith('personal:')){
+    const id=key.slice('personal:'.length);
+    const arr=state.personalItems[me]||[];
+    const item=arr.find(x=>x.id===id);if(item){item.packed=!item.packed;}
+    persist();renderMyPacking();renderProgress();renderGear();
+  }else{
+    togglePacked(key,me);
+  }
+}
+function addPersonalItem(person){
+  const me=person||whoAmI();if(!me){toast('Pick who you are first');return;}
+  if(!canEditPacking(me)){toast('You can only edit your own list');return;}
+  const inp=$('#my-item-in');const v=(inp.value||'').trim();if(!v)return;
+  const qInp=$('#my-item-qty');const qty=qInp?parseInt(qInp.value,10)||0:0;
+  if(!state.personalItems[me])state.personalItems[me]=[];
+  const item={id:uid(),name:v,packed:false}; if(qty>1)item.qty=qty;
+  state.personalItems[me].push(item);
+  inp.value=''; if(qInp)qInp.value='';
+  persist();renderMyPacking();renderProgress();
+}
+function removePersonalItem(id, person){
+  const me=person||whoAmI();if(!me)return;
+  if(!canEditPacking(me)){toast('You can only edit your own list');return;}
+  state.personalItems[me]=(state.personalItems[me]||[]).filter(x=>x.id!==id);
+  persist();renderMyPacking();renderProgress();
+}
+let _viewPackOf=''; // which crew member's list is being viewed (read-only if not yours)
+function viewPackingOf(name){ _viewPackOf=name||''; renderMyPacking(); }
+function renderMyPacking(){
+  const wrap=$('#my-packing');if(!wrap)return;
+  const me=whoAmI();
+  const fillSel=(sel)=>{ if(sel){const opts=state.crew.map(c=>`<option value="${esc(c)}" ${c===me?'selected':''}>${esc(c)}</option>`).join('');sel.innerHTML=`<option value="">${t('gear.whoAreYou','Who are you?')}</option>${opts}`;} };
+  fillSel($('#whoami-select'));
+  fillSel($('#whoami-select-gear'));
+  if(!me){
+    const vw=$('#viewing-wrap'); if(vw)vw.style.display='none';
+    wrap.innerHTML=`<div class="empty">${t('gear.pickNameLong','Pick your name above to see your personal packing list — everything assigned to you, plus anything marked "All crew", plus your own custom items.')}</div>`;
+    return;
+  }
+  if(!state.crew.includes(me)){
+    try{localStorage.removeItem('ww_whoami');}catch(e){}
+    const vw=$('#viewing-wrap'); if(vw)vw.style.display='none';
+    wrap.innerHTML=`<div class="empty">${t('gear.pickName','Pick your name above to see your personal packing list.')}</div>`;
+    [$('#whoami-select'),$('#whoami-select-gear')].forEach(s=>{if(s)s.value='';});
+    return;
+  }
+  // whose list are we viewing? default = me
+  const viewing = (_viewPackOf && state.crew.includes(_viewPackOf)) ? _viewPackOf : me;
+  const editable = canEditPacking(viewing);
+  const list=packingListFor(viewing);
+  const stats=packStatsFor(viewing);
+  const pct=stats.total?Math.round(stats.packed/stats.total*100):0;
+
+  // populate the side-by-side "Viewing:" selector (only meaningful with >1 crew)
+  const vWrap=$('#viewing-wrap'), vSel=$('#viewing-select'), vRo=$('#viewing-ro');
+  if(vWrap && vSel){
+    if(state.crew.length>1){
+      vWrap.style.display='flex';
+      vSel.innerHTML=state.crew.map(c=>`<option value="${esc(c)}" ${c===viewing?'selected':''}>${esc(c)}${c===me?' ('+t('gear.meSuffix','me')+')':''}</option>`).join('');
+      if(vRo) vRo.style.display=editable?'none':'inline-block';
+    } else {
+      vWrap.style.display='none';
+    }
+  }
+
+  let html='';
+  html+=`<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+    <div style="font-family:var(--display);font-weight:700;font-size:20px">${stats.packed}/${stats.total} ${t('gear.packed','packed')}</div>
+    <div class="progress-track" style="flex:1;min-width:120px"><div class="progress-fill" style="width:${pct}%"></div></div>
+    <div style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--green)">${pct}%</div></div>`;
+  if(!list.length){
+    html+='<div class="empty">'+t('gear.nothingYet','Nothing on this list yet.')+(editable?' '+t('gear.claimBelow','Claim gear below, or add personal items here.'):'')+'</div>';
+  } else {
+    html+=list.map(x=>{
+      const tag = x.kind==='personal'?`<span class="gtype gt-each">${t('gear.tagPersonal','personal')}</span>`:x.kind==='all'?`<span class="gtype gt-shared">${t('gear.tagAllCrew','all crew')}</span>`:`<span class="gtype gt-someone">${t('gear.tagTheirs','theirs')}</span>`;
+      const qty = x.qty&&x.qty>1?`<span class="qty-badge">×${x.qty}</span>`:'';
+      const rm = (x.kind==='personal'&&editable)?`<span class="gear-x" onclick="event.stopPropagation();removePersonalItem('${x.key.slice(9)}','${esc(viewing).replace(/'/g,"\\'")}')" title="Remove">🗑</span>`:'';
+      const click = editable?`onclick="toggleMyPack('${x.key.replace(/'/g,"\\'")}','${esc(viewing).replace(/'/g,"\\'")}')"`:'';
+      return `<div class="chk ${x.packed?'done':''} ${editable?'':'readonly'}" ${click}>
+        <div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div>
+        <div class="ct" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${esc(x.name)} ${qty} ${tag}</div>${rm}</div>`;
+    }).join('');
+  }
+  if(editable){
+    html+=`<div style="display:flex;gap:6px;margin-top:12px">
+      <input id="my-item-in" placeholder="${t('gear.addPersonalPh','Add a personal item (e.g. retainer)…')}" style="flex:1" onkeydown="if(event.key==='Enter')addPersonalItem('${esc(viewing).replace(/'/g,"\\'")}')">
+      <input id="my-item-qty" type="number" min="1" placeholder="${t('gear.qty','Qty')}" style="width:62px" title="${t('gear.optionalQty','Optional quantity')}">
+      <button class="btn sm" onclick="addPersonalItem('${esc(viewing).replace(/'/g,"\\'")}')" data-i18n="gear.add">Add</button></div>`;
+  }
+  wrap.innerHTML=html;
+}
+function addGear(){
+  if(!requireEdit())return;
+  const n=$('#gear-name-in').value.trim(),note=$('#gear-note-in').value.trim(),t=$('#gear-type-in').value;
+  if(!n){toast('Give the gear a name');return;}
+  const g=gearData();let cat=g.find(c=>c.cat==='Crew additions');
+  if(!cat){cat={cat:'Crew additions',items:[]};g.push(cat);}
+  cat.items.push({id:uid(),n,t,note});
+  $('#gear-name-in').value='';$('#gear-note-in').value='';
+  persist();renderGear();toast('Gear added');
+}
+function archiveGear(id){
+  const g=gearData();
+  for(const cat of g){
+    const i=cat.items.findIndex(it=>it.id===id);
+    if(i>-1){
+      const [item]=cat.items.splice(i,1);
+      state.gearArchive.push({...item,fromCat:cat.cat,claims:state.gearClaims[id]||[],archivedAt:new Date().toISOString().slice(0,10)});
+      delete state.gearClaims[id];
+      persist();renderGear();toast('Moved to archive — restore anytime');return;
+    }
+  }
+}
+function restoreGear(idx){
+  const a=state.gearArchive.splice(idx,1)[0];if(!a)return;
+  const g=gearData();let cat=g.find(c=>c.cat===a.fromCat);
+  if(!cat){cat={cat:a.fromCat||'Crew additions',items:[]};g.push(cat);}
+  const {fromCat,claims,archivedAt,...item}=a;
+  cat.items.push(item);
+  if(claims&&claims.length)state.gearClaims[item.id]=claims;
+  persist();renderGear();renderArchive();toast('Restored to the gear list');
+}
+function deleteForever(idx){state.gearArchive.splice(idx,1);persist();renderArchive();renderGear();}
+function openArchive(){renderArchive();$('#archive-modal').classList.add('open');}
+function closeArchive(){$('#archive-modal').classList.remove('open');}
+function renderArchive(){
+  const w=$('#archive-list');w.innerHTML='';
+  if(!state.gearArchive.length){w.innerHTML='<div class="empty">Archive is empty — nothing has been removed.</div>';return;}
+  state.gearArchive.forEach((a,i)=>{
+    const r=document.createElement('div');r.className='gear-item';
+    r.innerHTML=`<div class="gear-info"><div class="gear-name">${esc(a.n)}</div><div class="gear-note">from ${esc(a.fromCat||'?')} · removed ${a.archivedAt||''}</div></div>
+      <button class="btn sm" onclick="restoreGear(${i})">Restore</button>
+      <button class="btn sm ghost" onclick="deleteForever(${i})">Delete forever</button>`;
+    w.appendChild(r);
+  });
+}
+
+/* ---------- food ---------- */
+let foodFilter='all';
+function allFood(){ return contentArr('FOOD',FOOD).concat(state.customFood||[]); }
+function renderFood(){
+  const tb=document.querySelector('#ftable tbody');tb.innerHTML='';
+  const sl={cooler:t('food.oCooler','Cooler'),dry:t('food.oDry','Dry'),fire:t('food.oFire','Fire'),stove:t('food.oStove','Stove'),none:t('food.oNone','No cook')};
+  allFood().filter(f=>foodFilter==='all'||f.store===foodFilter||f.cook===foodFilter).forEach((f,i)=>{
+    const tr=document.createElement('tr');
+    const isCustom=f.custom;
+    const delc=(isCustom&&canEdit())?`<button class="x" title="Remove" onclick="delFood('${esc(f.id)}')">✕</button>`:'';
+    tr.innerHTML=`<td class="fn">${esc(f.n)} ${isCustom?'<span class="catpill" data-i18n="food.added">'+t('food.added','added')+'</span>':''}</td><td><span class="fpill fp-${f.store}">${sl[f.store]}</span></td><td><span class="fpill fp-${f.cook}">${sl[f.cook]}</span></td><td>${esc(f.why||'')} ${delc}</td>`;
+    tb.appendChild(tr);
+  });
+}
+function addFood(){
+  if(!requireEdit())return;
+  const n=$('#food-name-in'),s=$('#food-store-in'),c=$('#food-cook-in'),wy=$('#food-why-in');
+  const name=(n.value||'').trim();
+  if(!name){toast('Enter a food name');return;}
+  if(!state.customFood)state.customFood=[];
+  state.customFood.push({id:'cf'+Date.now(),n:name,store:s.value,cook:c.value,why:(wy.value||'').trim(),custom:true});
+  n.value='';if(wy)wy.value='';
+  persist();renderFood();toast('Added to the food list');
+}
+function delFood(id){
+  if(!requireEdit())return;
+  state.customFood=(state.customFood||[]).filter(f=>f.id!==id);
+  persist();renderFood();
+}
+function mealItems(m,i){
+  const ov=state.mealEdits&&state.mealEdits[i];
+  return ov&&ov.items?ov.items:m.items;
+}
+function renderMeals(){
+  const w=$('#meal-grid');w.innerHTML='';
+  const meals=contentArr('MEALS',MEALS);
+  const editable=canEdit();
+  meals.forEach((m,i)=>{
+    const d=document.createElement('div');d.className='meal';
+    const items=mealItems(m,i);
+    const editHint=editable?`<span class="meal-edit-hint" title="${t('meal.editHint','Tap an item to edit it directly')}">✎</span>`:'';
+    const lis=items.map((it,idx)=>{
+      if(editable){
+        return `<li class="meal-li" contenteditable="true" spellcheck="false" data-mi="${i}" data-li="${idx}" onblur="saveMealLine(${i},${idx},this.textContent)" onkeydown="mealLineKey(event,${i},${idx})">${esc(it)}</li>`;
+      }
+      return `<li>${esc(it)}</li>`;
+    }).join('');
+    const addLi=editable?`<li class="meal-add-li" onclick="addMealLine(${i})">+ ${t('meal.addItem','add item')}</li>`:'';
+    d.innerHTML=`<div class="mh">${esc(m.h)}${editHint}</div><h4>${esc(m.t)}</h4><ul class="meal-ul">${lis}${addLi}</ul>${m.tip?`<div class="mtip">↳ ${esc(m.tip)}</div>`:''}`;
+    w.appendChild(d);
+  });
+}
+// Save one edited meal line in place. Empty text removes the line.
+function saveMealLine(mi,li,text){
+  if(!canEdit())return;
+  const m=contentArr('MEALS',MEALS)[mi];if(!m)return;
+  const items=mealItems(m,mi).slice();
+  const val=(text||'').trim();
+  if(val) items[li]=val; else items.splice(li,1);
+  commitMealItems(mi,m,items);
+}
+function addMealLine(mi){
+  if(!requireEdit())return;
+  const m=contentArr('MEALS',MEALS)[mi];if(!m)return;
+  const items=mealItems(m,mi).slice();
+  items.push(t('meal.newItem','New item'));
+  commitMealItems(mi,m,items);
+  // focus the new line for immediate typing
+  setTimeout(()=>{const li=document.querySelector(`.meal-li[data-mi="${mi}"][data-li="${items.length-1}"]`);if(li){li.focus();document.getSelection().selectAllChildren(li);}},30);
+}
+function mealLineKey(e,mi,li){
+  if(e.key==='Enter'){ e.preventDefault(); e.target.blur(); }
+}
+function commitMealItems(mi,m,items){
+  if(!state.mealEdits)state.mealEdits={};
+  // Compare against the *base English* default to decide whether to store an override.
+  const baseEN=(MEALS[mi]&&MEALS[mi].items)||[];
+  if(items.join('\n')===baseEN.join('\n')) delete state.mealEdits[mi];
+  else state.mealEdits[mi]={items};
+  persist();renderMeals();
+}
+function renderPrep(){const w=$('#prep-grid');w.innerHTML='';contentArr('PREP',PREP).forEach(p=>{const d=document.createElement('div');d.className='icard';
+  d.innerHTML=`<div class="itag ${p.c}">${esc(p.tag)}</div><h4>${esc(p.title)}</h4><p>${esc(p.body)}</p>`;w.appendChild(d);});}
+
+/* ---------- shopping ---------- */
+let shopFilter='all';
+function shopCat(btn,f){$$('.fbtn[data-sc]').forEach(b=>b.classList.remove('on'));btn.classList.add('on');shopFilter=f;renderShop();}
+function renderShop(){
+  const w=$('#shop-grid');w.innerHTML='';
+  const me=whoAmI();
+  const SHOP_L=contentArr('SHOP',SHOP);
+  SHOP.forEach((sOrig,si)=>{
+    if(!(shopFilter==='all'||sOrig.cat===shopFilter))return;
+    const s=SHOP_L[si]||sOrig; // translated display copy
+    const card=document.createElement('div');card.className='icard';
+    let html=`<div class="itag ${sOrig.c}">${esc(s.tag)}</div><h4>${esc(s.title)}</h4><div style="margin:10px 0 0">`;
+    sOrig.items.forEach((itOrig,ii)=>{
+      const it=(s.items&&s.items[ii])||itOrig;
+      const key='shop-'+si+'-'+ii;const done=state.checks[key];
+      let links='';
+      if(itOrig.l){
+        const L=itOrig.l;
+        const labels={amz:'Amazon',ct:'Canadian Tire',dec:'Decathlon'};
+        const mk=(k,cls)=>`<a class="shoplink ${cls} ${L.best===k?'best':''}" href="${L[k]}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${L.best===k?'★ ':''}${labels[k]}</a>`;
+        const reason=(it.l&&it.l.reason)||L.reason;
+        links=`<div class="shoplinks">${mk('amz','sl-amz')}${mk('ct','sl-ct')}${mk('dec','sl-dec')}</div><div class="best-note">↳ ${esc(reason)}</div>`;
+      }
+      const buyers=(state.shopBought&&state.shopBought[key])||[];
+      const iBought=me&&buyers.includes(me);
+      const avatars=buyers.map(b=>`<span class="buyer-av" style="background:${colorFor(b)}" title="${esc(b)} ${t('shop.boughtThisTitle','bought this')}">${initials(b)}</span>`).join('');
+      const buyBtn=`<button class="bought-btn ${iBought?'on':''}" onclick="event.stopPropagation();toggleBought('${key}')" title="${iBought?t('shop.youBought','You marked this bought'):t('shop.markBought','Mark that you bought this')}">${iBought?t('shop.bought','✓ bought'):t('shop.iBought','I bought this')}</button>`;
+      const adminBtn=isOwner()?`<button class="bought-btn admin-assign" onclick="event.stopPropagation();openBuyerPicker('${key}')" title="${t('shop.assignBuyers','Assign buyers (admin)')}">👥 ${t('shop.assign','assign')}</button>`:'';
+      const buyRow=`<div class="bought-row">${avatars}${buyBtn}${adminBtn}</div>`;
+      html+=`<div class="shop-item"><div class="chk ${done?'done':''}" onclick="toggleCheck('${key}')"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div><div class="ct">${esc(it.n)}${links}</div></div>${buyRow}</div>`;
+    });
+    html+=`</div><div class="note" style="margin-top:12px">${esc(s.note)}</div>`;
+    card.innerHTML=html;w.appendChild(card);
+  });
+}
+function toggleBought(key){
+  if(!requireEdit())return;
+  const me=whoAmI();
+  if(!me){toast('Pick who you are (Basecamp) to mark purchases');return;}
+  if(!state.shopBought)state.shopBought={};
+  const arr=state.shopBought[key]||(state.shopBought[key]=[]);
+  const i=arr.indexOf(me);
+  if(i>-1)arr.splice(i,1);else arr.push(me);
+  if(!arr.length)delete state.shopBought[key];
+  persist();renderShop();
+}
+function toggleCheck(k){if(!requireEdit())return;state.checks[k]=!state.checks[k];persist();renderShop();}
+// Admin-only: pick multiple crew members who bought an item together.
+let _buyerPickerKey=null;
+function openBuyerPicker(key){
+  if(!isOwner()){toast('Admin only');return;}
+  _buyerPickerKey=key;
+  const buyers=(state.shopBought&&state.shopBought[key])||[];
+  const body=$('#buyer-picker-list');
+  if(!body)return;
+  body.innerHTML=state.crew.map(c=>{
+    const on=buyers.includes(c);
+    return `<button class="buyer-pick ${on?'on':''}" onclick="toggleBuyerPick('${esc(c).replace(/'/g,"\\'")}')">
+      <span class="avatar" style="width:24px;height:24px;font-size:10px;background:${colorFor(c)}">${initials(c)}</span>${esc(c)}<span class="buyer-check">${on?'✓':''}</span></button>`;
+  }).join('')||`<div class="empty">${t('shop.noCrew','No crew to assign yet.')}</div>`;
+  $('#buyer-picker-modal').classList.add('open');
+}
+function toggleBuyerPick(name){
+  if(!isOwner()||!_buyerPickerKey)return;
+  if(!state.shopBought)state.shopBought={};
+  const arr=state.shopBought[_buyerPickerKey]||(state.shopBought[_buyerPickerKey]=[]);
+  const i=arr.indexOf(name);
+  if(i>-1)arr.splice(i,1);else arr.push(name);
+  if(!arr.length)delete state.shopBought[_buyerPickerKey];
+  persist();
+  openBuyerPicker(_buyerPickerKey); // re-render picker state
+  renderShop();
+}
+function closeBuyerPicker(){ const m=$('#buyer-picker-modal'); if(m)m.classList.remove('open'); _buyerPickerKey=null; }
+
+/* ---------- crew / roles ---------- */
+function renderCrew(){
+  const bar=$('#crew-bar');if(!bar)return;bar.innerHTML='';
+  if(!state.crew.length){bar.innerHTML='<span class="empty" style="padding:8px">No crew yet — add names above.</span>';}
+  const mine=myCrew();
+  state.crew.forEach(c=>{
+    const meta=state.crewMeta&&state.crewMeta[c]||{};
+    const isMine=mine&&c===mine;
+    const canRemove=canManage()||isMine;
+    const canRename=canManage()||isMine;
+    const chip=document.createElement('div');chip.className='crew-chip'+(isMine?' is-me':'');
+    const linkDot=meta.email?'<span class="crew-linked" title="Linked to '+esc(meta.email)+'">🔗</span>':'';
+    let actions='';
+    if(canRename) actions+=`<span class="x rename" title="Rename" onclick="renameCrew('${esc(c).replace(/&#39;/g,"\\'")}')">✎</span>`;
+    if(canRemove) actions+=`<span class="x" title="Remove" onclick="removeCrewGuarded('${esc(c).replace(/&#39;/g,"\\'")}')">✕</span>`;
+    chip.innerHTML=`<span class="avatar" style="background:${colorFor(c)}">${initials(c)}</span>${esc(c)}${linkDot}${actions}`;
+    bar.appendChild(chip);
+  });
+  // visitor "link my name" entry point
+  const lb=$('#link-cta');
+  if(lb){
+    const showCta = isSignedIn() && !canManage() && !mine && !isOwnerReal();
+    lb.style.display=showCta?'block':'none';
+  }
+  refreshCrewSelects();renderGear();renderRoles();renderSites();renderSettle();renderMyPacking();
+}
+function removeCrewGuarded(name){
+  const mine=myCrew();
+  if(!(canManage()||(mine&&name===mine))){toast('You can only remove your own name');return;}
+  if(!confirm('Remove "'+name+'" from the crew?'))return;
+  removeCrew(name);
+  if(mine===name){try{localStorage.removeItem('ww_whoami');}catch(e){} applyGateClasses();renderAuth();}
+}
+function renameCrew(name){
+  const mine=myCrew();
+  if(!(canManage()||(mine&&name===mine))){toast('You can only rename your own name');return;}
+  const nv=prompt('Rename "'+name+'" to:',name);
+  if(nv===null)return;
+  const v=nv.trim();
+  if(!v||v===name)return;
+  if(state.crew.includes(v)){toast('That name already exists');return;}
+  // migrate everything referencing the old name
+  state.crew=state.crew.map(c=>c===name?v:c);
+  if(state.crewMeta&&state.crewMeta[name]){state.crewMeta[v]=state.crewMeta[name];delete state.crewMeta[name];}
+  Object.keys(state.gearClaims).forEach(k=>{state.gearClaims[k]=(state.gearClaims[k]||[]).map(n=>n===name?v:n);});
+  if(state.gearPacked)Object.keys(state.gearPacked).forEach(k=>{const m=state.gearPacked[k];if(m&&typeof m==='object'&&m[name]){m[v]=m[name];delete m[name];}});
+  if(state.personalItems&&state.personalItems[name]){state.personalItems[v]=state.personalItems[name];delete state.personalItems[name];}
+  if(state.votes&&state.votes[name]){state.votes[v]=state.votes[name];delete state.votes[name];}
+  Object.keys(state.roles||{}).forEach(k=>{if(state.roles[k]===name)state.roles[k]=v;});
+  (state.expenses||[]).forEach(e=>{if(e.who===name)e.who=v;});
+  if(whoAmI()===name){try{localStorage.setItem('ww_whoami',v);}catch(e){}}
+  persist();renderCrew();renderExpenses();renderAuth();
+  toast('Renamed to '+v);
+}
+function requireEdit(){
+  const l=accessLevel();
+  if(l==='none'){ toast('🔒 Sign in to edit the trip'); return false; }
+  if(isBlocked()){ toast('Your access has been revoked by the organizer'); return false; }
+  if(l==='visitor'){ toast('👀 Visitors can view but not edit. Link your name in Basecamp to become a camper.'); return false; }
+  return true;
+}
+function requireManage(){
+  if(!canManage()){ toast('Only leaders or the admin can do that'); return false; }
+  return true;
+}
+function addCrew(){
+  if(!requireEdit())return;
+  if(!canAddCrew()){ toast('You can add 1 crew member. Ask an organizer to add more.'); return; }
+  const i=$('#crew-input');const v=i.value.trim();
+  if(!v||state.crew.includes(v))return;
+  state.crew.push(v);
+  if(!state.crewMeta)state.crewMeta={};
+  state.crewMeta[v]={email:myEmail(),by:myEmail(),at:Date.now()};
+  i.value='';persist();renderCrew();
+}
+function removeCrew(name){
+  state.crew=state.crew.filter(c=>c!==name);
+  if(state.crewMeta)delete state.crewMeta[name];
+  Object.keys(state.gearClaims).forEach(k=>{state.gearClaims[k]=(state.gearClaims[k]||[]).filter(n=>n!==name);if(!state.gearClaims[k].length)delete state.gearClaims[k];});
+  delete state.votes[name];
+  Object.keys(state.roles).forEach(k=>{if(state.roles[k]===name)delete state.roles[k];});
+  state.expenses=state.expenses.filter(e=>e.who!==name);
+  persist();renderCrew();renderExpenses();
+}
+function refreshCrewSelects(){
+  const opts=state.crew.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  const ew=$('#exp-who');if(ew){const cur=ew.value;ew.innerHTML=`<option value="">${t('cost.whoPaid','Who paid?')}</option>${opts}`;ew.value=cur;}
+}
+function renderRoles(){
+  const w=$('#role-grid');w.innerHTML='';
+  const rolesL=contentArr('ROLES',ROLES);
+  ROLES.forEach((rOrig,i)=>{
+    const label=rolesL[i]||rOrig;
+    const opts=state.crew.map(c=>`<option value="${esc(c)}" ${state.roles[rOrig]===c?'selected':''}>${esc(c)}</option>`).join('');
+    const d=document.createElement('div');d.className='role';
+    d.innerHTML=`<div class="rn">${esc(label)}</div><select onchange="setRole('${rOrig.replace(/'/g,"\\'")}',this.value)"><option value="">${state.crew.length?t('role.assign','Assign…'):t('role.addFirst','Add crew first')}</option>${opts}</select>`;w.appendChild(d);
+  });
+}
+function setRole(r,n){if(!requireEdit())return;if(n)state.roles[r]=n;else delete state.roles[r];persist();}
+
+/* ---------- expenses ---------- */
+function addExpense(){
+  if(!requireEdit())return;
+  const d=$('#exp-desc'),a=$('#exp-amt'),c=$('#exp-cat'),w=$('#exp-who');
+  const desc=d.value.trim(),amt=parseFloat(a.value),who=w.value,cat=c.value;
+  if(!desc||!amt||amt<=0||!who){toast('Need a description, amount & payer');return;}
+  state.expenses.push({id:Date.now(),desc,amt:Math.round(amt*100)/100,who,cat});
+  d.value='';a.value='';w.value='';persist();renderExpenses();
+}
+function delExpense(id){ if(!requireEdit())return; state.expenses=state.expenses.filter(e=>e.id!==id);persist();renderExpenses();}
+function editExpense(id){
+  if(!requireManage()){return;}
+  const e=state.expenses.find(x=>x.id===id);if(!e)return;
+  const nd=prompt('Item name:',e.desc); if(nd===null)return;
+  const na=prompt('Amount ($):',e.amt); if(na===null)return;
+  const amt=parseFloat(na);
+  if(!nd.trim()||isNaN(amt)||amt<=0){toast('Enter a valid name & amount');return;}
+  e.desc=nd.trim(); e.amt=Math.round(amt*100)/100;
+  persist();renderExpenses();toast('Expense updated');
+}
+function renderExpenses(){
+  const w=$('#exp-list');w.innerHTML='';
+  if(!state.expenses.length){w.innerHTML=`<div class="empty">${t('cost.noExpenses','No expenses logged yet.')}</div>`;}
+  state.expenses.forEach(e=>{const r=document.createElement('div');r.className='exp-row';
+    const editBtn=canManage()?`<span class="x" title="${t('cost.edit','Edit')}" onclick="editExpense(${e.id})">✎</span>`:'';
+    r.innerHTML=`<span class="avatar" style="background:${colorFor(e.who)}">${initials(e.who)}</span><div class="ed"><div class="edesc">${esc(e.desc)} <span class="catpill">${esc(catLabel(e.cat||'Other'))}</span></div><div class="emeta">${t('cost.paidBy','paid by')} ${esc(e.who)}</div></div><div class="eamt">$${e.amt.toFixed(2)}</div>${editBtn}<span class="x" onclick="delExpense(${e.id})">✕</span>`;w.appendChild(r);});
+  renderCatBars();renderSettle();
+}
+function renderCatBars(){
+  const w=$('#cat-bars');w.innerHTML='';
+  if(!state.expenses.length)return;
+  const byCat={};let max=0,total=0;
+  state.expenses.forEach(e=>{const c=e.cat||'Other';byCat[c]=(byCat[c]||0)+e.amt;total+=e.amt;});
+  Object.values(byCat).forEach(v=>max=Math.max(max,v));
+  const colors={Site:'#9bce6f',Food:'#f0b455',Gas:'#6cb6d4',Firewood:'#e8896b',Gear:'#b49ad4',Other:'#9aaa8c'};
+  let html=`<div class="kicker" style="margin:8px 0 10px">◆ ${t('cost.spendByCat','Spend by category · total')} $${total.toFixed(2)}</div>`;
+  Object.entries(byCat).sort((a,b)=>b[1]-a[1]).forEach(([c,v])=>{
+    html+=`<div class="cat-bar-row"><span class="cl">${esc(catLabel(c))}</span><div class="cat-track"><div class="cat-fill" style="width:${(v/max*100).toFixed(1)}%;background:${colors[c]||'#9aaa8c'}"></div></div><span class="cv">$${v.toFixed(2)}</span></div>`;
+  });
+  w.innerHTML=html;
+}
+function renderSettle(){
+  const w=$('#settle-body');
+  if(!state.crew.length||!state.expenses.length){w.innerHTML=`<div class="empty">${t('cost.settleEmpty','Add crew + expenses to see the split.')}</div>`;return;}
+  const total=state.expenses.reduce((s,e)=>s+e.amt,0);
+  const share=total/state.crew.length;
+  const bal={};state.crew.forEach(c=>bal[c]=-share);
+  state.expenses.forEach(e=>{if(bal[e.who]!==undefined)bal[e.who]+=e.amt;});
+  let html=`<div class="settle-row"><span>${t('cost.totalSpent','Total spent')}</span><span class="owe">$${total.toFixed(2)}</span></div><div class="settle-row"><span>${t('cost.perPerson','Per person')} (${state.crew.length})</span><span class="owe">$${share.toFixed(2)}</span></div><div style="height:8px"></div>`;
+  state.crew.forEach(c=>{const b=bal[c];const cls=b>=-0.005?'pos':'neg';const txt=b>=-0.005?`${t('cost.getsBack','gets back')} $${Math.max(0,b).toFixed(2)}`:`${t('cost.owes','owes')} $${Math.abs(b).toFixed(2)}`;
+    html+=`<div class="settle-row"><span><span class="avatar" style="width:20px;height:20px;font-size:9px;background:${colorFor(c)};display:inline-flex;vertical-align:middle;margin-right:7px">${initials(c)}</span>${esc(c)}</span><span class="owe ${cls}">${txt}</span></div>`;});
+  // minimal transfers (greedy)
+  const debtors=[],creditors=[];
+  Object.entries(bal).forEach(([n,b])=>{if(b<-0.005)debtors.push([n,-b]);else if(b>0.005)creditors.push([n,b]);});
+  debtors.sort((a,b)=>b[1]-a[1]);creditors.sort((a,b)=>b[1]-a[1]);
+  const transfers=[];let di=0,ci=0;
+  while(di<debtors.length&&ci<creditors.length){
+    const pay=Math.min(debtors[di][1],creditors[ci][1]);
+    transfers.push([debtors[di][0],creditors[ci][0],pay]);
+    debtors[di][1]-=pay;creditors[ci][1]-=pay;
+    if(debtors[di][1]<0.005)di++;if(creditors[ci][1]<0.005)ci++;
+  }
+  if(transfers.length){
+    html+=`<div class="kicker" style="margin:14px 0 10px">◆ ${t('cost.whoPays','Who pays who')} — ${transfers.length} ${transfers.length===1?t('cost.transfer','transfer'):t('cost.transfers','transfers')}</div>`;
+    transfers.forEach(([from,to,amt])=>{
+      html+=`<div class="transfer"><span class="avatar" style="background:${colorFor(from)}">${initials(from)}</span> ${esc(from)} <span style="color:var(--faint)">${t('cost.pays','pays')}</span> <span class="avatar" style="background:${colorFor(to)}">${initials(to)}</span> ${esc(to)} <span class="amt">$${amt.toFixed(2)}</span></div>`;
+    });
+  }
+  w.innerHTML=html;
+}
+
+/* ---------- activities / survival / faq ---------- */
+function renderActivities(){
+  const ag=$('#area-grid');ag.innerHTML='';
+  const AREA_L=(lang()==='fr'&&window.CONTENT_FR&&window.CONTENT_FR.AREA)?window.CONTENT_FR.AREA:AREA;
+  const order=state.chosenSite==='ivy'?['ivy','plage']:['plage','ivy'];
+  order.forEach(k=>{
+    const a=AREA_L[k]||AREA[k];const chosen=state.chosenSite===k;
+    const d=document.createElement('div');d.className='icard';if(chosen)d.style.borderColor='var(--amber)';
+    d.innerHTML=`<div class="itag it-fun">${chosen?t('act.ourSite','★ Our site'):t('act.option','Option')}</div><h4>${esc(a.title)}</h4><ul>${a.items.map(i=>`<li>${esc(i)}</li>`).join('')}</ul>`;
+    ag.appendChild(d);
+  });
+  const bg=$('#bring-grid');bg.innerHTML='';
+  contentArr('BRING',BRING).forEach(b=>{const d=document.createElement('div');d.className='icard';d.innerHTML=`<h4>${esc(b.t)}</h4><p>${esc(b.p)}</p>`;bg.appendChild(d);});
+  const gg=$('#games-grid');gg.innerHTML='';
+  contentArr('GAMES',GAMES).forEach(g=>{const d=document.createElement('div');d.className='icard';d.innerHTML=`<h4>${esc(g.t)}</h4><p>${esc(g.p)}</p>`;gg.appendChild(d);});
+}
+function renderSituations(){
+  const w=$('#situations-grid');w.innerHTML='';
+  contentArr('SITUATIONS',SITUATIONS).forEach(s=>{const d=document.createElement('div');d.className='icard';
+    d.innerHTML=`<div class="itag ${s.c}">${esc(s.tag)}</div><h4>${esc(s.title)}</h4><p>${esc(s.body)}</p>`;w.appendChild(d);});
+}
+function renderFAQ(){
+  const w=$('#faq-list');w.innerHTML='';
+  contentArr('FAQ',FAQ).forEach(f=>{const d=document.createElement('details');d.className='faq';
+    d.innerHTML=`<summary>${esc(f.q)}</summary><div class="fa">${esc(f.a)}</div>`;w.appendChild(d);});
+}
+function renderTips(){const w=$('#tips-card');w.innerHTML='';
+  contentArr('TIPS',TIPS).forEach(tip=>{const d=document.createElement('div');d.className='tip';
+    d.innerHTML=`<div class="ti">${tip.i}</div><div><h4>${esc(tip.t)}</h4><p>${esc(tip.p)}</p></div>`;w.appendChild(d);});}
+
+/* ---------- help / export / misc ---------- */
+function openHelp(){$('#help-modal').classList.add('open');}
+function closeHelp(){$('#help-modal').classList.remove('open');}
+function dismissBanner(){$('#help-banner').style.display='none';try{localStorage.setItem('ww_banner_hidden','1');}catch(e){}}
+function showBannerAgain(){try{localStorage.removeItem('ww_banner_hidden');}catch(e){}$('#help-banner').style.display='flex';closeSettings();toast('Welcome banner restored');}
+
+/* ---------- settings & theme (per-device, never synced) ---------- */
+const ALL_THEMES=['classic','aurora','ember','glacier','topo','nebula','synthwave','botanic','abyss','sakura','carbon','dune'];
+function getTheme(){try{return localStorage.getItem('ww_theme')||'classic';}catch(e){return 'classic';}}
+// Alternating monthly default for signed-in users: even calendar month -> Botanic,
+// odd month -> Aurora. Continues forever. Uses year*12+month so it never repeats wrongly.
+function monthlyDefaultTheme(d){
+  d=d||new Date();
+  const idx=d.getFullYear()*12+d.getMonth(); // months since year 0
+  return (idx%2===0)?'aurora':'botanic';
+}
+// Tag identifying which month-default a user has been auto-switched to, so we only
+// auto-switch once per month and never override a manual choice the user made.
+function getPinnedTheme(){try{return localStorage.getItem('ww_theme_pin')||'';}catch(e){return '';}}
+function setPinnedTheme(t){
+  try{
+    if(t){localStorage.setItem('ww_theme_pin',t);}
+    else{localStorage.removeItem('ww_theme_pin');}
+  }catch(e){}
+}
+// Signed-in users default to Aurora. Once they pick any theme, that choice sticks
+// (remembered per-device via ww_theme + ww_theme_manual). No more monthly rotation.
+function applyDefaultThemeOnSignIn(){
+  if(!user)return;
+  let manual=false;
+  try{ manual=localStorage.getItem('ww_theme_manual')==='1'; }catch(e){}
+  if(manual){
+    // honour their saved choice
+    const cur=getTheme();
+    if(canUseTheme(cur)){ document.documentElement.dataset.theme=cur; stopAmbient();startAmbient(); }
+    return;
+  }
+  // no manual choice yet -> Aurora is the signed-in default
+  const want='aurora';
+  if(getTheme()!==want){
+    try{ localStorage.setItem('ww_theme',want); }catch(e){}
+  }
+  document.documentElement.dataset.theme=want;
+  stopAmbient();startAmbient();
+}
+// back-compat alias (old name referenced elsewhere)
+function applyMonthlyDefaultOnSignIn(){ return applyDefaultThemeOnSignIn(); }
+// Display/motion settings are gated like themes: signed-out users can't change them.
+// Defaults differ by sign-in state and are applied once per state via a marker key.
+function motionOn(){
+  try{ const v=localStorage.getItem('ww_motion'); if(v===null) return isSignedIn(); return v!=='0'; }catch(e){ return isSignedIn(); }
+}
+function liteOn(){ // formerly "performance mode": trims visual features for smoother performance
+  try{ const v=localStorage.getItem('ww_lite'); if(v===null) return !isSignedIn(); return v==='1'; }catch(e){ return !isSignedIn(); }
+}
+function compactOn(){
+  try{ const v=localStorage.getItem('ww_compact'); if(v===null) return !isSignedIn(); return v==='1'; }catch(e){ return !isSignedIn(); }
+}
+function simplifyOn(){try{return localStorage.getItem('ww_simplify')==='1';}catch(e){return false;}}
+
+// Apply the correct DEFAULTS for the current sign-in state, once, unless the user has chosen.
+// Signed-out: motion OFF, lite ON, compact ON.  Signed-in: motion ON, lite OFF, compact OFF.
+function enforceDisplayDefaults(){
+  const signed=isSignedIn();
+  const marker = signed?'signed-in':'signed-out';
+  let last=null; try{last=localStorage.getItem('ww_display_state');}catch(e){}
+  if(last!==marker){
+    // new state: reset display prefs to that state's defaults (clears any prior manual choices)
+    try{
+      localStorage.removeItem('ww_motion');
+      localStorage.removeItem('ww_lite');
+      localStorage.removeItem('ww_compact');
+      localStorage.setItem('ww_display_state',marker);
+    }catch(e){}
+  }
+  document.documentElement.classList.toggle('perf', liteOn());
+  document.documentElement.classList.toggle('compact', compactOn());
+}
+function canUseTheme(t){return t==='classic'||!!user;}
+function canUseDisplay(){ return isSignedIn(); }
+function enforceThemeAccess(){
+  if(!canUseTheme(getTheme())){
+    try{localStorage.setItem('ww_theme','classic');}catch(e){}
+    document.documentElement.dataset.theme='classic';
+    stopAmbient();
+  }
+}
+function setTheme(t){
+  if(!canUseTheme(t)){toast('🔒 Sign in to unlock this theme');return;}
+  try{localStorage.setItem('ww_theme',t);localStorage.setItem('ww_theme_manual','1');}catch(e){}
+  document.documentElement.dataset.theme=t;
+  renderSettingsUI();
+  stopAmbient();startAmbient();
+  if(t==='classic')unlockReveals();
+  const names={aurora:'Aurora',ember:'Ember 🔥',glacier:'Glacier',topo:'Topo',classic:'Classic',nebula:'Nebula',synthwave:'Synthwave',botanic:'Botanic ☀',abyss:'Abyss',sakura:'Sakura',carbon:'Carbon',dune:'Dune'};
+  toast((names[t]||t)+' theme — just for you, not the crew');
+}
+function renderPinUI(){
+  const row=$('#pin-row'); if(!row) return;
+  // only meaningful for signed-in users (themes locked otherwise)
+  row.style.display=user?'flex':'none';
+  const pin=getPinnedTheme();
+  const cur=getTheme();
+  const names={aurora:'Aurora',ember:'Ember',glacier:'Glacier',topo:'Topo',classic:'Classic',nebula:'Nebula',synthwave:'Synthwave',botanic:'Botanic',abyss:'Abyss',sakura:'Sakura',carbon:'Carbon',dune:'Dune'};
+  const lbl=$('#pin-label'); const btn=$('#pin-btn');
+  if(pin){
+    if(lbl) lbl.innerHTML='📌 Pinned default: <b>'+(names[pin]||pin)+'</b> — overrides the monthly rotation.';
+    if(btn) btn.textContent='Unpin (use monthly rotation)';
+  } else {
+    if(lbl) lbl.innerHTML='Monthly rotation is on (this month: <b>'+(names[monthlyDefaultTheme()]||'')+'</b>). Pin <b>'+(names[cur]||cur)+'</b> as your permanent default?';
+    if(btn) btn.textContent='📌 Pin '+(names[cur]||cur)+' as my default';
+  }
+}
+function togglePin(){
+  if(!user){toast('Sign in to set a default theme');return;}
+  if(getPinnedTheme()){
+    setPinnedTheme('');
+    toast('Unpinned — monthly rotation restored');
+  } else {
+    const cur=getTheme();
+    if(cur==='classic'){toast('Pick a theme first, then pin it');return;}
+    setPinnedTheme(cur);
+    // pinning also clears the per-month manual flag so it's clean
+    try{localStorage.setItem('ww_theme_manual','1');}catch(e){}
+    toast('Pinned as your default theme 📌');
+  }
+  renderPinUI();
+}
+function toggleMotion(){
+  if(!canUseDisplay()){toast('🔒 Sign in to change display settings');return;}
+  const on=!motionOn();
+  try{localStorage.setItem('ww_motion',on?'1':'0');}catch(e){}
+  renderSettingsUI();
+  if(on)startAmbient();else{stopAmbient();unlockReveals();}
+  document.querySelectorAll('#aurora-blobs .blob').forEach(b=>b.style.animationPlayState=on?'running':'paused');
+}
+function renderSettingsUI(){
+  const t=getTheme();
+  ALL_THEMES.forEach(k=>{
+    const card=$('#tc-'+k);if(!card)return;
+    card.classList.toggle('on',t===k);
+    card.classList.toggle('locked',!canUseTheme(k));
+  });
+  const note=$('#theme-lock-note');if(note)note.style.display=user?'none':'block';
+  renderPinUI();
+  // display toggles: show ON/OFF state, lock for signed-out
+  const lockDisp=!canUseDisplay();
+  [['#motion-toggle',motionOn()],['#perf-toggle',liteOn()],['#compact-toggle',compactOn()],['#simplify-toggle',simplifyOn()]].forEach(([id,on])=>{
+    const el=$(id);if(!el)return;
+    el.classList.toggle('done',on);
+    el.classList.toggle('locked-row',lockDisp);
+    const st=el.querySelector('.tg-state');
+    if(st)st.textContent=on?'ON':'OFF';
+  });
+  const dnote=$('#display-lock-note');if(dnote)dnote.style.display=lockDisp?'block':'none';
+}
+function liteOnSet(v){try{localStorage.setItem('ww_lite',v?'1':'0');}catch(e){}}
+function togglePerf(){
+  if(!canUseDisplay()){toast('🔒 Sign in to change display settings');return;}
+  const v=!liteOn();liteOnSet(v);document.documentElement.classList.toggle('perf',v);renderSettingsUI();
+}
+function toggleCompact(){
+  if(!canUseDisplay()){toast('🔒 Sign in to change display settings');return;}
+  const v=!compactOn();try{localStorage.setItem('ww_compact',v?'1':'0');}catch(e){}document.documentElement.classList.toggle('compact',v);renderSettingsUI();
+}
+function toggleSetSec(key){
+  const sec=$('#setsec-'+key), head=sec&&sec.previousElementSibling, caret=$('#caret-'+key);
+  if(!sec)return;
+  const collapsed=sec.classList.toggle('collapsed');
+  if(head)head.classList.toggle('collapsed',collapsed);
+  try{localStorage.setItem('ww_setsec_'+key,collapsed?'1':'0');}catch(e){}
+}
+function renderLangPills(){
+  const w=$('#lang-pills'); if(!w||!window.i18n)return;
+  const cur=window.i18n.getLang();
+  w.innerHTML=Object.entries(window.i18n.LANGS).map(([code,info])=>
+    `<button class="lang-pill ${code===cur?'on':''}" onclick="chooseLang('${code}')"><span class="lp-flag">${info.flag}</span>${info.name}</button>`
+  ).join('');
+}
+function chooseLang(code){
+  if(!window.i18n)return;
+  window.i18n.setLang(code);
+  renderLangPills();
+}
+// called by i18n.setLang after the static DOM is translated — re-render dynamic content
+window.onLangChange=function(lang){
+  try{ countdown(); }catch(e){}
+  try{ renderAll(); }catch(e){}
+  try{ renderLangPills(); }catch(e){}
+};
+function toggleSimplify(){
+  if(!canUseDisplay()){toast('🔒 Sign in to change display settings');return;}
+  const v=!simplifyOn();try{localStorage.setItem('ww_simplify',v?'1':'0');}catch(e){}applySimplify(v);renderSettingsUI();toast(v?'Simplified — extra tabs & sections hidden':'Full mode — everything shown');
+}
+// Simplify mode: hide non-essential tabs & sections to de-clutter (esp. mobile).
+// Keeps the essentials: Basecamp, Campsites, Gear, Food, Survival. Hides Itinerary,
+// Shopping, Costs, Activities, and trims secondary sections within kept pages.
+const SIMPLIFY_HIDE_TABS=['plan','shop','money','fun'];
+function applySimplify(on){
+  document.documentElement.classList.toggle('simplify',on);
+  // hide/show the secondary tabs
+  SIMPLIFY_HIDE_TABS.forEach(p=>{
+    const tab=document.querySelector('.tab[data-p="'+p+'"]');
+    if(tab)tab.style.display=on?'none':'';
+  });
+  // if the active tab is being hidden, jump back to Basecamp
+  if(on){
+    const active=document.querySelector('.tab.active');
+    if(active && SIMPLIFY_HIDE_TABS.includes(active.dataset.p)){
+      const dash=document.querySelector('.tab[data-p="dash"]');if(dash)dash.click();
+    }
+  }
+}
+function openSettings(){renderSettingsUI();$('#settings-modal').classList.add('open');}
+function closeSettings(){$('#settings-modal').classList.remove('open');}
+
+/* ---------- ambient visuals — per-theme engine ----------
+   Desktop (fine pointer, >=1024px, WebGL OK) -> Three.js scene per theme
+   Mobile / fallback -> themed 2D canvas particles
+   Themes: aurora (drift field) · ember (rising embers, camping)
+           glacier (snowfall) · topo (wireframe terrain) · classic (none) */
+let ffRAF=null,ffParticles=null,ff2dTheme=null;
+let threeRAF=null,threeEnv=null;
+
+const AMBIENT={
+  aurora:{colors2d:['126,226,168','255,196,107'],drift:'float'},
+  ember:{colors2d:['255,140,66','255,200,87','255,90,60'],drift:'rise'},
+  glacier:{colors2d:['200,235,255','150,205,250'],drift:'fall'},
+  topo:{colors2d:['88,255,155'],drift:'float'},
+  nebula:{colors2d:['210,200,255','255,160,235','160,210,255'],drift:'float'},
+  synthwave:{colors2d:['255,41,117','80,240,255'],drift:'float'},
+  botanic:{colors2d:['120,150,60','170,190,90'],drift:'rise',blend:'normal'},
+  abyss:{colors2d:['120,220,255','200,250,255'],drift:'rise'},
+  sakura:{colors2d:['255,157,189','255,200,220'],drift:'fall'},
+  carbon:{colors2d:['235,235,235'],drift:'float'},
+  dune:{colors2d:['230,180,120','250,210,150'],drift:'wind'},
 };
 
+function isDesktop(){
+  try{return window.matchMedia('(pointer: fine)').matches && innerWidth>=1024 && !('ontouchstart' in window);}catch(e){return innerWidth>=1024;}
+}
+function startAmbient(){
+  const theme=getTheme();
+  const cfg=AMBIENT[theme];
+  if(!cfg||!motionOn()){stopAmbient();return;}
+  if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const c=$('#fireflies');if(!c)return;
+  if(c.dataset.mode==='2d'){start2D(cfg,theme);return;}
+  if(c.dataset.mode==='three'){startThree(theme);return;}
+  if(isDesktop())startThree(theme);else start2D(cfg,theme);
+}
+function stopAmbient(){stop2D();stopThree();}
+
+function loadThree(){
+  return new Promise((res,rej)=>{
+    if(window.THREE)return res();
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js';
+    s.onload=res;s.onerror=rej;document.head.appendChild(s);
+  });
+}
+function softSprite(){
+  const spr=document.createElement('canvas');spr.width=spr.height=64;
+  const x=spr.getContext('2d');
+  const g=x.createRadialGradient(32,32,0,32,32,32);
+  g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.35,'rgba(255,255,255,.5)');g.addColorStop(1,'rgba(255,255,255,0)');
+  x.fillStyle=g;x.fillRect(0,0,64,64);
+  return new THREE.CanvasTexture(spr);
+}
+function makePoints(scene,sprite,count,size,colA,colB,spread,ySpread){
+  const pos=new Float32Array(count*3),col=new Float32Array(count*3);
+  const a=new THREE.Color(colA),bC=new THREE.Color(colB);
+  for(let i=0;i<count;i++){
+    pos[i*3]=(Math.random()-.5)*spread;
+    pos[i*3+1]=(Math.random()-.5)*(ySpread||spread*.7);
+    pos[i*3+2]=(Math.random()-.5)*spread;
+    const cc=a.clone().lerp(bC,Math.random());
+    col[i*3]=cc.r;col[i*3+1]=cc.g;col[i*3+2]=cc.b;
+  }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  g.setAttribute('color',new THREE.BufferAttribute(col,3));
+  const m=new THREE.PointsMaterial({size,map:sprite,vertexColors:true,transparent:true,opacity:.4,
+    blending:THREE.AdditiveBlending,depthWrite:false,sizeAttenuation:true});
+  const p=new THREE.Points(g,m);scene.add(p);return p;
+}
+
+/* ---- per-theme scene builders: return {update(t,mx,my), objects[]} ---- */
+function buildAurora(scene,sprite,camera){
+  camera.position.set(0,0,90);
+  const A=makePoints(scene,sprite,300,1.4,'#7ee2a8','#7cc8ff',200);
+  const B=makePoints(scene,sprite,110,2.0,'#ffc46b','#c5a8ff',160);
+  return {objects:[A,B],update(t,mx,my,sc){
+    A.rotation.y=t*.22;A.rotation.x=Math.sin(t*.28)*.04;
+    B.rotation.y=-t*.16;B.rotation.z=Math.cos(t*.2)*.03;
+    A.material.opacity=.28+.12*Math.sin(t*.9);
+    B.material.opacity=.24+.14*Math.sin(t*.7+1);
+    camera.position.x=mx*5;camera.position.y=-my*3.5-Math.min(sc*.004,8);camera.lookAt(0,0,0);
+  }};
+}
+function buildEmber(scene,sprite,camera){
+  camera.position.set(0,0,90);
+  const N=200;
+  const E=makePoints(scene,sprite,N,1.5,'#ff9d4a','#ff5c3a',180,150);
+  const pos=E.geometry.attributes.position;
+  const meta=Array.from({length:N},()=>({vy:.04+Math.random()*.1,ph:Math.random()*6.28,sway:.5+Math.random()*1.2}));
+  const glow=makePoints(scene,sprite,40,3.4,'#ffd27d','#ff7d3a',150,130);
+  glow.material.opacity=.18;
+  return {objects:[E,glow],update(t,mx,my,sc){
+    for(let i=0;i<N;i++){
+      let y=pos.getY(i)+meta[i].vy;
+      if(y>78){y=-78;pos.setX(i,(Math.random()-.5)*180);}
+      pos.setY(i,y);
+      pos.setX(i,pos.getX(i)+Math.sin(t*1.4+meta[i].ph)*.018*meta[i].sway);
+    }
+    pos.needsUpdate=true;
+    E.material.opacity=.34+.12*Math.sin(t*2.2);
+    glow.rotation.y=t*.1;
+    camera.position.x=mx*4;camera.position.y=-my*3;camera.lookAt(0,0,0);
+  }};
+}
+function buildGlacier(scene,sprite,camera){
+  camera.position.set(0,0,90);
+  const N=260;
+  const S=makePoints(scene,sprite,N,1.3,'#eaf6ff','#9fd4ff',200,170);
+  const pos=S.geometry.attributes.position;
+  const meta=Array.from({length:N},()=>({vy:.03+Math.random()*.08,ph:Math.random()*6.28,sway:.4+Math.random()}));
+  return {objects:[S],update(t,mx,my,sc){
+    for(let i=0;i<N;i++){
+      let y=pos.getY(i)-meta[i].vy;
+      if(y<-88){y=88;pos.setX(i,(Math.random()-.5)*200);}
+      pos.setY(i,y);
+      pos.setX(i,pos.getX(i)+Math.sin(t*.9+meta[i].ph)*.02*meta[i].sway);
+    }
+    pos.needsUpdate=true;
+    S.material.opacity=.34+.1*Math.sin(t*.8);
+    camera.position.x=mx*4;camera.position.y=-my*3;camera.lookAt(0,0,0);
+  }};
+}
+function buildTopo(scene,sprite,camera){
+  camera.position.set(0,26,70);
+  const geo=new THREE.PlaneGeometry(340,340,64,64);
+  geo.rotateX(-Math.PI/2);
+  const mat=new THREE.MeshBasicMaterial({wireframe:true,color:0x58ff9b,transparent:true,opacity:.13});
+  const mesh=new THREE.Mesh(geo,mat);mesh.position.y=-24;scene.add(mesh);
+  const pos=geo.attributes.position;
+  const dots=makePoints(scene,sprite,70,1.6,'#58ff9b','#a8ffd0',240,90);
+  dots.material.opacity=.22;
+  return {objects:[mesh,dots],update(t,mx,my,sc){
+    for(let i=0;i<pos.count;i++){
+      const x=pos.getX(i),z=pos.getZ(i);
+      pos.setY(i,5.5*Math.sin(x*.045+t*.7)+4*Math.cos(z*.05+t*.5)+2.2*Math.sin((x+z)*.03+t*.9));
+    }
+    pos.needsUpdate=true;
+    mesh.rotation.y=t*.03;
+    dots.rotation.y=-t*.05;
+    camera.position.x=mx*6;camera.position.y=26-my*4+Math.min(sc*.006,10);camera.lookAt(0,-14,0);
+  }};
+}
+function buildNebula(scene,sprite,camera){
+  camera.position.set(0,0,100);
+  const stars=makePoints(scene,sprite,520,1.0,'#ffffff','#b9a8ff',260,200);
+  stars.material.opacity=.5;
+  const tint=makePoints(scene,sprite,140,1.8,'#ff7ad9','#8fd0ff',220,170);
+  tint.material.opacity=.25;
+  // shooting star: single bright point
+  const shoot=makePoints(scene,sprite,1,4.5,'#ffffff','#ffffff',1,1);
+  const sp=shoot.geometry.attributes.position;
+  let sx=999,sy=0,svx=0,svy=0,nextAt=2;
+  return {objects:[stars,tint,shoot],update(t,mx,my,sc){
+    stars.rotation.y=t*.05;stars.rotation.z=t*.012;
+    tint.rotation.y=-t*.035;
+    stars.material.opacity=.4+.15*Math.sin(t*1.2);
+    if(t>nextAt&&sx>900){sx=-160;sy=40+Math.random()*60;svx=2.4+Math.random()*1.6;svy=-(.6+Math.random()*.5);}
+    if(sx<900){sx+=svx;sy+=svy;sp.setXYZ(0,sx,sy,-30);sp.needsUpdate=true;
+      shoot.material.opacity=Math.max(0,.9-Math.abs(sx)/200);
+      if(sx>180){sx=999;nextAt=t+2.5+Math.random()*4;shoot.material.opacity=0;}}
+    camera.position.x=mx*6;camera.position.y=-my*4-Math.min(sc*.005,10);camera.lookAt(0,0,0);
+  }};
+}
+function buildSynthwave(scene,sprite,camera){
+  camera.position.set(0,9,72);
+  const geo=new THREE.PlaneGeometry(480,480,48,48);
+  geo.rotateX(-Math.PI/2);
+  const grid=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({wireframe:true,color:0xff2975,transparent:true,opacity:.3}));
+  grid.position.y=-16;scene.add(grid);
+  const sun=makePoints(scene,sprite,1,150,'#ff7ad9','#ff7ad9',1,1);
+  sun.geometry.attributes.position.setXYZ(0,0,26,-180);sun.geometry.attributes.position.needsUpdate=true;
+  sun.material.opacity=.5;
+  const stars=makePoints(scene,sprite,160,1.1,'#50f0ff','#ffffff',300,140);
+  stars.material.opacity=.3;
+  const STEP=10;
+  return {objects:[grid,sun,stars],update(t,mx,my,sc){
+    grid.position.z=((t*46)%STEP);
+    stars.rotation.y=t*.02;
+    sun.material.opacity=.42+.1*Math.sin(t*1.6);
+    camera.position.x=mx*7;camera.position.y=9-my*3+Math.min(sc*.004,6);camera.lookAt(0,-2,-60);
+  }};
+}
+function buildBotanic(scene,sprite,camera){
+  camera.position.set(0,0,90);
+  const N=150;
+  const P=makePoints(scene,sprite,N,2.0,'#7a9a3c','#b9c468',200,160);
+  P.material.blending=THREE.NormalBlending;P.material.opacity=.5;
+  const pos=P.geometry.attributes.position;
+  const meta=Array.from({length:N},()=>({vy:.015+Math.random()*.05,ph:Math.random()*6.28,sw:.6+Math.random()}));
+  return {objects:[P],update(t,mx,my,sc){
+    for(let i=0;i<N;i++){
+      let y=pos.getY(i)+meta[i].vy;
+      if(y>85){y=-85;pos.setX(i,(Math.random()-.5)*200);}
+      pos.setY(i,y);
+      pos.setX(i,pos.getX(i)+Math.sin(t*.8+meta[i].ph)*.02*meta[i].sw);
+    }
+    pos.needsUpdate=true;
+    camera.position.x=mx*4;camera.position.y=-my*3-Math.min(sc*.003,6);camera.lookAt(0,0,0);
+  }};
+}
+function buildAbyss(scene,sprite,camera){
+  camera.position.set(0,0,90);
+  const N=230;
+  const B=makePoints(scene,sprite,N,1.5,'#9fe8ff','#e6fbff',200,180);
+  const pos=B.geometry.attributes.position;
+  const meta=Array.from({length:N},()=>({vy:.05+Math.random()*.14,ph:Math.random()*6.28,sw:.6+Math.random()*1.4,sz:Math.random()}));
+  return {objects:[B],update(t,mx,my,sc){
+    for(let i=0;i<N;i++){
+      let y=pos.getY(i)+meta[i].vy;
+      if(y>95){y=-95;pos.setX(i,(Math.random()-.5)*200);}
+      pos.setY(i,y);
+      pos.setX(i,pos.getX(i)+Math.sin(t*1.8+meta[i].ph)*.05*meta[i].sw);
+    }
+    pos.needsUpdate=true;
+    B.material.opacity=.3+.1*Math.sin(t*.7);
+    camera.position.x=Math.sin(t*.4)*2+mx*4;camera.position.y=-my*3-Math.min(sc*.004,8);camera.lookAt(0,0,0);
+  }};
+}
+function buildSakura(scene,sprite,camera){
+  camera.position.set(0,0,90);
+  const N=170;
+  const P=makePoints(scene,sprite,N,2.0,'#ff9dbd','#ffd0e0',210,180);
+  const pos=P.geometry.attributes.position;
+  const meta=Array.from({length:N},()=>({vy:.025+Math.random()*.07,ph:Math.random()*6.28,sw:1+Math.random()*2}));
+  return {objects:[P],update(t,mx,my,sc){
+    for(let i=0;i<N;i++){
+      let y=pos.getY(i)-meta[i].vy;
+      if(y<-95){y=95;pos.setX(i,(Math.random()-.5)*210);}
+      pos.setY(i,y);
+      pos.setX(i,pos.getX(i)+Math.sin(t*1.1+meta[i].ph)*.045*meta[i].sw);
+    }
+    pos.needsUpdate=true;
+    P.material.opacity=.4+.12*Math.sin(t*.9);
+    camera.position.x=mx*4;camera.position.y=-my*3-Math.min(sc*.004,8);camera.lookAt(0,0,0);
+  }};
+}
+function buildCarbon(scene,sprite,camera){
+  camera.position.set(0,0,86);
+  const knot=new THREE.Mesh(
+    new THREE.TorusKnotGeometry(24,7,110,14),
+    new THREE.MeshBasicMaterial({wireframe:true,color:0xffffff,transparent:true,opacity:.07}));
+  knot.position.set(34,4,-30);scene.add(knot);
+  const dots=makePoints(scene,sprite,70,1.2,'#ffffff','#d8f021',240,160);
+  dots.material.opacity=.16;
+  return {objects:[knot,dots],update(t,mx,my,sc){
+    knot.rotation.x=t*.3;knot.rotation.y=t*.42;
+    dots.rotation.y=t*.03;
+    camera.position.x=mx*5;camera.position.y=-my*3-Math.min(sc*.004,7);camera.lookAt(0,0,0);
+  }};
+}
+function buildDune(scene,sprite,camera){
+  camera.position.set(0,0,90);
+  const N=220;
+  const S=makePoints(scene,sprite,N,1.3,'#e8b478','#ffd9a0',220,140);
+  const pos=S.geometry.attributes.position;
+  const meta=Array.from({length:N},()=>({vx:.12+Math.random()*.3,ph:Math.random()*6.28}));
+  const sun=makePoints(scene,sprite,1,120,'#ffb86b','#ffb86b',1,1);
+  sun.geometry.attributes.position.setXYZ(0,-70,42,-150);sun.geometry.attributes.position.needsUpdate=true;
+  sun.material.opacity=.4;
+  return {objects:[S,sun],update(t,mx,my,sc){
+    const gust=1+.5*Math.sin(t*1.3);
+    for(let i=0;i<N;i++){
+      let x=pos.getX(i)+meta[i].vx*gust;
+      if(x>120){x=-120;pos.setY(i,(Math.random()-.5)*140);}
+      pos.setX(i,x);
+      pos.setY(i,pos.getY(i)+Math.sin(t*2+meta[i].ph)*.012);
+    }
+    pos.needsUpdate=true;
+    S.material.opacity=.3+.12*Math.sin(t*1.1);
+    camera.position.x=mx*4;camera.position.y=-my*3-Math.min(sc*.004,7);camera.lookAt(0,0,0);
+  }};
+}
+const THREE_BUILDERS={aurora:buildAurora,ember:buildEmber,glacier:buildGlacier,topo:buildTopo,
+  nebula:buildNebula,synthwave:buildSynthwave,botanic:buildBotanic,abyss:buildAbyss,
+  sakura:buildSakura,carbon:buildCarbon,dune:buildDune};
+
+async function startThree(theme){
+  const c=$('#fireflies');if(!c)return;
+  try{await loadThree();}catch(e){start2D(AMBIENT[theme],theme);return;}
+  if(threeEnv&&threeEnv.theme===theme){threeEnv.running=true;cancelAnimationFrame(threeRAF);threeEnv.loop();return;}
+  if(!threeEnv){
+    let renderer;
+    try{renderer=new THREE.WebGLRenderer({canvas:c,alpha:true,antialias:false,powerPreference:'low-power'});}
+    catch(e){start2D(AMBIENT[theme],theme);return;}
+    c.dataset.mode='three';
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
+    const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,1,400);
+    let tx=0,ty=0;
+    const onMouse=e=>{tx=(e.clientX/innerWidth-.5)*2;ty=(e.clientY/innerHeight-.5)*2;};
+    const onResize=()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight,false);};
+    window.addEventListener('mousemove',onMouse,{passive:true});
+    window.addEventListener('resize',onResize);
+    onResize();
+    threeEnv={renderer,camera,scene:new THREE.Scene(),sprite:softSprite(),t:0,mx:0,my:0,
+      get tx(){return tx},get ty(){return ty},running:true,theme:null,built:null,loop:null};
+  }
+  const env=threeEnv;
+  // clear previous theme objects
+  if(env.built){env.built.objects.forEach(o=>{env.scene.remove(o);o.geometry&&o.geometry.dispose();o.material&&o.material.dispose();});}
+  env.theme=theme;env.running=true;
+  env.built=THREE_BUILDERS[theme](env.scene,env.sprite,env.camera);
+  cancelAnimationFrame(threeRAF);
+  env.loop=function loop(){
+    if(!env.running)return;
+    if(document.hidden){threeRAF=requestAnimationFrame(env.loop);return;}
+    env.t+=.0016;
+    env.mx+=(env.tx-env.mx)*.025;env.my+=(env.ty-env.my)*.025;
+    env.built.update(env.t,env.mx,env.my,(window.scrollY||0));
+    env.renderer.render(env.scene,env.camera);
+    threeRAF=requestAnimationFrame(env.loop);
+  };
+  env.loop();
+}
+function stopThree(){
+  cancelAnimationFrame(threeRAF);
+  if(threeEnv){threeEnv.running=false;try{threeEnv.renderer.clear();}catch(e){}}
+}
+function start2D(cfg,theme){
+  const c=$('#fireflies');if(!c)return;
+  if(c.dataset.mode==='three')return;
+  c.dataset.mode='2d';
+  const ctx=c.getContext('2d');if(!ctx)return;
+  const DPR=Math.min(window.devicePixelRatio||1,2);
+  function size(){c.width=innerWidth*DPR;c.height=innerHeight*DPR;}
+  size();window.addEventListener('resize',size);
+  const N=innerWidth<700?18:36;
+  if(!ffParticles||ff2dTheme!==theme){
+    ff2dTheme=theme;
+    const rise=cfg.drift==='rise',fall=cfg.drift==='fall',wind=cfg.drift==='wind';
+    ffParticles=Array.from({length:N},()=>({
+      x:Math.random()*c.width,y:Math.random()*c.height,
+      r:(Math.random()*1.5+0.7)*DPR,
+      vx:wind?(.18+Math.random()*.4)*DPR:(Math.random()-.5)*.14*DPR,
+      vy:rise?-(.08+Math.random()*.2)*DPR:fall?(.06+Math.random()*.16)*DPR:(Math.random()-.5)*.12*DPR,
+      ph:Math.random()*6.28,sp:.006+Math.random()*.012,
+      col:cfg.colors2d[Math.floor(Math.random()*cfg.colors2d.length)]
+    }));
+  }
+  cancelAnimationFrame(ffRAF);
+  (function tick(){
+    if(document.hidden){ffRAF=requestAnimationFrame(tick);return;}
+    ctx.clearRect(0,0,c.width,c.height);
+    for(const p of ffParticles){
+      p.x+=p.vx;p.y+=p.vy;p.ph+=p.sp;
+      if(p.x<0)p.x=c.width;if(p.x>c.width)p.x=0;
+      if(p.y<-20)p.y=c.height+10;if(p.y>c.height+20)p.y=-10;
+      const a=.16+.45*Math.abs(Math.sin(p.ph));
+      const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r*5);
+      g.addColorStop(0,`rgba(${p.col},${a})`);g.addColorStop(1,`rgba(${p.col},0)`);
+      ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,p.r*5,0,7);ctx.fill();
+    }
+    ffRAF=requestAnimationFrame(tick);
+  })();
+}
+function stop2D(){
+  cancelAnimationFrame(ffRAF);
+  const c=$('#fireflies');
+  if(c&&c.dataset.mode==='2d'){try{c.getContext('2d').clearRect(0,0,c.width,c.height);}catch(e){}}
+}
+
+/* ---------- GSAP entrance animations ---------- */
+let revObserver=null;
+function ensureObserver(){
+  if(revObserver)return revObserver;
+  revObserver=new IntersectionObserver(entries=>{
+    entries.forEach(en=>{if(en.isIntersecting){en.target.classList.add('in');revObserver.unobserve(en.target);}});
+  },{threshold:.06,rootMargin:'0px 0px -4% 0px'});
+  return revObserver;
+}
+function animatePanel(panel){
+  if(!motionOn()||getTheme()==='classic'){
+    panel.querySelectorAll('.rv').forEach(el=>el.classList.add('in'));
+    return;
+  }
+  const kids=panel.querySelectorAll('.card,.icard,.site,.meal,.gear-item,.tl-item,.role,.quicklink,details.faq,.stop-row,.exp-row');
+  const obs=ensureObserver();let i=0;
+  kids.forEach(el=>{
+    if(el.classList.contains('in'))return;
+    if(!el.classList.contains('rv')){
+      el.style.transitionDelay=((i%8)*45)+'ms';i++;
+      el.classList.add('rv');obs.observe(el);
+    }
+  });
+}
+function unlockReveals(){document.querySelectorAll('.rv').forEach(el=>el.classList.add('in'));}
+function animateBoot(){
+  if(!window.gsap||!motionOn())return;
+  gsap.fromTo('header .brand',{opacity:0,y:-16},{opacity:1,y:0,duration:.7,ease:'power3.out'});
+  gsap.fromTo('header .head-right',{opacity:0,y:-10},{opacity:1,y:0,duration:.7,delay:.12,ease:'power3.out'});
+  gsap.fromTo('nav .tab',{opacity:0,y:10},{opacity:1,y:0,duration:.4,stagger:.04,delay:.2,ease:'power2.out',clearProps:'all'});
+}
+
+/* ---------- progress + share ---------- */
+function renderProgress(){
+  const w=$('#progress-wrap');if(!w)return;
+  // shared trip readiness
+  let total=0,claimed=0;
+  gearData().forEach(c=>c.items.forEach(it=>{total++;if((state.gearClaims[it.id]||[]).length)claimed++;}));
+  let sTotal=0,sDone=0;
+  SHOP.forEach((s,si)=>s.items.forEach((_,ii)=>{sTotal++;if(state.checks['shop-'+si+'-'+ii])sDone++;}));
+  const sitePicked=state.chosenSite?100:0;
+  const crewPct=Math.min(100,Math.round(state.crew.length/4*100));
+  const rows=[['Crew added',crewPct],['Site chosen',sitePicked],['Gear claimed',total?Math.round(claimed/total*100):0],['Shopping done',sTotal?Math.round(sDone/sTotal*100):0]];
+  // personal packing row driven by "who am I"
+  const me=whoAmI();
+  if(me && state.crew.includes(me)){
+    const st=packStatsFor(me);
+    rows.push(['My packing ('+me.split(' ')[0]+')', st.total?Math.round(st.packed/st.total*100):0]);
+  }
+  w.innerHTML=rows.map(([l,v])=>`<div class="progress-row"><span class="pl">${l}</span><div class="progress-track"><div class="progress-fill" style="width:${v}%"></div></div><span class="pv">${v}%</span></div>`).join('');
+}
+function copySettle(){
+  if(!state.crew.length||!state.expenses.length){toast('Nothing to copy yet');return;}
+  const total=state.expenses.reduce((s,e)=>s+e.amt,0);
+  const share=total/state.crew.length;
+  const bal={};state.crew.forEach(c=>bal[c]=-share);
+  state.expenses.forEach(e=>{if(bal[e.who]!==undefined)bal[e.who]+=e.amt;});
+  const debtors=[],creditors=[];
+  Object.entries(bal).forEach(([n,b])=>{if(b<-0.005)debtors.push([n,-b]);else if(b>0.005)creditors.push([n,b]);});
+  debtors.sort((a,b)=>b[1]-a[1]);creditors.sort((a,b)=>b[1]-a[1]);
+  let lines=['🏕 Camping 2026 — settle up','Total: $'+total.toFixed(2)+' · per person: $'+share.toFixed(2),''];
+  let di=0,ci=0;
+  while(di<debtors.length&&ci<creditors.length){
+    const pay=Math.min(debtors[di][1],creditors[ci][1]);
+    lines.push(debtors[di][0]+' pays '+creditors[ci][0]+' $'+pay.toFixed(2));
+    debtors[di][1]-=pay;creditors[ci][1]-=pay;
+    if(debtors[di][1]<0.005)di++;if(creditors[ci][1]<0.005)ci++;
+  }
+  const txt=lines.join('\n');
+  if(navigator.clipboard){navigator.clipboard.writeText(txt).then(()=>toast('Settle-up copied — paste in the group chat')).catch(()=>toast(txt));}
+  else toast(txt);
+}
+async function shareSite(){
+  const data={title:'Camping 2026 — our camping plan',text:'Our June 19–21 camping plan — gear, route, costs, everything:',url:location.href};
+  if(navigator.share){try{await navigator.share(data);}catch(e){}}
+  else{try{await navigator.clipboard.writeText(location.href);toast('Link copied — paste it in the group chat');}catch(e){toast(location.href);}}
+}
+
+function exportJSON(){
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');
+  a.href=url;a.download='wildweekend-crew-data.json';a.click();URL.revokeObjectURL(url);
+}
+function importJSON(input){
+  const file=input.files[0];if(!file)return;const r=new FileReader();
+  r.onload=()=>{try{state=Object.assign(defaultState(),JSON.parse(r.result));persist();renderAll();toast('Crew data imported');}catch(e){toast('Could not read that file');}};
+  r.readAsText(file);input.value='';
+}
+function exportPDF(){window.print();}
+function resetData(){
+  if(!canReset()){toast('🔒 Only an admin or leader can reset the trip');return;}
+  if(confirm('Reset everything? This clears crew, gear, costs, votes, stops, roles & checklists for EVERYONE on the live trip.')){state=defaultState();persist();renderAll();}
+}
+
+/* ---------- tabs / boot ---------- */
+function initTabs(){
+  const LOCKED_TABS=['gear','food','shop','money'];
+  $$('.tab').forEach(t=>t.addEventListener('click',()=>{
+    // Signed-out users cannot open locked pages — bounce to Basecamp with a hint.
+    if(LOCKED_TABS.includes(t.dataset.p) && !isSignedIn()){
+      toast('🔒 '+window.t('lock.signInToView','Sign in to view this page'));
+      const dash=document.querySelector('.tab[data-p="dash"]'); if(dash&&!dash.classList.contains('active')) dash.click();
+      return;
+    }
+    $$('.tab').forEach(x=>x.classList.remove('active'));
+    $$('.panel').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');const panel=document.getElementById(t.dataset.p);panel.classList.add('active');
+    animatePanel(panel);
+    try{ trackPresence(); }catch(e){}
+    window.scrollTo({top:0,behavior:'smooth'});
+  }));
+  $$('.fbtn[data-f]').forEach(b=>b.addEventListener('click',()=>{
+    $$('.fbtn[data-f]').forEach(x=>x.classList.remove('on'));b.classList.add('on');foodFilter=b.dataset.f;renderFood();
+  }));
+}
+function countdown(){
+  const target=new Date('2026-06-19T08:00:00-04:00');const now=new Date();
+  const diff=Math.ceil((target-now)/(86400000));
+  const n=$('#cd-num'),l=$('#cd-lbl');
+  if(diff>0){n.textContent=diff;l.textContent=diff===1?t('cd.dayToGo','day to go'):t('cd.daysToGo','days to go');}
+  else if(diff===0){n.textContent='GO';l.textContent=t('cd.today',"it's today");}
+  else{n.textContent='✓';l.textContent=t('cd.done','trip done');}
+}
+// Signed-out users see the trip as if empty — crew/costs/etc all look reset.
+// The real data lives in memory and reappears the instant they sign in.
+// (Visitors — signed in but unlinked — DO see crew data; only the cost page is gated for them.)
+function hideDataForViewer(){ return accessLevel()==='none'; }
+function renderAll(){
+  // Swap in an empty view for visitors, then restore the real state afterward.
+  const realState = state;
+  if(hideDataForViewer()){
+    state = Object.assign(defaultState(), { chosenSite: realState.chosenSite });
+  }
+  renderCrew();renderExpenses();renderFood();renderMeals();renderPrep();renderShop();
+  renderTips();renderSituations();renderFAQ();renderActivities();renderStops();renderSites();renderProgress();
+  renderQuickLinks();renderPresence();renderMyPacking();renderDepartureBanner();
+  state = realState; // restore real data in memory
+  const active=document.querySelector('.panel.active');if(active)animatePanel(active);
+}
+async function boot(){
+  // --- CORE UI FIRST: must run no matter what, so the app is always usable & typeable ---
+  try{ loadLocal(); }catch(e){ console.warn('loadLocal',e); }
+  try{ if(localStorage.getItem('ww_banner_hidden'))$('#help-banner').style.display='none'; }catch(e){}
+  try{ initTabs(); }catch(e){ console.warn('initTabs',e); }
+  try{ initMapViewer(); }catch(e){ console.warn('initMapViewer',e); }
+  try{
+    const tt=document.getElementById('to-top');
+    if(tt) window.addEventListener('scroll',()=>{ tt.classList.toggle('show', window.scrollY>500); },{passive:true});
+  }catch(e){}
+  try{ countdown(); }catch(e){}
+  try{
+    applyGateClasses();
+    enforceDisplayDefaults();
+    applySimplify(simplifyOn());
+    try{ if(window.i18n){ document.documentElement.lang=window.i18n.getLang(); document.documentElement.dir=window.i18n.LANGS[window.i18n.getLang()].dir; window.i18n.applyI18n(); } renderLangPills(); }catch(e){console.warn('i18n init',e);}
+  }catch(e){}
+  try{ renderAll(); }catch(e){ console.warn('renderAll',e); }
+  try{ setSync('local','Local'); }catch(e){}
+  try{ renderSettingsUI(); }catch(e){}
+
+  // --- NICE-TO-HAVE (animations): never allowed to break the app ---
+  try{ if(window.gsap) animateBoot(); }catch(e){}
+  try{ startAmbient(); }catch(e){ console.warn('ambient',e); }
+
+  // --- SERVICE WORKER: register WITHOUT the reload-on-controllerchange loop ---
+  try{
+    if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+      navigator.serviceWorker.register('sw.js').catch(()=>{});
+    }
+  }catch(e){}
+
+  // --- SUPABASE / AUTH: fully optional; failure leaves the app in working local mode ---
+  try{
+    if(window.supabase && typeof window.supabase.createClient==='function'){
+      await initSupabase();
+      try{ renderAll(); }catch(e){}
+    } else {
+      setSync('local','Local'); // supabase lib didn't load — app still fully works locally
+    }
+  }catch(e){ console.warn('supabase boot skipped:',e); try{setSync('local','Local');}catch(_){} }
+}
+// run boot but never let a thrown error leave the page frozen
+boot().catch(e=>{ console.error('boot failed, app still usable:',e); });
