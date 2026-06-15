@@ -25,7 +25,17 @@ function defaultState(){
 }
 
 /* "Who am I" — per device, never synced. Drives the personal packing list + progress. */
-function whoAmI(){ try{ return isSignedIn()?(localStorage.getItem('ww_whoami')||''):''; }catch(e){ return ''; } }
+function whoAmI(){
+  try{
+    if(!isSignedIn()) return '';
+    const explicit=localStorage.getItem('ww_whoami');
+    if(explicit && state.crew.includes(explicit)) return explicit;
+    // Not set (or stale) — auto-derive from the crew member linked to this email.
+    const mine=myCrew();
+    if(mine){ try{ localStorage.setItem('ww_whoami',mine); }catch(e){} return mine; }
+    return explicit||'';
+  }catch(e){ return ''; }
+}
 function setWhoAmI(name){ if(!isSignedIn()){toast('🔒 Sign in to use the crew features');return;} try{ localStorage.setItem('ww_whoami',name||''); }catch(e){} renderGear(); renderProgress(); renderMyPacking(); }
 
 /* Build the packing list for a given crew member:
@@ -189,7 +199,7 @@ async function initSupabase(){
     sb.auth.onAuthStateChange((_e,session)=>{ user=session?.user||null; applyAccess(); });
     const {data:{session}}=await sb.auth.getSession(); user=session?.user||null;
     await applyAccess();
-  }catch(e){ console.warn('supabase init:',e.message||e); setSync('local','Local (no connection)'); renderAuth(); }
+  }catch(e){ console.warn('supabase init:',e.message||e); setSync('local','Local'); renderAuth(); }
 }
 
 async function applyAccess(){
@@ -303,11 +313,19 @@ async function connectLive(){
   try{
     const {data,error}=await sb.from('trips').select('data').eq('id',TRIP_ID).maybeSingle();
     if(error) throw error;
-    if(data && data.data && Object.keys(data.data).length){
+    const remoteHasData = data && data.data && Object.keys(data.data).length;
+    const remoteCrew = remoteHasData ? ((data.data.crew||[]).length) : 0;
+    const localCrew = (state.crew||[]).length;
+    if(remoteHasData && (remoteCrew>0 || localCrew===0)){
+      // Remote has real crew data, OR local is empty too — always trust remote in these cases.
+      state=Object.assign(defaultState(),data.data);
+    } else if(remoteHasData){
+      // Remote exists but has NO crew while local DOES — keep the richer one by rev, never blank the crew.
       const remote=Object.assign(defaultState(),data.data);
-      if((remote.rev||0) >= (state.rev||0)) state=remote;
+      if((remote.rev||0) > (state.rev||0)) state=remote;
     } else {
-      await sb.from('trips').upsert({id:TRIP_ID,data:state});
+      // Remote genuinely empty — only seed it from local if local actually has crew data.
+      if(localCrew>0){ await sb.from('trips').upsert({id:TRIP_ID,data:state}); }
     }
     saveLocal();
     // If this email is already linked to a crew member, sync "who am I" to it.
@@ -342,7 +360,12 @@ async function connectLive(){
     await loadAdminConfig();
     subscribeAdminConfig();
     setSync('live','Live');
-  }catch(e){ console.warn('connectLive:',e.message||e); liveReady=false; setSync('local','Local (no connection)'); }
+  }catch(e){
+    console.warn('connectLive:',e.message||e); liveReady=false; setSync('local','Local');
+    try{ loadLocal(); }catch(_){}
+    try{ const mine=myCrew(); if(mine) localStorage.setItem('ww_whoami',mine); }catch(_){}
+    applyGateClasses(); renderAuth(); renderAll();
+  }
 }
 function disconnectLive(){
   liveReady=false;onlineCount=0;presenceList=[];renderPresence();
@@ -475,7 +498,8 @@ function renderPresence(){
    Not referenced anywhere visible to other users.
    ============================================================ */
 function openAdmin(){
-  if(!isOwner()){return;}
+  if(!isOwnerReal()){return;}
+  if(viewAs){ viewAs=null; applyGateClasses(); renderAuth(); renderAll(); } // exit any preview first
   renderAdminPresence();
   renderAdminConfigUI();
   renderAdminStats();
@@ -2806,20 +2830,10 @@ function countdown(){
   else if(diff===0){n.textContent='GO';l.textContent=t('cd.today',"it's today");}
   else{n.textContent='✓';l.textContent=t('cd.done','trip done');}
 }
-// Signed-out users see the trip as if empty — crew/costs/etc all look reset.
-// The real data lives in memory and reappears the instant they sign in.
-// (Visitors — signed in but unlinked — DO see crew data; only the cost page is gated for them.)
-function hideDataForViewer(){ return accessLevel()==='none'; }
 function renderAll(){
-  // Swap in an empty view for visitors, then restore the real state afterward.
-  const realState = state;
-  if(hideDataForViewer()){
-    state = Object.assign(defaultState(), { chosenSite: realState.chosenSite });
-  }
   renderCrew();renderExpenses();renderFood();renderMeals();renderPrep();renderShop();
   renderTips();renderSituations();renderFAQ();renderActivities();renderStops();renderSites();renderProgress();
   renderQuickLinks();renderPresence();renderMyPacking();renderDepartureBanner();
-  state = realState; // restore real data in memory
   const active=document.querySelector('.panel.active');if(active)animatePanel(active);
 }
 async function boot(){
