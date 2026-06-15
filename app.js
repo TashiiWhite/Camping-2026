@@ -21,7 +21,7 @@ let state = defaultState();
 function defaultState(){
   return { rev:0, by:'', crew:[], crewMeta:{}, gear:null, gearArchive:[], gearClaims:{}, gearPacked:{}, personalItems:{},
     expenses:[], votes:{}, roles:{}, checks:{}, stops:[], chosenSite:'',
-    customFood:[], timelineExtra:[], shopBought:{}, prepEdits:{}, mealEdits:{} };
+    customFood:[], timelineExtra:[], timelineEdits:{}, shopBought:{}, prepEdits:{}, mealEdits:{} };
 }
 
 /* "Who am I" — per device, never synced. Drives the personal packing list + progress. */
@@ -162,6 +162,13 @@ function applyGateClasses(){
   h.classList.toggle('can-edit', canEdit());
   h.classList.toggle('can-manage', canManage());
   h.dataset.access=l;
+  // If signed out while on a locked page, bounce to Basecamp (can't view locked pages).
+  if(l==='none'){
+    const active=document.querySelector('.panel.active');
+    if(active && ['gear','food','shop','money'].includes(active.id)){
+      const dash=document.querySelector('.tab[data-p="dash"]'); if(dash) dash.click();
+    }
+  }
 }
 // Regular campers/visitors may own only 1 crew member; leaders/admins unlimited.
 function canAddCrew(){
@@ -204,6 +211,8 @@ async function applyAccess(){
     setSync('local','Local — sign in for live');
     state=defaultState();
     try{ await loadAdminConfig(); }catch(e){}
+    // Track anonymous visitors too (so the admin sees signed-out traffic).
+    try{ if(sb){ recordVisit(); startSessionTimer(); } }catch(e){}
   }
   renderAll();
 }
@@ -314,6 +323,7 @@ async function connectLive(){
         if(status==='SUBSCRIBED'){
           liveReady=true; setSync('live','Live');
           try{await trackPresence();}catch(e){}
+          try{ recordVisit(); startSessionTimer(); }catch(e){}
         }
       });
     // admin config (banner + signup flag) — load + subscribe for everyone
@@ -333,10 +343,86 @@ async function trackPresence(){
     await liveChannel.track({
       name:user?.user_metadata?.full_name||user?.email||'crew',
       email:user?.email||'',
+      role:realLevel(),
       tab:currentTabName(),
       at:Date.now()
     });
   }catch(e){}
+}
+
+/* ============================================================
+   ANALYTICS — per-visitor visits + time-on-site, written to Supabase.
+   Works for signed-in emails AND anonymous visitors (anon:<clientid>).
+   Counters are computed live in the admin dashboard from presence + these rows.
+   ============================================================ */
+let _sessionStart=Date.now(), _analyticsFlushT=null, _visitRecorded=false, _secondsBank=0;
+function analyticsId(){ return myEmail() ? myEmail() : ('anon:'+CLIENT_ID); }
+function analyticsRole(){ return realLevel(); } // none|visitor|camper|leader|admin
+// Record a visit (one per page load / session) and ensure the visitor row exists.
+async function recordVisit(){
+  if(!sb||_visitRecorded)return;
+  _visitRecorded=true;
+  const id=analyticsId(), email=myEmail()||null, isAnon=!email;
+  const now=new Date().toISOString();
+  try{
+    const {data}=await sb.from('site_visitors').select('visits,seconds,first_seen').eq('id',id).maybeSingle();
+    if(data){
+      await sb.from('site_visitors').update({
+        last_seen:now, visits:(data.visits||0)+1, role:analyticsRole(),
+        display_name:(user?.user_metadata?.full_name||user?.email||'visitor'), updated_at:now
+      }).eq('id',id);
+    }else{
+      await sb.from('site_visitors').insert({
+        id, email, is_anon:isAnon, role:analyticsRole(),
+        display_name:(user?.user_metadata?.full_name||user?.email||'visitor'),
+        first_seen:now, last_seen:now, visits:1, seconds:0, updated_at:now
+      });
+    }
+    // bump the daily rollup
+    const day=now.slice(0,10);
+    const {data:d}=await sb.from('site_daily').select('visits').eq('day',day).maybeSingle();
+    if(d) await sb.from('site_daily').update({visits:(d.visits||0)+1,updated_at:now}).eq('day',day);
+    else  await sb.from('site_daily').insert({day,visits:1,uniques:1,updated_at:now});
+  }catch(e){ console.warn('recordVisit',e.message||e); }
+}
+// Periodically flush accumulated seconds-on-site to the visitor row.
+function startSessionTimer(){
+  _sessionStart=Date.now();
+  clearInterval(_analyticsFlushT);
+  _analyticsFlushT=setInterval(flushSeconds, 60000); // every 60s
+  window.addEventListener('beforeunload', flushSecondsSync);
+  document.addEventListener('visibilitychange',()=>{ if(document.hidden) flushSeconds(); });
+}
+async function flushSeconds(){
+  if(!sb)return;
+  const add=Math.round((Date.now()-_sessionStart)/1000);
+  if(add<=0)return; _sessionStart=Date.now();
+  const id=analyticsId();
+  try{
+    const {data}=await sb.from('site_visitors').select('seconds').eq('id',id).maybeSingle();
+    const total=((data&&data.seconds)||0)+add;
+    await sb.from('site_visitors').update({seconds:total,last_seen:new Date().toISOString()}).eq('id',id);
+  }catch(e){}
+}
+function flushSecondsSync(){
+  // best-effort on unload using sendBeacon-style fire-and-forget
+  try{ flushSeconds(); }catch(e){}
+}
+// Live counts by role, computed from current presence list (everyone online right now).
+function liveRoleCounts(){
+  const c={signedOut:0,visitor:0,camper:0,leader:0,admin:0,online:0};
+  presenceList.forEach(p=>{
+    c.online++;
+    const r=p.role||(p.email?'camper':'none');
+    if(r==='none') c.signedOut++;
+    else if(r==='visitor') c.visitor++;
+    else if(r==='leader'){ c.leader++; } // leader counts as camper for the "camper" tally too
+    else if(r==='admin') c.admin++;
+    else c.camper++;
+  });
+  // Per spec: leader counts as a camper for live data (but keeps its own role label).
+  c.camperIncLeaders=c.camper+c.leader;
+  return c;
 }
 async function loadAdminConfig(){
   if(!sb)return;
@@ -385,7 +471,13 @@ function openAdmin(){
   adminTab('presence');
   $('#admin-modal').classList.add('open');
 }
-function closeAdmin(){ $('#admin-modal').classList.remove('open'); }
+function closeAdmin(){ $('#admin-modal').classList.remove('open'); adminStatsOpen=false; }
+function openAdminGuide(){
+  if(!isOwnerReal())return;
+  const o=$('#ag-owner'); if(o)o.textContent=OWNER_EMAIL;
+  $('#admin-guide-modal').classList.add('open');
+}
+function closeAdminGuide(){ $('#admin-guide-modal').classList.remove('open'); }
 
 function adminTab(name){
   ['presence','banner','users','reports','data'].forEach(t=>{
@@ -393,6 +485,8 @@ function adminTab(name){
     if(sec)sec.style.display=(t===name)?'block':'none';
     if(btn)btn.classList.toggle('on',t===name);
   });
+  adminStatsOpen=(name==='reports');
+  if(name==='reports') renderAdminStats();
 }
 
 /* --- live presence: who's online + what tab they're viewing --- */
@@ -502,83 +596,147 @@ function svgDonut(segments,opts){ // segments:[{label,value,color}]
   return `<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap"><svg viewBox="0 0 ${size} ${size}" style="width:${size}px;height:${size}px;flex-shrink:0">${rings}<text x="${cx}" y="${cy+4}" font-size="16" font-weight="700" fill="var(--text)" text-anchor="middle" font-family="var(--display)">${total}</text></svg><div style="display:flex;flex-direction:column;gap:6px">${legend}</div></div>`;
 }
 
-/* --- reports / stats dashboard --- */
+/* --- reports / stats dashboard (admin data center) --- */
+let _analyticsCache=null, _analyticsLoading=false, _analyticsChannel=null, adminStatsOpen=false;
+async function loadAnalytics(){
+  if(!sb||!isOwnerReal())return null;
+  _analyticsLoading=true;
+  try{
+    const {data:visitors}=await sb.from('site_visitors').select('*');
+    const {data:daily}=await sb.from('site_daily').select('*');
+    _analyticsCache={visitors:visitors||[],daily:daily||[]};
+  }catch(e){ console.warn('loadAnalytics',e.message||e); _analyticsCache={visitors:[],daily:[],error:true}; }
+  _analyticsLoading=false;
+  return _analyticsCache;
+}
+function subscribeAnalytics(){
+  if(!sb||_analyticsChannel||!isOwnerReal())return;
+  try{
+    _analyticsChannel=sb.channel('analytics-'+TRIP_ID)
+      .on('postgres_changes',{event:'*',schema:'public',table:'site_visitors'},()=>{ loadAnalytics().then(()=>{ if(adminStatsOpen) renderAdminStats(); }); })
+      .subscribe();
+  }catch(e){}
+}
+function fmtDuration(sec){
+  sec=Math.round(sec||0);
+  if(sec<60) return sec+'s';
+  const m=Math.round(sec/60); if(m<60) return m+' min';
+  const h=Math.floor(m/60), rm=m%60; return h+'h'+(rm?(' '+rm+'m'):'');
+}
 function renderAdminStats(){
   const w=$('#admin-reports');if(!w)return;
+  adminStatsOpen=true;
+  if(_analyticsCache===null && !_analyticsLoading){ loadAnalytics().then(()=>{ if(adminStatsOpen) renderAdminStats(); }); subscribeAnalytics(); }
+
+  const lc=liveRoleCounts();
+  const A=_analyticsCache||{visitors:[],daily:[]};
+  const visitors=A.visitors||[], daily=A.daily||[];
+  const totalVisitsAll = daily.reduce((s,d)=>s+(d.visits||0),0) || visitors.reduce((s,v)=>s+(v.visits||0),0);
+  const monthKey=new Date().toISOString().slice(0,7);
+  const visitsMonth = daily.filter(d=>String(d.day).slice(0,7)===monthKey).reduce((s,d)=>s+(d.visits||0),0);
+  const uniqueEmails = visitors.filter(v=>!v.is_anon && v.email).length;
+  const uniqueAnon   = visitors.filter(v=>v.is_anon).length;
+  const totalSeconds = visitors.reduce((s,v)=>s+(v.seconds||0),0);
+  const avgSeconds   = visitors.length? totalSeconds/visitors.length : 0;
+
   const crew=state.crew.length;
   let gearTotal=0,claimed=0;
   gearData().forEach(c=>c.items.forEach(it=>{gearTotal++;if((state.gearClaims[it.id]||[]).length)claimed++;}));
   const packRows=state.crew.map(n=>{const s=packStatsFor(n);return {n,...s};});
   const total=state.expenses.reduce((s,e)=>s+e.amt,0);
   const votes={};Object.values(state.votes).forEach(v=>votes[v]=(votes[v]||0)+1);
-  const stat=(v,k)=>`<div class="stat"><div class="v">${v}</div><div class="k">${k}</div></div>`;
-  let html=`<div class="dash-stats" style="grid-template-columns:repeat(3,1fr)">
-    ${stat(crew,'crew')}
-    ${stat(onlineCount,'online now')}
-    ${stat(claimed+'/'+gearTotal,'gear claimed')}
-    ${stat('$'+total.toFixed(0),'logged spend')}
-    ${stat(state.stops.length,'route stops')}
-    ${stat(state.chosenSite?(state.chosenSite==='ivy'?'Ivy Lea':'Plage'):'—','site')}
+
+  const sCard=(v,k,sub)=>`<div class="dc-stat"><div class="dc-v">${v}</div><div class="dc-k">${k}</div>${sub?`<div class="dc-sub">${sub}</div>`:''}</div>`;
+  const liveCard=(v,k,cls)=>`<div class="dc-live ${cls||''}"><span class="dc-live-dot"></span><div class="dc-v">${v}</div><div class="dc-k">${k}</div></div>`;
+  const sec=(x)=>`<div class="dc-sec">${x}</div>`;
+
+  let html='<div class="datacenter">';
+
+  html+=sec('<span class="dc-pulse">●</span> '+t('rep.liveNow','Live now')+(A.error?' <span class="dc-warn">'+t('rep.analyticsOffline','analytics table not found — run the v9 SQL')+'</span>':''));
+  html+=`<div class="dc-live-grid">
+    ${liveCard(lc.online,t('rep.online','online total'),'g')}
+    ${liveCard(lc.signedOut,t('rep.signedOut','signed-out'))}
+    ${liveCard(lc.visitor,t('rep.visitors','visitors'))}
+    ${liveCard(lc.camperIncLeaders,t('rep.campers','campers'))}
+    ${liveCard(lc.leader,t('rep.leaders','leaders'))}
+    ${liveCard(lc.admin,t('rep.admins','admins'))}
   </div>`;
 
-  // traffic line chart (daily peak online)
+  const totalPeople = visitors.length;
+  html+=sec('◆ '+t('rep.audience','Audience'));
+  html+=`<div class="dc-grid">
+    ${sCard(totalVisitsAll||'—',t('rep.visitsAll','visits all-time'))}
+    ${sCard(visitsMonth||'—',t('rep.visitsMonth','visits this month'))}
+    ${sCard(totalPeople||'—',t('rep.uniquePeople','unique people'),uniqueEmails+' '+t('rep.emails','emails')+' · '+uniqueAnon+' '+t('rep.anon','anon'))}
+    ${sCard(fmtDuration(totalSeconds),t('rep.totalTime','total time on site'))}
+    ${sCard(fmtDuration(avgSeconds),t('rep.avgTime','avg per visitor'))}
+    ${sCard(crew,t('rep.crewSize','crew size'))}
+  </div>`;
+
+  if(visitors.length){
+    const rows=visitors.slice().sort((a,b)=>(b.seconds||0)-(a.seconds||0)).slice(0,40).map(v=>{
+      const who=v.is_anon?('<span class="dc-anon">'+t('rep.anonVisitor','anonymous visitor')+'</span>'):esc(v.email||v.display_name||'—');
+      const roleBadge=`<span class="role-badge role-${v.role||'visitor'}">${esc((v.role||'visitor'))}</span>`;
+      const last=v.last_seen?new Date(v.last_seen).toLocaleString():'—';
+      return `<tr><td>${who}</td><td>${roleBadge}</td><td>${v.visits||0}</td><td>${fmtDuration(v.seconds)}</td><td class="dc-dim">${esc(last)}</td></tr>`;
+    }).join('');
+    html+=sec('◆ '+t('rep.visitorLog','Visitor log')+' <span class="dc-count">'+visitors.length+'</span>');
+    html+=`<div class="dc-tablewrap"><table class="dc-table"><thead><tr>
+      <th>${t('rep.thWho','Who (email)')}</th><th>${t('rep.thRole','Role')}</th><th>${t('rep.thVisits','Visits')}</th><th>${t('rep.thTime','Time')}</th><th>${t('rep.thLast','Last seen')}</th>
+    </tr></thead><tbody>${rows}</tbody></table></div>`;
+  } else if(!A.error){
+    html+=`<div class="empty" style="font-size:12px">${t('rep.noVisitors','No visitor analytics yet — this fills in as people open the live site.')}</div>`;
+  }
+
   const traffic=adminConfig.traffic||{};
   const days=Object.keys(traffic).sort();
-  html+='<div class="kicker" style="margin:18px 0 8px">◆ Site traffic — peak online per day</div>';
-  if(days.length<1){ html+='<div class="empty">No traffic recorded yet. This fills in as people use the site live.</div>'; }
-  else html+=svgLineChart(days.map(d=>({label:d,value:traffic[d]})));
-
-  // gear claimed donut
-  html+='<div class="kicker" style="margin:18px 0 8px">◆ Gear claimed vs unclaimed</div>';
-  html+=svgDonut([
-    {label:'Claimed',value:claimed,color:'var(--green)'},
-    {label:'Unclaimed',value:Math.max(0,gearTotal-claimed),color:'var(--surface3)'}
-  ]);
-
-  // packing by crew — bar chart
-  if(packRows.length){
-    html+='<div class="kicker" style="margin:18px 0 8px">◆ Packing progress by crew member (%)</div>';
-    html+=svgBarChart(packRows.map(r=>({label:r.n,value:r.total?Math.round(r.packed/r.total*100):0})));
+  html+=sec('◆ '+t('rep.trafficPeak','Peak online per day'));
+  if(days.length<1){ html+=`<div class="empty" style="font-size:12px">${t('rep.noTraffic','No traffic recorded yet.')}</div>`; }
+  else html+=svgLineChart(days.map(d=>({label:d,value:traffic[d]})),{h:140});
+  if(daily.length){
+    html+=sec('◆ '+t('rep.visitsPerDay','Visits per day'));
+    const dd=daily.slice().sort((a,b)=>String(a.day).localeCompare(String(b.day)));
+    html+=svgLineChart(dd.map(d=>({label:String(d.day),value:d.visits||0})),{h:140});
   }
 
-  // spend by person — bar chart
+  html+=sec('◆ '+t('rep.tripData','Trip data'));
+  html+='<div class="dc-charts">';
+  html+=`<div class="dc-chart"><div class="dc-chart-h">${t('rep.gearClaimed','Gear claimed')}</div>${svgDonut([
+    {label:t('rep.claimed','Claimed'),value:claimed,color:'var(--green)'},
+    {label:t('rep.unclaimed','Unclaimed'),value:Math.max(0,gearTotal-claimed),color:'var(--surface3)'}
+  ],{size:104})}</div>`;
+  if(Object.keys(votes).length){
+    html+=`<div class="dc-chart"><div class="dc-chart-h">${t('rep.votes','Campsite votes')}</div>${svgDonut(Object.entries(votes).map(([k,v],i)=>({label:k==='ivy'?'Ivy Lea':'Plage',value:v,color:i===0?'var(--green)':'var(--river)'})),{size:104})}</div>`;
+  }
+  let shopTotal=0,shopDone=0; SHOP.forEach((s,si)=>s.items.forEach((_,ii)=>{shopTotal++;if(state.checks['shop-'+si+'-'+ii])shopDone++;}));
+  if(shopTotal){
+    html+=`<div class="dc-chart"><div class="dc-chart-h">${t('rep.shopping','Shopping done')}</div>${svgDonut([
+      {label:t('rep.done','Done'),value:shopDone,color:'var(--green)'},{label:t('rep.toBuy','To buy'),value:Math.max(0,shopTotal-shopDone),color:'var(--surface3)'}
+    ],{size:104})}</div>`;
+  }
+  html+='</div>';
+
+  if(packRows.length){
+    html+=sec('◆ '+t('rep.packingByCrew','Packing progress by crew (%)'));
+    html+=svgBarChart(packRows.map(r=>({label:r.n,value:r.total?Math.round(r.packed/r.total*100):0})),{h:130});
+  }
   const spendBy={};state.expenses.forEach(e=>{spendBy[e.who]=(spendBy[e.who]||0)+e.amt;});
   if(Object.keys(spendBy).length){
-    html+='<div class="kicker" style="margin:18px 0 8px">◆ Spend by person ($)</div>';
-    html+=svgBarChart(Object.entries(spendBy).map(([k,v])=>({label:k,value:Math.round(v)})));
+    html+=sec('◆ '+t('rep.spendByPerson','Spend by person ($)'));
+    html+=svgBarChart(Object.entries(spendBy).map(([k,v])=>({label:k,value:Math.round(v)})),{h:130});
   }
-
-  // votes donut
-  if(Object.keys(votes).length){
-    html+='<div class="kicker" style="margin:18px 0 8px">◆ Campsite votes</div>';
-    html+=svgDonut(Object.entries(votes).map(([k,v],i)=>({label:k==='ivy'?'Ivy Lea':'Camping de la Plage',value:v,color:i===0?'var(--green)':'var(--river)'})));
-  }
-
-  // shopping progress donut
-  let shopTotal=0,shopDone=0;
-  SHOP.forEach((s,si)=>s.items.forEach((_,ii)=>{shopTotal++;if(state.checks['shop-'+si+'-'+ii])shopDone++;}));
-  if(shopTotal){
-    html+='<div class="kicker" style="margin:18px 0 8px">◆ Shopping checked off</div>';
-    html+=svgDonut([
-      {label:'Done',value:shopDone,color:'var(--green)'},
-      {label:'To buy',value:Math.max(0,shopTotal-shopDone),color:'var(--surface3)'}
-    ]);
-  }
-
-  // purchases logged by crew member (who bought how many things)
-  const boughtBy={};
-  Object.values(state.shopBought||{}).forEach(arr=>(arr||[]).forEach(n=>{boughtBy[n]=(boughtBy[n]||0)+1;}));
+  const boughtBy={}; Object.values(state.shopBought||{}).forEach(arr=>(arr||[]).forEach(n=>{boughtBy[n]=(boughtBy[n]||0)+1;}));
   if(Object.keys(boughtBy).length){
-    html+='<div class="kicker" style="margin:18px 0 8px">◆ Items bought by crew member</div>';
-    html+=svgBarChart(Object.entries(boughtBy).map(([k,v])=>({label:k,value:v})));
+    html+=sec('◆ '+t('rep.itemsBought','Items bought by crew'));
+    html+=svgBarChart(Object.entries(boughtBy).map(([k,v])=>({label:k,value:v})),{h:120});
+  }
+  if(Object.keys(state.roles||{}).length){
+    html+=sec('◆ '+t('rep.rolesAssigned','Roles assigned'));
+    html+='<div class="dc-roles">'+Object.entries(state.roles).map(([r,n])=>`<div class="dc-role-row"><span>${esc(r)}</span><span class="owe pos">${esc(n)}</span></div>`).join('')+'</div>';
   }
 
-  // roles assigned overview
-  const roleCount=Object.keys(state.roles||{}).length;
-  if(roleCount){
-    html+='<div class="kicker" style="margin:18px 0 8px">◆ Roles assigned</div>';
-    html+='<div style="font-size:12px">'+Object.entries(state.roles).map(([r,n])=>`<div class="settle-row"><span>${esc(r)}</span><span class="owe pos">${esc(n)}</span></div>`).join('')+'</div>';
-  }
+  html+=`<div class="dc-foot">${t('rep.refreshed','Refreshed')} ${new Date().toLocaleTimeString()} · ${t('rep.liveNote','live counters update automatically')}</div>`;
+  html+='</div>';
   w.innerHTML=html;
 }
 
@@ -861,6 +1019,24 @@ const PREP=[
 ];
 
 /* retailer search links: amz / ct / dec; best = our pick */
+function lang(){ try{ return (window.i18n&&window.i18n.getLang())||'en'; }catch(e){ return 'en'; } }
+// Merge an EN content array with its FR overrides (index-aligned) when language is FR.
+// Handles arrays of objects (merge fields) and arrays of strings (replace).
+function contentArr(name, enArr){
+  if(lang()!=='fr' || !window.CONTENT_FR || !window.CONTENT_FR[name]) return enArr;
+  const fr=window.CONTENT_FR[name];
+  return enArr.map((item,i)=>{
+    if(fr[i]==null) return item;
+    if(typeof item==='string') return fr[i];          // string arrays (ROLES): replace
+    if(typeof fr[i]==='string') return fr[i];
+    return Object.assign({}, item, fr[i]);             // object arrays: merge fields
+  });
+}
+// Translate a stored (English) expense category for display.
+function catLabel(cat){
+  const map={Site:'cost.catSite',Food:'cost.catFood',Gas:'cost.catGas',Firewood:'cost.catFirewood',Gear:'cost.catGear',Other:'cost.catOther'};
+  return map[cat]?t(map[cat],cat):cat;
+}
 function rlinks(q,best,reason){
   const e=encodeURIComponent(q);
   return {amz:`https://www.amazon.ca/s?k=${e}`,ct:`https://www.canadiantire.ca/en/search-results.html?q=${e}`,dec:`https://www.decathlon.ca/en/search?q=${e}`,best,reason};
@@ -1141,29 +1317,91 @@ function renderStops(){
   renderRouteEndpoints();
   renderTimelineExtra();
 }
-function renderTimelineExtra(){
-  const w=$('#tl-extra'); const addCard=$('#tl-add-card');
+// Default timeline points. `sort` is an epoch ms used purely for ordering.
+// Titles/bodies use i18n keys (kept in sync with the it.* dictionary entries).
+const TIMELINE_DEFAULT=[
+  {id:'d1',sort:Date.parse('2026-06-18T20:00'),amber:true, wk:'it.t1when',tk:'it.t1title',bk:'it.t1body'},
+  {id:'d2',sort:Date.parse('2026-06-19T08:30'),amber:false,wk:'it.t2when',tk:'it.t2title',bk:'it.t2body'},
+  {id:'d3',sort:Date.parse('2026-06-19T10:00'),amber:false,wk:'it.t3when',tk:'it.t3title',bk:'it.t3body'},
+  {id:'d4',sort:Date.parse('2026-06-19T12:30'),amber:false,wk:'it.t4when',tk:'it.t4title',bk:'it.t4body'},
+  {id:'d5',sort:Date.parse('2026-06-20T09:00'),amber:false,wk:'it.t5when',tk:'it.t5title',bk:'it.t5body'},
+  {id:'d6',sort:Date.parse('2026-06-21T09:00'),amber:true, wk:'it.t6when',tk:'it.t6title',bk:'it.t6body'}
+];
+// Best-effort parse of a free-text "when" into a sortable epoch for auto-ordering.
+// Understands day tokens (Thu/Fri/Sat/Sun or Jun 18-21) + a clock time (10am, 3 PM, 14:30).
+function parseWhenToSort(when){
+  if(!when) return Number.MAX_SAFE_INTEGER; // undated -> end
+  const s=when.toLowerCase();
+  let day=19; // default to Friday (trip start day) if no day found
+  const dayMap={'18':18,'jun 18':18,'thu':18,'thursday':18,'jeu':18,
+                '19':19,'jun 19':19,'fri':19,'friday':19,'ven':19,
+                '20':20,'jun 20':20,'sat':20,'saturday':20,'sam':20,
+                '21':21,'jun 21':21,'sun':21,'sunday':21,'dim':21};
+  for(const k in dayMap){ if(s.includes(k)){ day=dayMap[k]; break; } }
+  // time: match "10am", "10 am", "3pm", "12:30", "14h", "8–9 am" (take first number)
+  let hour=12,min=0;
+  const ampm=s.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/);
+  const h24=s.match(/(\d{1,2})\s*h(?:(\d{2}))?/);     // québécois "14 h", "8 h 30"
+  const plain=s.match(/(\d{1,2}):(\d{2})/);
+  if(ampm){ hour=parseInt(ampm[1],10)%12; if(ampm[3]==='pm')hour+=12; if(ampm[2])min=parseInt(ampm[2],10); }
+  else if(h24){ hour=parseInt(h24[1],10); if(h24[2])min=parseInt(h24[2],10); }
+  else if(plain){ hour=parseInt(plain[1],10); min=parseInt(plain[2],10); }
+  else if(/morning|matin|am\b/.test(s)) hour=8;
+  else if(/night|soir|evening|pm\b/.test(s)) hour=20;
+  const d=new Date(2026,5,day,hour,min,0);
+  return d.getTime();
+}
+// Build the merged, time-sorted list of default + custom timeline points.
+function buildTimeline(){
+  const defaults=TIMELINE_DEFAULT.map(p=>{
+    const ov=(state.timelineEdits&&state.timelineEdits[p.id])||{};
+    const when = ov.when!=null?ov.when:t(p.wk,'');
+    const title= ov.title!=null?ov.title:t(p.tk,'');
+    const body = ov.body!=null?ov.body:t(p.bk,'');
+    const hidden = !!ov.hidden;
+    return {id:p.id,kind:'default',amber:p.amber,when,title,body,hidden,
+            sort: ov.sort!=null?ov.sort:p.sort};
+  }).filter(p=>!p.hidden);
+  const extras=(state.timelineExtra||[]).map(p=>({
+    id:p.id,kind:'extra',amber:false,when:p.when||'',title:p.title||'',body:p.desc||'',
+    sort: (p.sort!=null?p.sort:parseWhenToSort(p.when))
+  }));
+  return defaults.concat(extras).sort((a,b)=>a.sort-b.sort);
+}
+function renderTimelineExtra(){ renderTimeline(); } // back-compat alias
+function renderTimeline(){
+  const w=$('#tl-list'); const addCard=$('#tl-add-card');
   if(addCard) addCard.style.display=canManage()?'block':'none';
   if(!w)return;
-  const list=state.timelineExtra||[];
-  w.innerHTML=list.map(p=>{
-    const del=canManage()?`<span class="x" style="float:right" onclick="delTimelinePoint('${esc(p.id)}')">✕</span>`:'';
-    return `<div class="tl-item">${del}<div class="tl-time">${esc(p.when||'')}</div><h4>${esc(p.title||'')}</h4>${p.desc?`<p>${esc(p.desc)}</p>`:''}</div>`;
+  const manage=canManage();
+  w.innerHTML=buildTimeline().map(p=>{
+    const ctrls=manage?`<span class="tl-ctrls">${p.kind==='extra'
+        ?`<span class="x" title="${t('it.removePoint','Remove')}" onclick="delTimelinePoint('${esc(p.id)}')">✕</span>`
+        :`<span class="x" title="${t('it.hidePoint','Hide')}" onclick="hideDefaultPoint('${esc(p.id)}')">✕</span>`}</span>`:'';
+    return `<div class="tl-item${p.amber?' amber':''}">${ctrls}<div class="tl-time">${esc(p.when)}</div><h4>${esc(p.title)}</h4>${p.body?`<p>${esc(p.body)}</p>`:''}</div>`;
   }).join('');
 }
 function addTimelinePoint(){
   if(!requireManage())return;
   const when=$('#tl-when').value.trim(), title=$('#tl-title').value.trim(), desc=$('#tl-desc').value.trim();
-  if(!title){toast('Give the point a title');return;}
+  if(!title){toast(t('it.needTitle','Give the point a title'));return;}
   if(!state.timelineExtra)state.timelineExtra=[];
-  state.timelineExtra.push({id:'tl'+Date.now(),when,title,desc});
+  state.timelineExtra.push({id:'tl'+Date.now(),when,title,desc,sort:parseWhenToSort(when)});
   $('#tl-when').value='';$('#tl-title').value='';$('#tl-desc').value='';
-  persist();renderTimelineExtra();toast('Timeline point added');
+  persist();renderTimeline();toast(t('it.pointAdded','Timeline point added — sorted into place'));
 }
 function delTimelinePoint(id){
   if(!requireManage())return;
   state.timelineExtra=(state.timelineExtra||[]).filter(p=>p.id!==id);
-  persist();renderTimelineExtra();
+  persist();renderTimeline();
+}
+// Hiding/restoring a built-in default point (stored as an edit override).
+function hideDefaultPoint(id){
+  if(!requireManage())return;
+  if(!confirm(t('it.confirmHide','Hide this default timeline point?')))return;
+  if(!state.timelineEdits)state.timelineEdits={};
+  state.timelineEdits[id]=Object.assign({},state.timelineEdits[id],{hidden:true});
+  persist();renderTimeline();
 }
 function addStop(){
   if(!requireEdit())return;
@@ -1329,16 +1567,18 @@ function viewPackingOf(name){ _viewPackOf=name||''; renderMyPacking(); }
 function renderMyPacking(){
   const wrap=$('#my-packing');if(!wrap)return;
   const me=whoAmI();
-  const fillSel=(sel)=>{ if(sel){const opts=state.crew.map(c=>`<option value="${esc(c)}" ${c===me?'selected':''}>${esc(c)}</option>`).join('');sel.innerHTML=`<option value="">Who are you?</option>${opts}`;} };
+  const fillSel=(sel)=>{ if(sel){const opts=state.crew.map(c=>`<option value="${esc(c)}" ${c===me?'selected':''}>${esc(c)}</option>`).join('');sel.innerHTML=`<option value="">${t('gear.whoAreYou','Who are you?')}</option>${opts}`;} };
   fillSel($('#whoami-select'));
   fillSel($('#whoami-select-gear'));
   if(!me){
-    wrap.innerHTML='<div class="empty">Pick your name above to see your personal packing list — everything assigned to you, plus anything marked "All crew", plus your own custom items.</div>';
+    const vw=$('#viewing-wrap'); if(vw)vw.style.display='none';
+    wrap.innerHTML=`<div class="empty">${t('gear.pickNameLong','Pick your name above to see your personal packing list — everything assigned to you, plus anything marked "All crew", plus your own custom items.')}</div>`;
     return;
   }
   if(!state.crew.includes(me)){
     try{localStorage.removeItem('ww_whoami');}catch(e){}
-    wrap.innerHTML='<div class="empty">Pick your name above to see your personal packing list.</div>';
+    const vw=$('#viewing-wrap'); if(vw)vw.style.display='none';
+    wrap.innerHTML=`<div class="empty">${t('gear.pickName','Pick your name above to see your personal packing list.')}</div>`;
     [$('#whoami-select'),$('#whoami-select-gear')].forEach(s=>{if(s)s.value='';});
     return;
   }
@@ -1349,24 +1589,28 @@ function renderMyPacking(){
   const stats=packStatsFor(viewing);
   const pct=stats.total?Math.round(stats.packed/stats.total*100):0;
 
-  // crew switcher (view others read-only)
-  let html='';
-  if(state.crew.length>1){
-    html+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-      <span style="font-size:12px;color:var(--muted)">Viewing:</span>
-      <select onchange="viewPackingOf(this.value)" style="font-size:13px">${state.crew.map(c=>`<option value="${esc(c)}" ${c===viewing?'selected':''}>${esc(c)}${c===me?' (me)':''}</option>`).join('')}</select>
-      ${!editable?'<span class="gtype gt-someone">read-only</span>':''}
-    </div>`;
+  // populate the side-by-side "Viewing:" selector (only meaningful with >1 crew)
+  const vWrap=$('#viewing-wrap'), vSel=$('#viewing-select'), vRo=$('#viewing-ro');
+  if(vWrap && vSel){
+    if(state.crew.length>1){
+      vWrap.style.display='flex';
+      vSel.innerHTML=state.crew.map(c=>`<option value="${esc(c)}" ${c===viewing?'selected':''}>${esc(c)}${c===me?' ('+t('gear.meSuffix','me')+')':''}</option>`).join('');
+      if(vRo) vRo.style.display=editable?'none':'inline-block';
+    } else {
+      vWrap.style.display='none';
+    }
   }
+
+  let html='';
   html+=`<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px">
-    <div style="font-family:var(--display);font-weight:700;font-size:20px">${stats.packed}/${stats.total} packed</div>
+    <div style="font-family:var(--display);font-weight:700;font-size:20px">${stats.packed}/${stats.total} ${t('gear.packed','packed')}</div>
     <div class="progress-track" style="flex:1;min-width:120px"><div class="progress-fill" style="width:${pct}%"></div></div>
     <div style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--green)">${pct}%</div></div>`;
   if(!list.length){
-    html+='<div class="empty">Nothing on this list yet.'+(editable?' Claim gear below, or add personal items here.':'')+'</div>';
+    html+='<div class="empty">'+t('gear.nothingYet','Nothing on this list yet.')+(editable?' '+t('gear.claimBelow','Claim gear below, or add personal items here.'):'')+'</div>';
   } else {
     html+=list.map(x=>{
-      const tag = x.kind==='personal'?'<span class="gtype gt-each">personal</span>':x.kind==='all'?'<span class="gtype gt-shared">all crew</span>':'<span class="gtype gt-someone">theirs</span>';
+      const tag = x.kind==='personal'?`<span class="gtype gt-each">${t('gear.tagPersonal','personal')}</span>`:x.kind==='all'?`<span class="gtype gt-shared">${t('gear.tagAllCrew','all crew')}</span>`:`<span class="gtype gt-someone">${t('gear.tagTheirs','theirs')}</span>`;
       const qty = x.qty&&x.qty>1?`<span class="qty-badge">×${x.qty}</span>`:'';
       const rm = (x.kind==='personal'&&editable)?`<span class="gear-x" onclick="event.stopPropagation();removePersonalItem('${x.key.slice(9)}','${esc(viewing).replace(/'/g,"\\'")}')" title="Remove">🗑</span>`:'';
       const click = editable?`onclick="toggleMyPack('${x.key.replace(/'/g,"\\'")}','${esc(viewing).replace(/'/g,"\\'")}')"`:'';
@@ -1377,9 +1621,9 @@ function renderMyPacking(){
   }
   if(editable){
     html+=`<div style="display:flex;gap:6px;margin-top:12px">
-      <input id="my-item-in" placeholder="Add a personal item (e.g. retainer)…" style="flex:1" onkeydown="if(event.key==='Enter')addPersonalItem('${esc(viewing).replace(/'/g,"\\'")}')">
-      <input id="my-item-qty" type="number" min="1" placeholder="Qty" style="width:62px" title="Optional quantity">
-      <button class="btn sm" onclick="addPersonalItem('${esc(viewing).replace(/'/g,"\\'")}')">Add</button></div>`;
+      <input id="my-item-in" placeholder="${t('gear.addPersonalPh','Add a personal item (e.g. retainer)…')}" style="flex:1" onkeydown="if(event.key==='Enter')addPersonalItem('${esc(viewing).replace(/'/g,"\\'")}')">
+      <input id="my-item-qty" type="number" min="1" placeholder="${t('gear.qty','Qty')}" style="width:62px" title="${t('gear.optionalQty','Optional quantity')}">
+      <button class="btn sm" onclick="addPersonalItem('${esc(viewing).replace(/'/g,"\\'")}')" data-i18n="gear.add">Add</button></div>`;
   }
   wrap.innerHTML=html;
 }
@@ -1431,15 +1675,15 @@ function renderArchive(){
 
 /* ---------- food ---------- */
 let foodFilter='all';
-function allFood(){ return FOOD.concat(state.customFood||[]); }
+function allFood(){ return contentArr('FOOD',FOOD).concat(state.customFood||[]); }
 function renderFood(){
   const tb=document.querySelector('#ftable tbody');tb.innerHTML='';
-  const sl={cooler:'Cooler',dry:'Dry',fire:'Fire',stove:'Stove',none:'No cook'};
+  const sl={cooler:t('food.oCooler','Cooler'),dry:t('food.oDry','Dry'),fire:t('food.oFire','Fire'),stove:t('food.oStove','Stove'),none:t('food.oNone','No cook')};
   allFood().filter(f=>foodFilter==='all'||f.store===foodFilter||f.cook===foodFilter).forEach((f,i)=>{
     const tr=document.createElement('tr');
     const isCustom=f.custom;
     const delc=(isCustom&&canEdit())?`<button class="x" title="Remove" onclick="delFood('${esc(f.id)}')">✕</button>`:'';
-    tr.innerHTML=`<td class="fn">${esc(f.n)} ${isCustom?'<span class="catpill">added</span>':''}</td><td><span class="fpill fp-${f.store}">${sl[f.store]}</span></td><td><span class="fpill fp-${f.cook}">${sl[f.cook]}</span></td><td>${esc(f.why||'')} ${delc}</td>`;
+    tr.innerHTML=`<td class="fn">${esc(f.n)} ${isCustom?'<span class="catpill" data-i18n="food.added">'+t('food.added','added')+'</span>':''}</td><td><span class="fpill fp-${f.store}">${sl[f.store]}</span></td><td><span class="fpill fp-${f.cook}">${sl[f.cook]}</span></td><td>${esc(f.why||'')} ${delc}</td>`;
     tb.appendChild(tr);
   });
 }
@@ -1464,28 +1708,54 @@ function mealItems(m,i){
 }
 function renderMeals(){
   const w=$('#meal-grid');w.innerHTML='';
-  MEALS.forEach((m,i)=>{
+  const meals=contentArr('MEALS',MEALS);
+  const editable=canEdit();
+  meals.forEach((m,i)=>{
     const d=document.createElement('div');d.className='meal';
     const items=mealItems(m,i);
-    const editBtn=canEdit()?`<button class="x" style="float:right;font-size:13px" title="Edit this meal" onclick="editMeal(${i})">✎</button>`:'';
-    d.innerHTML=`<div class="mh">${m.h}${editBtn}</div><h4>${m.t}</h4><ul>${items.map(it=>`<li>${esc(it)}</li>`).join('')}</ul>${m.tip?`<div class="mtip">↳ ${m.tip}</div>`:''}`;
+    const editHint=editable?`<span class="meal-edit-hint" title="${t('meal.editHint','Tap an item to edit it directly')}">✎</span>`:'';
+    const lis=items.map((it,idx)=>{
+      if(editable){
+        return `<li class="meal-li" contenteditable="true" spellcheck="false" data-mi="${i}" data-li="${idx}" onblur="saveMealLine(${i},${idx},this.textContent)" onkeydown="mealLineKey(event,${i},${idx})">${esc(it)}</li>`;
+      }
+      return `<li>${esc(it)}</li>`;
+    }).join('');
+    const addLi=editable?`<li class="meal-add-li" onclick="addMealLine(${i})">+ ${t('meal.addItem','add item')}</li>`:'';
+    d.innerHTML=`<div class="mh">${esc(m.h)}${editHint}</div><h4>${esc(m.t)}</h4><ul class="meal-ul">${lis}${addLi}</ul>${m.tip?`<div class="mtip">↳ ${esc(m.tip)}</div>`:''}`;
     w.appendChild(d);
   });
 }
-function editMeal(i){
-  if(!requireEdit())return;
-  const m=MEALS[i];if(!m)return;
-  const cur=mealItems(m,i).join('\n');
-  const nv=prompt('Edit "'+m.t+'" items (one per line):',cur);
-  if(nv===null)return;
-  const items=nv.split('\n').map(s=>s.trim()).filter(Boolean);
-  if(!state.mealEdits)state.mealEdits={};
-  if(items.join('\n')===m.items.join('\n')) delete state.mealEdits[i]; // back to default
-  else state.mealEdits[i]={items};
-  persist();renderMeals();toast('Meal updated');
+// Save one edited meal line in place. Empty text removes the line.
+function saveMealLine(mi,li,text){
+  if(!canEdit())return;
+  const m=contentArr('MEALS',MEALS)[mi];if(!m)return;
+  const items=mealItems(m,mi).slice();
+  const val=(text||'').trim();
+  if(val) items[li]=val; else items.splice(li,1);
+  commitMealItems(mi,m,items);
 }
-function renderPrep(){const w=$('#prep-grid');w.innerHTML='';PREP.forEach(p=>{const d=document.createElement('div');d.className='icard';
-  d.innerHTML=`<div class="itag ${p.c}">${p.tag}</div><h4>${p.title}</h4><p>${p.body}</p>`;w.appendChild(d);});}
+function addMealLine(mi){
+  if(!requireEdit())return;
+  const m=contentArr('MEALS',MEALS)[mi];if(!m)return;
+  const items=mealItems(m,mi).slice();
+  items.push(t('meal.newItem','New item'));
+  commitMealItems(mi,m,items);
+  // focus the new line for immediate typing
+  setTimeout(()=>{const li=document.querySelector(`.meal-li[data-mi="${mi}"][data-li="${items.length-1}"]`);if(li){li.focus();document.getSelection().selectAllChildren(li);}},30);
+}
+function mealLineKey(e,mi,li){
+  if(e.key==='Enter'){ e.preventDefault(); e.target.blur(); }
+}
+function commitMealItems(mi,m,items){
+  if(!state.mealEdits)state.mealEdits={};
+  // Compare against the *base English* default to decide whether to store an override.
+  const baseEN=(MEALS[mi]&&MEALS[mi].items)||[];
+  if(items.join('\n')===baseEN.join('\n')) delete state.mealEdits[mi];
+  else state.mealEdits[mi]={items};
+  persist();renderMeals();
+}
+function renderPrep(){const w=$('#prep-grid');w.innerHTML='';contentArr('PREP',PREP).forEach(p=>{const d=document.createElement('div');d.className='icard';
+  d.innerHTML=`<div class="itag ${p.c}">${esc(p.tag)}</div><h4>${esc(p.title)}</h4><p>${esc(p.body)}</p>`;w.appendChild(d);});}
 
 /* ---------- shopping ---------- */
 let shopFilter='all';
@@ -1493,27 +1763,31 @@ function shopCat(btn,f){$$('.fbtn[data-sc]').forEach(b=>b.classList.remove('on')
 function renderShop(){
   const w=$('#shop-grid');w.innerHTML='';
   const me=whoAmI();
-  SHOP.filter(s=>shopFilter==='all'||s.cat===shopFilter).forEach((s)=>{
-    const si=SHOP.indexOf(s);
+  const SHOP_L=contentArr('SHOP',SHOP);
+  SHOP.forEach((sOrig,si)=>{
+    if(!(shopFilter==='all'||sOrig.cat===shopFilter))return;
+    const s=SHOP_L[si]||sOrig; // translated display copy
     const card=document.createElement('div');card.className='icard';
-    let html=`<div class="itag ${s.c}">${s.tag}</div><h4>${s.title}</h4><div style="margin:10px 0 0">`;
-    s.items.forEach((it,ii)=>{
+    let html=`<div class="itag ${sOrig.c}">${esc(s.tag)}</div><h4>${esc(s.title)}</h4><div style="margin:10px 0 0">`;
+    sOrig.items.forEach((itOrig,ii)=>{
+      const it=(s.items&&s.items[ii])||itOrig;
       const key='shop-'+si+'-'+ii;const done=state.checks[key];
       let links='';
-      if(it.l){
-        const L=it.l;
-        const mk=(k,label,cls)=>`<a class="shoplink ${cls} ${L.best===k?'best':''}" href="${L[k]}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${L.best===k?'★ ':''}${label}</a>`;
-        links=`<div class="shoplinks">${mk('amz','Amazon','sl-amz')}${mk('ct','Canadian Tire','sl-ct')}${mk('dec','Decathlon','sl-dec')}</div><div class="best-note">↳ ${L.reason}</div>`;
+      if(itOrig.l){
+        const L=itOrig.l;
+        const labels={amz:'Amazon',ct:'Canadian Tire',dec:'Decathlon'};
+        const mk=(k,cls)=>`<a class="shoplink ${cls} ${L.best===k?'best':''}" href="${L[k]}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${L.best===k?'★ ':''}${labels[k]}</a>`;
+        const reason=(it.l&&it.l.reason)||L.reason;
+        links=`<div class="shoplinks">${mk('amz','sl-amz')}${mk('ct','sl-ct')}${mk('dec','sl-dec')}</div><div class="best-note">↳ ${esc(reason)}</div>`;
       }
-      // who-bought indicator (global, multi-crew)
       const buyers=(state.shopBought&&state.shopBought[key])||[];
       const iBought=me&&buyers.includes(me);
-      const avatars=buyers.map(b=>`<span class="buyer-av" style="background:${colorFor(b)}" title="${esc(b)} bought this">${initials(b)}</span>`).join('');
-      const buyBtn=`<button class="bought-btn ${iBought?'on':''}" onclick="event.stopPropagation();toggleBought('${key}')" title="${iBought?'You marked this bought':'Mark that you bought this'}">${iBought?'✓ bought':'I bought this'}</button>`;
+      const avatars=buyers.map(b=>`<span class="buyer-av" style="background:${colorFor(b)}" title="${esc(b)} ${t('shop.boughtThisTitle','bought this')}">${initials(b)}</span>`).join('');
+      const buyBtn=`<button class="bought-btn ${iBought?'on':''}" onclick="event.stopPropagation();toggleBought('${key}')" title="${iBought?t('shop.youBought','You marked this bought'):t('shop.markBought','Mark that you bought this')}">${iBought?t('shop.bought','✓ bought'):t('shop.iBought','I bought this')}</button>`;
       const buyRow=`<div class="bought-row">${avatars}${buyBtn}</div>`;
       html+=`<div class="shop-item"><div class="chk ${done?'done':''}" onclick="toggleCheck('${key}')"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div><div class="ct">${esc(it.n)}${links}</div></div>${buyRow}</div>`;
     });
-    html+=`</div><div class="note" style="margin-top:12px">${s.note}</div>`;
+    html+=`</div><div class="note" style="margin-top:12px">${esc(s.note)}</div>`;
     card.innerHTML=html;w.appendChild(card);
   });
 }
@@ -1616,13 +1890,17 @@ function removeCrew(name){
 }
 function refreshCrewSelects(){
   const opts=state.crew.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
-  const ew=$('#exp-who');if(ew){const cur=ew.value;ew.innerHTML=`<option value="">Who paid?</option>${opts}`;ew.value=cur;}
+  const ew=$('#exp-who');if(ew){const cur=ew.value;ew.innerHTML=`<option value="">${t('cost.whoPaid','Who paid?')}</option>${opts}`;ew.value=cur;}
 }
 function renderRoles(){
   const w=$('#role-grid');w.innerHTML='';
-  ROLES.forEach(r=>{const opts=state.crew.map(c=>`<option value="${esc(c)}" ${state.roles[r]===c?'selected':''}>${esc(c)}</option>`).join('');
+  const rolesL=contentArr('ROLES',ROLES);
+  ROLES.forEach((rOrig,i)=>{
+    const label=rolesL[i]||rOrig;
+    const opts=state.crew.map(c=>`<option value="${esc(c)}" ${state.roles[rOrig]===c?'selected':''}>${esc(c)}</option>`).join('');
     const d=document.createElement('div');d.className='role';
-    d.innerHTML=`<div class="rn">${r}</div><select onchange="setRole('${r.replace(/'/g,"\\'")}',this.value)"><option value="">${state.crew.length?'Assign…':'Add crew first'}</option>${opts}</select>`;w.appendChild(d);});
+    d.innerHTML=`<div class="rn">${esc(label)}</div><select onchange="setRole('${rOrig.replace(/'/g,"\\'")}',this.value)"><option value="">${state.crew.length?t('role.assign','Assign…'):t('role.addFirst','Add crew first')}</option>${opts}</select>`;w.appendChild(d);
+  });
 }
 function setRole(r,n){if(!requireEdit())return;if(n)state.roles[r]=n;else delete state.roles[r];persist();}
 
@@ -1648,10 +1926,10 @@ function editExpense(id){
 }
 function renderExpenses(){
   const w=$('#exp-list');w.innerHTML='';
-  if(!state.expenses.length){w.innerHTML='<div class="empty">No expenses logged yet.</div>';}
+  if(!state.expenses.length){w.innerHTML=`<div class="empty">${t('cost.noExpenses','No expenses logged yet.')}</div>`;}
   state.expenses.forEach(e=>{const r=document.createElement('div');r.className='exp-row';
-    const editBtn=canManage()?`<span class="x" title="Edit" onclick="editExpense(${e.id})">✎</span>`:'';
-    r.innerHTML=`<span class="avatar" style="background:${colorFor(e.who)}">${initials(e.who)}</span><div class="ed"><div class="edesc">${esc(e.desc)} <span class="catpill">${esc(e.cat||'Other')}</span></div><div class="emeta">paid by ${esc(e.who)}</div></div><div class="eamt">$${e.amt.toFixed(2)}</div>${editBtn}<span class="x" onclick="delExpense(${e.id})">✕</span>`;w.appendChild(r);});
+    const editBtn=canManage()?`<span class="x" title="${t('cost.edit','Edit')}" onclick="editExpense(${e.id})">✎</span>`:'';
+    r.innerHTML=`<span class="avatar" style="background:${colorFor(e.who)}">${initials(e.who)}</span><div class="ed"><div class="edesc">${esc(e.desc)} <span class="catpill">${esc(catLabel(e.cat||'Other'))}</span></div><div class="emeta">${t('cost.paidBy','paid by')} ${esc(e.who)}</div></div><div class="eamt">$${e.amt.toFixed(2)}</div>${editBtn}<span class="x" onclick="delExpense(${e.id})">✕</span>`;w.appendChild(r);});
   renderCatBars();renderSettle();
 }
 function renderCatBars(){
@@ -1661,21 +1939,21 @@ function renderCatBars(){
   state.expenses.forEach(e=>{const c=e.cat||'Other';byCat[c]=(byCat[c]||0)+e.amt;total+=e.amt;});
   Object.values(byCat).forEach(v=>max=Math.max(max,v));
   const colors={Site:'#9bce6f',Food:'#f0b455',Gas:'#6cb6d4',Firewood:'#e8896b',Gear:'#b49ad4',Other:'#9aaa8c'};
-  let html=`<div class="kicker" style="margin:8px 0 10px">◆ Spend by category · total $${total.toFixed(2)}</div>`;
+  let html=`<div class="kicker" style="margin:8px 0 10px">◆ ${t('cost.spendByCat','Spend by category · total')} $${total.toFixed(2)}</div>`;
   Object.entries(byCat).sort((a,b)=>b[1]-a[1]).forEach(([c,v])=>{
-    html+=`<div class="cat-bar-row"><span class="cl">${c}</span><div class="cat-track"><div class="cat-fill" style="width:${(v/max*100).toFixed(1)}%;background:${colors[c]||'#9aaa8c'}"></div></div><span class="cv">$${v.toFixed(2)}</span></div>`;
+    html+=`<div class="cat-bar-row"><span class="cl">${esc(catLabel(c))}</span><div class="cat-track"><div class="cat-fill" style="width:${(v/max*100).toFixed(1)}%;background:${colors[c]||'#9aaa8c'}"></div></div><span class="cv">$${v.toFixed(2)}</span></div>`;
   });
   w.innerHTML=html;
 }
 function renderSettle(){
   const w=$('#settle-body');
-  if(!state.crew.length||!state.expenses.length){w.innerHTML='<div class="empty">Add crew + expenses to see the split.</div>';return;}
+  if(!state.crew.length||!state.expenses.length){w.innerHTML=`<div class="empty">${t('cost.settleEmpty','Add crew + expenses to see the split.')}</div>`;return;}
   const total=state.expenses.reduce((s,e)=>s+e.amt,0);
   const share=total/state.crew.length;
   const bal={};state.crew.forEach(c=>bal[c]=-share);
   state.expenses.forEach(e=>{if(bal[e.who]!==undefined)bal[e.who]+=e.amt;});
-  let html=`<div class="settle-row"><span>Total spent</span><span class="owe">$${total.toFixed(2)}</span></div><div class="settle-row"><span>Per person (${state.crew.length})</span><span class="owe">$${share.toFixed(2)}</span></div><div style="height:8px"></div>`;
-  state.crew.forEach(c=>{const b=bal[c];const cls=b>=-0.005?'pos':'neg';const txt=b>=-0.005?`gets back $${Math.max(0,b).toFixed(2)}`:`owes $${Math.abs(b).toFixed(2)}`;
+  let html=`<div class="settle-row"><span>${t('cost.totalSpent','Total spent')}</span><span class="owe">$${total.toFixed(2)}</span></div><div class="settle-row"><span>${t('cost.perPerson','Per person')} (${state.crew.length})</span><span class="owe">$${share.toFixed(2)}</span></div><div style="height:8px"></div>`;
+  state.crew.forEach(c=>{const b=bal[c];const cls=b>=-0.005?'pos':'neg';const txt=b>=-0.005?`${t('cost.getsBack','gets back')} $${Math.max(0,b).toFixed(2)}`:`${t('cost.owes','owes')} $${Math.abs(b).toFixed(2)}`;
     html+=`<div class="settle-row"><span><span class="avatar" style="width:20px;height:20px;font-size:9px;background:${colorFor(c)};display:inline-flex;vertical-align:middle;margin-right:7px">${initials(c)}</span>${esc(c)}</span><span class="owe ${cls}">${txt}</span></div>`;});
   // minimal transfers (greedy)
   const debtors=[],creditors=[];
@@ -1689,9 +1967,9 @@ function renderSettle(){
     if(debtors[di][1]<0.005)di++;if(creditors[ci][1]<0.005)ci++;
   }
   if(transfers.length){
-    html+=`<div class="kicker" style="margin:14px 0 10px">◆ Who pays who — ${transfers.length} transfer${transfers.length===1?'':'s'}</div>`;
+    html+=`<div class="kicker" style="margin:14px 0 10px">◆ ${t('cost.whoPays','Who pays who')} — ${transfers.length} ${transfers.length===1?t('cost.transfer','transfer'):t('cost.transfers','transfers')}</div>`;
     transfers.forEach(([from,to,amt])=>{
-      html+=`<div class="transfer"><span class="avatar" style="background:${colorFor(from)}">${initials(from)}</span> ${esc(from)} <span style="color:var(--faint)">pays</span> <span class="avatar" style="background:${colorFor(to)}">${initials(to)}</span> ${esc(to)} <span class="amt">$${amt.toFixed(2)}</span></div>`;
+      html+=`<div class="transfer"><span class="avatar" style="background:${colorFor(from)}">${initials(from)}</span> ${esc(from)} <span style="color:var(--faint)">${t('cost.pays','pays')}</span> <span class="avatar" style="background:${colorFor(to)}">${initials(to)}</span> ${esc(to)} <span class="amt">$${amt.toFixed(2)}</span></div>`;
     });
   }
   w.innerHTML=html;
@@ -1700,31 +1978,32 @@ function renderSettle(){
 /* ---------- activities / survival / faq ---------- */
 function renderActivities(){
   const ag=$('#area-grid');ag.innerHTML='';
+  const AREA_L=(lang()==='fr'&&window.CONTENT_FR&&window.CONTENT_FR.AREA)?window.CONTENT_FR.AREA:AREA;
   const order=state.chosenSite==='ivy'?['ivy','plage']:['plage','ivy'];
   order.forEach(k=>{
-    const a=AREA[k];const chosen=state.chosenSite===k;
+    const a=AREA_L[k]||AREA[k];const chosen=state.chosenSite===k;
     const d=document.createElement('div');d.className='icard';if(chosen)d.style.borderColor='var(--amber)';
-    d.innerHTML=`<div class="itag it-fun">${chosen?'★ Our site':'Option'}</div><h4>${a.title}</h4><ul>${a.items.map(i=>`<li>${i}</li>`).join('')}</ul>`;
+    d.innerHTML=`<div class="itag it-fun">${chosen?t('act.ourSite','★ Our site'):t('act.option','Option')}</div><h4>${esc(a.title)}</h4><ul>${a.items.map(i=>`<li>${esc(i)}</li>`).join('')}</ul>`;
     ag.appendChild(d);
   });
   const bg=$('#bring-grid');bg.innerHTML='';
-  BRING.forEach(b=>{const d=document.createElement('div');d.className='icard';d.innerHTML=`<h4>${b.t}</h4><p>${b.p}</p>`;bg.appendChild(d);});
+  contentArr('BRING',BRING).forEach(b=>{const d=document.createElement('div');d.className='icard';d.innerHTML=`<h4>${esc(b.t)}</h4><p>${esc(b.p)}</p>`;bg.appendChild(d);});
   const gg=$('#games-grid');gg.innerHTML='';
-  GAMES.forEach(g=>{const d=document.createElement('div');d.className='icard';d.innerHTML=`<h4>${g.t}</h4><p>${g.p}</p>`;gg.appendChild(d);});
+  contentArr('GAMES',GAMES).forEach(g=>{const d=document.createElement('div');d.className='icard';d.innerHTML=`<h4>${esc(g.t)}</h4><p>${esc(g.p)}</p>`;gg.appendChild(d);});
 }
 function renderSituations(){
   const w=$('#situations-grid');w.innerHTML='';
-  SITUATIONS.forEach(s=>{const d=document.createElement('div');d.className='icard';
-    d.innerHTML=`<div class="itag ${s.c}">${s.tag}</div><h4>${s.title}</h4><p>${s.body}</p>`;w.appendChild(d);});
+  contentArr('SITUATIONS',SITUATIONS).forEach(s=>{const d=document.createElement('div');d.className='icard';
+    d.innerHTML=`<div class="itag ${s.c}">${esc(s.tag)}</div><h4>${esc(s.title)}</h4><p>${esc(s.body)}</p>`;w.appendChild(d);});
 }
 function renderFAQ(){
   const w=$('#faq-list');w.innerHTML='';
-  FAQ.forEach(f=>{const d=document.createElement('details');d.className='faq';
-    d.innerHTML=`<summary>${f.q}</summary><div class="fa">${f.a}</div>`;w.appendChild(d);});
+  contentArr('FAQ',FAQ).forEach(f=>{const d=document.createElement('details');d.className='faq';
+    d.innerHTML=`<summary>${esc(f.q)}</summary><div class="fa">${esc(f.a)}</div>`;w.appendChild(d);});
 }
 function renderTips(){const w=$('#tips-card');w.innerHTML='';
-  TIPS.forEach(t=>{const d=document.createElement('div');d.className='tip';
-    d.innerHTML=`<div class="ti">${t.i}</div><div><h4>${t.t}</h4><p>${t.p}</p></div>`;w.appendChild(d);});}
+  contentArr('TIPS',TIPS).forEach(tip=>{const d=document.createElement('div');d.className='tip';
+    d.innerHTML=`<div class="ti">${tip.i}</div><div><h4>${esc(tip.t)}</h4><p>${esc(tip.p)}</p></div>`;w.appendChild(d);});}
 
 /* ---------- help / export / misc ---------- */
 function openHelp(){$('#help-modal').classList.add('open');}
@@ -2404,7 +2683,14 @@ function resetData(){
 
 /* ---------- tabs / boot ---------- */
 function initTabs(){
+  const LOCKED_TABS=['gear','food','shop','money'];
   $$('.tab').forEach(t=>t.addEventListener('click',()=>{
+    // Signed-out users cannot open locked pages — bounce to Basecamp with a hint.
+    if(LOCKED_TABS.includes(t.dataset.p) && !isSignedIn()){
+      toast('🔒 '+window.t('lock.signInToView','Sign in to view this page'));
+      const dash=document.querySelector('.tab[data-p="dash"]'); if(dash&&!dash.classList.contains('active')) dash.click();
+      return;
+    }
     $$('.tab').forEach(x=>x.classList.remove('active'));
     $$('.panel').forEach(x=>x.classList.remove('active'));
     t.classList.add('active');const panel=document.getElementById(t.dataset.p);panel.classList.add('active');

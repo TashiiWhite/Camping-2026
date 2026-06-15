@@ -83,6 +83,47 @@ nav::-webkit-scrollbar{display:none}
 .stat .v small{font-size:13px;color:var(--muted);font-family:var(--body);font-weight:400}
 .stat .k{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-top:2px}
 .dash-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+/* ===== ADMIN DATA-CENTER DASHBOARD ===== */
+.datacenter{font-size:12px}
+.datacenter .dc-sec{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--green);margin:16px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.dc-pulse{color:#5fd35f;animation:dcpulse 1.6s ease-in-out infinite}
+@keyframes dcpulse{0%,100%{opacity:1}50%{opacity:.25}}
+.dc-warn{margin-left:auto;font-size:9px;color:var(--amber);letter-spacing:.04em;text-transform:none}
+.dc-count{margin-left:6px;background:var(--surface3);color:var(--muted);border-radius:99px;padding:1px 7px;font-size:9px}
+.dc-live-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.dc-live{position:relative;background:linear-gradient(160deg,var(--surface2),var(--surface));border:1px solid var(--border);border-radius:10px;padding:10px 11px;overflow:hidden}
+.dc-live.g{border-color:rgba(155,206,111,.5);box-shadow:0 0 0 1px rgba(155,206,111,.2) inset}
+.dc-live-dot{position:absolute;top:9px;right:9px;width:6px;height:6px;border-radius:50%;background:#5fd35f;animation:dclive 1.8s infinite}
+@keyframes dclive{0%{box-shadow:0 0 0 0 rgba(95,211,95,.5)}70%{box-shadow:0 0 0 7px rgba(95,211,95,0)}100%{box-shadow:0 0 0 0 rgba(95,211,95,0)}}
+.dc-live .dc-v{font-family:var(--display);font-weight:700;font-size:22px;line-height:1}
+.dc-live .dc-k{font-family:var(--mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin-top:3px}
+.dc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.dc-stat{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 11px}
+.dc-stat .dc-v{font-family:var(--display);font-weight:700;font-size:19px;line-height:1.05}
+.dc-stat .dc-k{font-family:var(--mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);margin-top:3px}
+.dc-stat .dc-sub{font-size:9.5px;color:var(--muted);margin-top:3px}
+.dc-tablewrap{max-height:240px;overflow:auto;border:1px solid var(--border);border-radius:10px}
+.dc-table{width:100%;border-collapse:collapse;font-size:11px}
+.dc-table th{position:sticky;top:0;background:var(--surface3);text-align:left;padding:7px 9px;font-family:var(--mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.dc-table td{padding:6px 9px;border-top:1px solid var(--border);vertical-align:middle}
+.dc-table .dc-dim{color:var(--faint);font-size:10px;font-family:var(--mono)}
+.dc-anon{color:var(--faint);font-style:italic}
+.dc-charts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.dc-chart{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px}
+.dc-chart-h{font-family:var(--mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.dc-roles{display:grid;grid-template-columns:repeat(2,1fr);gap:4px 14px}
+.dc-role-row{display:flex;justify-content:space-between;font-size:11.5px;padding:3px 0;border-bottom:1px dotted var(--border)}
+.dc-foot{margin-top:16px;font-family:var(--mono);font-size:9px;color:var(--faint);text-align:center;letter-spacing:.03em}
+/* admin guide / FAQ */
+.ag-sec{margin-bottom:18px}
+.ag-h{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--green);margin-bottom:8px}
+.ag-list{list-style:none;margin:0;padding:0}
+.ag-list li{position:relative;padding:5px 0 5px 16px;font-size:12.5px;line-height:1.5;color:var(--muted);border-bottom:1px dotted var(--border)}
+.ag-list li:last-child{border-bottom:none}
+.ag-list li::before{content:'›';position:absolute;left:2px;top:5px;color:var(--green)}
+.ag-list li b{color:var(--text)}
+.ag-mono{font-family:var(--mono);font-size:11px;color:var(--river)}
+@media(max-width:560px){.dc-live-grid,.dc-grid{grid-template-columns:repeat(2,1fr)}.dc-charts{grid-template-columns:1fr}}
 .quicklink{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);text-decoration:none;color:var(--text);transition:all .16s}
 .quicklink:hover{border-color:var(--border-strong);background:var(--surface2);transform:translateX(3px)}
 .quicklink .ico{width:34px;height:34px;border-radius:8px;background:var(--surface3);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:17px}
@@ -98,6 +139,9 @@ nav::-webkit-scrollbar{display:none}
 .crew-chip .x{cursor:pointer;color:var(--faint);font-size:15px;line-height:1;padding:0 3px}
 .crew-chip .x:hover{color:var(--danger)}
 input,select,textarea{font-family:var(--body);font-size:14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 12px;outline:none;transition:border .16s}
+/* Force readable dropdown option contrast across all themes (native option lists ignore most inherited styles) */
+select option{background:#1a1f16;color:#e8ede2}
+html[data-theme="botanic"] select option,html[data-theme="sakura"] select option{background:#ffffff;color:#26301c}
 input:focus,select:focus{border-color:var(--green)}
 input::placeholder{color:var(--faint)}
 .btn{font-family:var(--mono);font-size:12px;letter-spacing:.04em;text-transform:uppercase;font-weight:700;background:var(--green);color:var(--bg);border:none;border-radius:8px;padding:9px 16px;cursor:pointer;transition:all .16s}
@@ -138,6 +182,7 @@ input::placeholder{color:var(--faint)}
 .tl-item.amber::before{background:var(--amber)}
 .tl-time{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);margin-bottom:3px}
 .tl-item h4{font-family:var(--display);font-weight:700;font-size:17px;margin-bottom:3px}
+.tl-ctrls{float:right;display:flex;gap:6px}
 .tl-item p{font-size:13.5px;color:var(--muted)}
 .gear-item{display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:7px;flex-wrap:wrap}
 .gear-item.claimed{background:var(--surface2)}
@@ -549,6 +594,13 @@ html.simplify .simplify-hide{display:none !important}
 .set-sec-head.collapsed .set-caret{transform:rotate(-90deg)}
 /* packing quantity badge + read-only rows */
 .qty-badge{font-family:var(--mono);font-size:10px;font-weight:700;background:var(--surface3);color:var(--muted);border-radius:5px;padding:1px 6px}
+/* inline meal editing */
+.meal-edit-hint{float:right;font-size:12px;color:var(--faint);cursor:default}
+.meal-ul .meal-li{cursor:text;border-radius:5px;padding:2px 5px;margin:1px -5px;transition:background .12s,box-shadow .12s;outline:none}
+.meal-ul .meal-li:hover{background:rgba(155,206,111,.07)}
+.meal-ul .meal-li:focus{background:rgba(155,206,111,.12);box-shadow:0 0 0 1px var(--green)}
+.meal-add-li{list-style:none;cursor:pointer;color:var(--faint);font-size:12.5px;font-family:var(--mono);margin-top:5px;padding:2px 5px;border-radius:5px}
+.meal-add-li:hover{color:var(--green);background:rgba(155,206,111,.08)}
 .chk.readonly{cursor:default;opacity:.85}
 .chk.readonly:hover{background:transparent}
 /* shopping "who bought this" indicator */
@@ -574,8 +626,8 @@ html.simplify .simplify-hide{display:none !important}
 .role-camper{background:rgba(108,182,212,.18);color:var(--river);border:1px solid rgba(108,182,212,.35)}
 .role-visitor{background:var(--surface3);color:var(--muted);border:1px solid var(--border)}
 /* view-as preview bar */
-#viewas-bar{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:center;gap:14px;background:linear-gradient(90deg,var(--amber),#e0a045);color:#1a1206;font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.04em;padding:7px 14px}
-#viewas-bar .btn{background:rgba(0,0,0,.18);border-color:rgba(0,0,0,.25);color:#1a1206}
+#viewas-bar{position:sticky;top:0;z-index:60;display:flex;align-items:center;justify-content:center;gap:14px;background:linear-gradient(90deg,rgba(240,180,85,.82),rgba(224,160,69,.82));-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:#1a1206;font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.04em;padding:7px 14px;box-shadow:0 2px 12px rgba(0,0,0,.25)}
+#viewas-bar .btn{background:rgba(0,0,0,.18);border-color:rgba(0,0,0,.3);color:#1a1206}
 .viewas-picker{display:flex;gap:7px;flex-wrap:wrap}
 .chk.done .tg-state{background:var(--green);color:var(--bg)}
 .tg-sub{font-size:11.5px;color:var(--faint);margin-top:3px;line-height:1.4;font-weight:400}
@@ -592,7 +644,8 @@ html.signed-out .tab.locked-tab{opacity:.6}
 /* page-level sign-in notice shown inside locked panels */
 .page-lock-note{display:none;align-items:center;gap:10px;background:linear-gradient(135deg,rgba(240,180,85,.14),rgba(240,180,85,.05));border:1px solid rgba(240,180,85,.34);border-radius:var(--radius);padding:12px 15px;margin-bottom:14px;font-size:13px;color:var(--amber)}
 html.signed-out .panel.gated .page-lock-note{display:flex}
-html.signed-out .panel.gated .gate-disable{opacity:.5;pointer-events:none;filter:grayscale(.4)}
+/* Signed-out users cannot view locked page content at all — fully hidden, only the lock notice shows */
+html.signed-out .panel.gated .gate-disable{display:none !important}
 /* departure / announcement banner (admin-controlled, shown to all) */
 #departure-banner{margin-bottom:14px}
 .dep-inner{display:flex;gap:13px;align-items:flex-start;background:linear-gradient(135deg,rgba(240,180,85,.16),rgba(240,180,85,.06));border:1px solid rgba(240,180,85,.4);border-radius:var(--radius);padding:14px 16px}
@@ -649,6 +702,8 @@ html.signed-out .panel.gated .gate-disable{opacity:.5;pointer-events:none;filter
 </style>
 </head>
 <body>
+<!-- VIEW-AS BAR (owner impersonation preview) — pinned to very top -->
+<div id="viewas-bar" style="display:none"><span id="viewas-label">👁 Previewing</span><button class="btn ghost sm" onclick="setViewAs(null)" data-i18n="admin.exitPreview">Exit preview</button></div>
 <div class="topo">
 <svg viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
 <g fill="none" stroke="#9bce6f" stroke-width="1" opacity="0.5">
@@ -792,15 +847,7 @@ html.signed-out .panel.gated .gate-disable{opacity:.5;pointer-events:none;filter
   </div>
 
   <div class="kicker" data-i18n="it.timeline">◆ Timeline</div>
-  <div class="tl">
-    <div class="tl-item amber"><div class="tl-time" data-i18n="it.t1when">Thu Jun 18 · night before</div><h4 data-i18n="it.t1title">Pack &amp; prep</h4><p data-i18n="it.t1body">Car-pack both vehicles. Pre-make marinades &amp; foil packets. Pre-crack eggs into a jar. Freeze water bottles (free ice + drinking water). Confirm reservation, check weather &amp; fire ban. Charge every power bank.</p></div>
-    <div class="tl-item"><div class="tl-time" data-i18n="it.t2when">Fri Jun 19 · 8–9 AM</div><h4 data-i18n="it.t2title">Roll out of DDO</h4><p>2-car convoy, lead car set. Gas up before the highway. Share the playlist across both cars.</p></div>
-    <div class="tl-item"><div class="tl-time" data-i18n="it.t3when">Fri Jun 19 · ~10 AM</div><h4 data-i18n="it.t3title">Road grocery stop</h4><p data-i18n="it.t3body">Last real store: IGA in Saint-Jérôme (Rivière-Rouge run) or Foodland in Gananoque (Ivy Lea run). Ice top-up, fresh produce, buns, breakfast sandwiches.</p></div>
-    <div class="tl-item"><div class="tl-time" data-i18n="it.t4when">Fri Jun 19 · 12–1 PM</div><h4 data-i18n="it.t4title">Arrive &amp; set up</h4><p data-i18n="it.t4body">Both cars park. Pitch all tents first. Build the kitchen station. Buy firewood on-site. Light the first fire. Easy foil-packet dinner. Night-one campfire.</p></div>
-    <div class="tl-item"><div class="tl-time" data-i18n="it.t5when">Sat Jun 20 · all day</div><h4 data-i18n="it.t5title">The main day</h4><p data-i18n="it.t5body">Slow breakfast &amp; coffee. Lake/river time — swim, canoe, kayak. No-cook lunch. Golden-hour hangs. Grill night. Long fire with games, music &amp; s'mores.</p></div>
-    <div class="tl-item amber"><div class="tl-time" data-i18n="it.t6when">Sun Jun 21 · AM</div><h4 data-i18n="it.t6title">Wind down &amp; pack out</h4><p data-i18n="it.t6body">Leftover brunch. Break down camp systematically across both cars. Leave-no-trace sweep. Check out (11 AM QC / 1 PM Ivy Lea). Hit "Reverse — route home" above for the drive back.</p></div>
-    <div id="tl-extra"></div>
-  </div>
+  <div class="tl" id="tl-list"></div>
   <div class="card gate-disable" id="tl-add-card" style="display:none;margin-top:14px">
     <div style="font-size:12px;color:var(--muted);margin-bottom:8px" data-i18n="it.addPointLabel">Add a timeline point (leaders &amp; admin)</div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
@@ -814,30 +861,37 @@ html.signed-out .panel.gated .gate-disable{opacity:.5;pointer-events:none;filter
 
 <!-- GEAR -->
 <section class="panel gated" id="gear">
-  <div class="page-lock-note">🔒 <span>Sign in (top right) to view and edit this page.</span></div>
+  <div class="page-lock-note">🔒 <span data-i18n="lock.page">Sign in (top right) to view and edit this page.</span></div>
   <div class="gate-disable">
-  <div class="sec-title">Gear — claim, pack, archive</div>
-  <div class="sec-desc">Assign one or more people per item (or <b>All</b> = everyone brings their own). Pick who you are to get your own packing checklist, then tick things off as you pack. Add custom gear for the team below, or personal items to your own list.</div>
+  <div class="sec-title" data-i18n="gear.title">Gear — claim, pack, archive</div>
+  <div class="sec-desc" data-i18n-html="gear.desc">Assign one or more people per item (or <b>All</b> = everyone brings their own). Pick who you are to get your own packing checklist, then tick things off as you pack. Add custom gear for the team below, or personal items to your own list.</div>
 
-  <div class="kicker" style="margin-top:6px">◆ My packing list</div>
+  <div class="kicker" style="margin-top:6px" data-i18n="gear.myList">◆ My packing list</div>
   <div class="card" style="margin-bottom:14px">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-      <span style="font-size:12px;color:var(--muted)">I'm:</span>
-      <select id="whoami-select-gear" onchange="setWhoAmI(this.value)" style="font-size:13px"></select>
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:7px">
+        <span style="font-size:12px;color:var(--muted)" data-i18n="bc.im">I'm:</span>
+        <select id="whoami-select-gear" onchange="setWhoAmI(this.value)" style="font-size:13px"></select>
+      </div>
+      <div id="viewing-wrap" style="display:none;align-items:center;gap:7px">
+        <span style="font-size:12px;color:var(--muted)" data-i18n="gear.viewing">Viewing:</span>
+        <select id="viewing-select" onchange="viewPackingOf(this.value)" style="font-size:13px"></select>
+        <span id="viewing-ro" class="gtype gt-someone" style="display:none" data-i18n="gear.readonly">read-only</span>
+      </div>
     </div>
     <div id="my-packing"></div>
   </div>
 
-  <div class="kicker">◆ Team gear — who's bringing what</div>
+  <div class="kicker" data-i18n="gear.teamGear">◆ Team gear — who's bringing what</div>
   <div class="card" style="margin-bottom:14px" id="pack-summary"></div>
   <div class="card" style="margin-bottom:18px">
     <div class="add-row">
-      <input id="gear-name-in" placeholder="New gear item (e.g. Axe)">
-      <input id="gear-note-in" placeholder="Note (optional)">
-      <select id="gear-type-in"><option value="someone">Someone</option><option value="shared">Shared</option><option value="each">Each</option></select>
-      <button class="btn" onclick="addGear()">Add gear</button>
+      <input id="gear-name-in" placeholder="New gear item (e.g. Axe)" data-i18n-ph="gear.newItemPh">
+      <input id="gear-note-in" placeholder="Note (optional)" data-i18n-ph="gear.notePh">
+      <select id="gear-type-in"><option value="someone" data-i18n="gear.someone">Someone</option><option value="shared" data-i18n="gear.shared">Shared</option><option value="each" data-i18n="gear.each">Each</option></select>
+      <button class="btn" onclick="addGear()" data-i18n="gear.addGear">Add gear</button>
     </div>
-    <div class="toolbar" style="margin-top:0"><button class="btn ghost sm" onclick="openArchive()">🗃 View archive (<span id="arch-count">0</span>)</button></div>
+    <div class="toolbar" style="margin-top:0"><button class="btn ghost sm" onclick="openArchive()"><span data-i18n="gear.viewArchive">🗃 View archive</span> (<span id="arch-count">0</span>)</button></div>
   </div>
   <div id="gear-list"></div>
 </div>
@@ -845,58 +899,58 @@ html.signed-out .panel.gated .gate-disable{opacity:.5;pointer-events:none;filter
 
 <!-- FOOD -->
 <section class="panel gated" id="food">
-  <div class="page-lock-note">🔒 <span>Sign in (top right) to view and edit this page.</span></div>
+  <div class="page-lock-note">🔒 <span data-i18n="lock.page">Sign in (top right) to view and edit this page.</span></div>
   <div class="gate-disable">
-  <div class="sec-title">Food — easy to haul, easy to cook, fills you up</div>
-  <div class="sec-desc">Filter the food matrix by how it stores or how it cooks. Below: the 9-meal plan and the expert prep playbook.</div>
+  <div class="sec-title" data-i18n="food.title">Food — easy to haul, easy to cook, fills you up</div>
+  <div class="sec-desc" data-i18n="food.desc">Filter the food matrix by how it stores or how it cooks. Below: the 9-meal plan and the expert prep playbook.</div>
   <div class="ffilter" id="ffilter">
-    <button class="fbtn on" data-f="all">All</button><button class="fbtn" data-f="cooler">Cooler</button><button class="fbtn" data-f="dry">Dry / no fridge</button><button class="fbtn" data-f="fire">Campfire</button><button class="fbtn" data-f="stove">Camp stove</button><button class="fbtn" data-f="none">No cook</button>
+    <button class="fbtn on" data-f="all" data-i18n="food.fAll">All</button><button class="fbtn" data-f="cooler" data-i18n="food.fCooler">Cooler</button><button class="fbtn" data-f="dry" data-i18n="food.fDry">Dry / no fridge</button><button class="fbtn" data-f="fire" data-i18n="food.fFire">Campfire</button><button class="fbtn" data-f="stove" data-i18n="food.fStove">Camp stove</button><button class="fbtn" data-f="none" data-i18n="food.fNone">No cook</button>
   </div>
-  <div class="card" style="padding:4px 0;overflow-x:auto"><table class="ftable" id="ftable"><thead><tr><th>Food</th><th>Store</th><th>Cook</th><th>Why it works + pro tip</th></tr></thead><tbody></tbody></table></div>
+  <div class="card" style="padding:4px 0;overflow-x:auto"><table class="ftable" id="ftable"><thead><tr><th data-i18n="food.thFood">Food</th><th data-i18n="food.thStore">Store</th><th data-i18n="food.thCook">Cook</th><th data-i18n="food.thWhy">Why it works + pro tip</th></tr></thead><tbody></tbody></table></div>
   <div class="card gate-disable" style="margin-bottom:18px">
-    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Add a food item</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px" data-i18n="food.addItem">Add a food item</div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-      <input id="food-name-in" placeholder="Food name" style="flex:2;min-width:120px">
-      <select id="food-store-in" style="flex:1;min-width:90px"><option value="cooler">Cooler</option><option value="dry">Dry</option></select>
-      <select id="food-cook-in" style="flex:1;min-width:90px"><option value="fire">Fire</option><option value="stove">Stove</option><option value="none">No cook</option></select>
-      <input id="food-why-in" placeholder="Note (optional)" style="flex:2;min-width:120px">
+      <input id="food-name-in" placeholder="Food name" data-i18n-ph="food.namePh" style="flex:2;min-width:120px">
+      <select id="food-store-in" style="flex:1;min-width:90px"><option value="cooler" data-i18n="food.oCooler">Cooler</option><option value="dry" data-i18n="food.oDry">Dry</option></select>
+      <select id="food-cook-in" style="flex:1;min-width:90px"><option value="fire" data-i18n="food.oFire">Fire</option><option value="stove" data-i18n="food.oStove">Stove</option><option value="none" data-i18n="food.oNone">No cook</option></select>
+      <input id="food-why-in" placeholder="Note (optional)" data-i18n-ph="gear.notePh" style="flex:2;min-width:120px">
       <button class="btn sm" onclick="addFood()">Add</button>
     </div>
   </div>
-  <div class="kicker">◆ The 9-meal plan</div>
+  <div class="kicker" data-i18n="food.mealPlan">◆ The 9-meal plan</div>
   <div class="grid g3" id="meal-grid"></div>
-  <div class="kicker simplify-hide">◆ Expert prep, packing &amp; storage</div>
+  <div class="kicker simplify-hide" data-i18n="food.prepTitle">◆ Expert prep, packing &amp; storage</div>
   <div class="grid g2 simplify-hide" id="prep-grid"></div>
 </div>
 </section>
 
 <!-- SHOPPING -->
 <section class="panel gated" id="shop">
-  <div class="page-lock-note">🔒 <span>Sign in (top right) to view and edit this page.</span></div>
+  <div class="page-lock-note">🔒 <span data-i18n="lock.page">Sign in (top right) to view and edit this page.</span></div>
   <div class="gate-disable">
-  <div class="sec-title">Shopping — food &amp; gear, in 3 phases</div>
-  <div class="sec-desc">Two categories: <b>Food</b> (groceries — Maxi/IGA at home, road stops en route) and <b>Gear &amp; essentials</b> (with Amazon / Canadian Tire / Decathlon links — the highlighted store is our best-value pick for that item). Checks sync for the whole crew.</div>
+  <div class="sec-title" data-i18n="shop.title">Shopping — food &amp; gear, in 3 phases</div>
+  <div class="sec-desc" data-i18n-html="shop.desc">Two categories: <b>Food</b> (groceries — Maxi/IGA at home, road stops en route) and <b>Gear &amp; essentials</b> (with Amazon / Canadian Tire / Decathlon links — the highlighted store is our best-value pick for that item). Checks sync for the whole crew.</div>
   <div class="ffilter">
-    <button class="fbtn on" data-sc="all" onclick="shopCat(this,'all')">Everything</button>
-    <button class="fbtn" data-sc="food" onclick="shopCat(this,'food')">🍳 Food</button>
-    <button class="fbtn" data-sc="gear" onclick="shopCat(this,'gear')">🎒 Gear &amp; essentials</button>
+    <button class="fbtn on" data-sc="all" onclick="shopCat(this,'all')" data-i18n="shop.everything">Everything</button>
+    <button class="fbtn" data-sc="food" onclick="shopCat(this,'food')" data-i18n="shop.food">🍳 Food</button>
+    <button class="fbtn" data-sc="gear" onclick="shopCat(this,'gear')" data-i18n="shop.gear">🎒 Gear &amp; essentials</button>
   </div>
   <div class="grid g3" id="shop-grid"></div>
-  <div class="note">Campground store prices run 30–50% above retail. On-site, only buy what must be local (firewood) or what you genuinely forgot. Store picks are general guidance — flyers change weekly, so a 10-second price check before buying never hurts.</div>
+  <div class="note"><span data-i18n="shop.note">Campground store prices run 30–50% above retail. On-site, only buy what must be local (firewood) or what you genuinely forgot. Store picks are general guidance — flyers change weekly, so a 10-second price check before buying never hurts.</span></div>
 </div>
 </section>
 
 <!-- COSTS -->
 <section class="panel gated" id="money">
-  <div class="page-lock-note">🔒 <span>Sign in (top right) to view and edit this page.</span></div>
+  <div class="page-lock-note">🔒 <span data-i18n="lock.page">Sign in (top right) to view and edit this page.</span></div>
   <div class="gate-disable">
-  <div class="sec-title">Cost splitter</div>
-  <div class="sec-desc">Log every shared expense with a category. You get per-person balances, totals by category, and the exact minimal transfers to settle up — synced for everyone.</div>
+  <div class="sec-title" data-i18n="cost.title">Cost splitter</div>
+  <div class="sec-desc" data-i18n="cost.desc">Log every shared expense with a category. You get per-person balances, totals by category, and the exact minimal transfers to settle up — synced for everyone.</div>
   <div class="card">
     <div class="expense-form">
-      <input id="exp-desc" placeholder="What was it? (e.g. firewood)">
-      <input id="exp-amt" type="number" placeholder="$ amount" step="0.01">
-      <select id="exp-cat"><option>Site</option><option>Food</option><option>Gas</option><option>Firewood</option><option>Gear</option><option>Other</option></select>
+      <input id="exp-desc" placeholder="What was it? (e.g. firewood)" data-i18n-ph="cost.whatPh">
+      <input id="exp-amt" type="number" placeholder="$ amount" data-i18n-ph="cost.amtPh" step="0.01">
+      <select id="exp-cat"><option value="Site" data-i18n="cost.catSite">Site</option><option value="Food" data-i18n="cost.catFood">Food</option><option value="Gas" data-i18n="cost.catGas">Gas</option><option value="Firewood" data-i18n="cost.catFirewood">Firewood</option><option value="Gear" data-i18n="cost.catGear">Gear</option><option value="Other" data-i18n="cost.catOther">Other</option></select>
       <select id="exp-who"><option value="">Who paid?</option></select>
       <button class="btn" onclick="addExpense()">Add</button>
     </div>
@@ -909,32 +963,32 @@ html.signed-out .panel.gated .gate-disable{opacity:.5;pointer-events:none;filter
 
 <!-- ACTIVITIES -->
 <section class="panel" id="fun">
-  <div class="sec-title">Activities &amp; entertainment</div>
-  <div class="sec-desc">Three layers of fun: what's around the campsite, what to throw in the car, and what to do at camp when the fire's going.</div>
-  <div class="kicker" style="margin-top:6px">◆ In the area — depends on the site</div>
+  <div class="sec-title" data-i18n="act.title">Activities &amp; entertainment</div>
+  <div class="sec-desc" data-i18n="act.desc">Three layers of fun: what's around the campsite, what to throw in the car, and what to do at camp when the fire's going.</div>
+  <div class="kicker" style="margin-top:6px" data-i18n="act.inArea">◆ In the area — depends on the site</div>
   <div class="grid g2" id="area-grid"></div>
-  <div class="kicker">◆ Fun things to bring</div>
+  <div class="kicker" data-i18n="act.toBring">◆ Fun things to bring</div>
   <div class="grid g3" id="bring-grid"></div>
-  <div class="kicker">◆ Camp zone &amp; tent games</div>
+  <div class="kicker" data-i18n="act.games">◆ Camp zone &amp; tent games</div>
   <div class="grid g3" id="games-grid"></div>
 </section>
 
 <!-- SURVIVAL -->
 <section class="panel" id="info">
-  <div class="sec-title">Survival kit — tips, situations, FAQ &amp; roles</div>
-  <div class="sec-desc">Who does what, the safety basics, what to do when things go sideways, and answers to the questions someone will definitely ask.</div>
-  <div class="kicker" style="margin-top:8px">◆ Assign roles</div>
+  <div class="sec-title" data-i18n="surv.title">Survival kit — tips, situations, FAQ &amp; roles</div>
+  <div class="sec-desc" data-i18n="surv.desc">Who does what, the safety basics, what to do when things go sideways, and answers to the questions someone will definitely ask.</div>
+  <div class="kicker" style="margin-top:8px" data-i18n="surv.roles">◆ Assign roles</div>
   <div class="role-grid" id="role-grid"></div>
-  <div class="kicker">◆ Situations &amp; fixes — when things go sideways</div>
+  <div class="kicker" data-i18n="surv.situations">◆ Situations &amp; fixes — when things go sideways</div>
   <div class="grid g2" id="situations-grid"></div>
   <div class="kicker simplify-hide">◆ Field tips &amp; good-to-knows</div>
   <div class="card simplify-hide" id="tips-card"></div>
   <div class="kicker">◆ FAQ</div>
   <div id="faq-list"></div>
-  <div class="kicker">◆ Emergency &amp; key info</div>
+  <div class="kicker" data-i18n="surv.emergency">◆ Emergency &amp; key info</div>
   <div class="grid g2">
-    <div class="icard"><div class="itag it-safe">Safety</div><h4>Print one copy per car</h4><p>Campground phone (Plage 819-275-7757 / Ivy Lea 613-659-3057), nearest hospital &amp; urgent care, and provincial fire/police non-emergency numbers. Don't rely on phones — service is spotty.</p></div>
-    <div class="icard"><div class="itag it-safe">Water</div><h4>Bring backup water</h4><p>Both sites have potable tap water, but pack 10–15 L in jugs as backup. Never drink from the river or lake without a filter.</p></div>
+    <div class="icard"><div class="itag it-safe" data-i18n="surv.safetyTag">Safety</div><h4 data-i18n="surv.printTitle">Print one copy per car</h4><p data-i18n="surv.printBody">Campground phone (Plage 819-275-7757 / Ivy Lea 613-659-3057), nearest hospital &amp; urgent care, and provincial fire/police non-emergency numbers. Don't rely on phones — service is spotty.</p></div>
+    <div class="icard"><div class="itag it-safe" data-i18n="surv.waterTag">Water</div><h4 data-i18n="surv.waterTitle">Bring backup water</h4><p data-i18n="surv.waterBody">Both sites have potable tap water, but pack 10–15 L in jugs as backup. Never drink from the river or lake without a filter.</p></div>
   </div>
 </section>
 
@@ -945,17 +999,17 @@ html.signed-out .panel.gated .gate-disable{opacity:.5;pointer-events:none;filter
 <div class="modal-bg" id="help-modal" onclick="if(event.target===this)closeHelp()">
   <div class="modal">
     <span class="close-x" onclick="closeHelp()">✕</span>
-    <h3>How to use Camping 2026</h3>
-    <div class="gate-note" style="background:linear-gradient(135deg,rgba(240,180,85,.14),rgba(240,180,85,.05));border:1px solid rgba(240,180,85,.34);border-radius:10px;padding:11px 14px;margin-bottom:14px;font-size:12.5px;color:var(--amber)">🔒 You're browsing signed out — the trip is read-only and crew pages are locked. <b>Sign in (top right)</b> to add the crew, claim gear, sync live, and unlock every feature.</div>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">One shared trip, every device, live. Here's the 60-second version:</p>
-    <div class="help-step"><div class="hn">1</div><p><b>Add the crew</b> — Basecamp tab → type each person's name. Names power everything else.</p></div>
-    <div class="help-step"><div class="hn">2</div><p><b>Say who you are</b> — Basecamp tab → pick yourself in the <b>"I'm:"</b> dropdown. This gives you a personal packing list and your own progress bar.</p></div>
-    <div class="help-step"><div class="hn">3</div><p><b>Pick the campsite</b> — Campsites tab → vote with your name, then hit <b>Choose this site</b>. That switches the quick links, weather &amp; route to that site, and shows its <b>site map</b> (zoom, pan, save).</p></div>
-    <div class="help-step"><div class="hn">4</div><p><b>Claim &amp; pack your gear</b> — Gear tab → assign people per item (or "All"). Your <b>My packing list</b> shows everything you need; tick items off as you pack, and add your own personal items.</p></div>
-    <div class="help-step"><div class="hn">5</div><p><b>Plan the drive</b> — Itinerary tab → add stops, open the route in Google Maps, one tap reverses it for home.</p></div>
-    <div class="help-step"><div class="hn">6</div><p><b>Shop &amp; split costs</b> — Shopping tab for the 3-phase lists with store picks; Costs tab logs expenses and computes who pays who.</p></div>
-    <div class="help-step"><div class="hn">7</div><p><b>Sign in to go live</b> — top right. Signing in syncs the trip with the whole crew in real time and unlocks all themes. Signed out, you're in local (this-device) mode on the Classic theme.</p></div>
-    <div class="help-step"><div class="hn">8</div><p><b>Make it yours</b> — ⚙ Settings → switch themes, and turn on <b>Simplify</b> to hide extra tabs for a cleaner phone view. Add the site to your home screen (Share → Add to Home Screen) for an app icon + offline use.</p></div>
+    <h3 data-i18n="help.title">How to use Camping 2026</h3>
+    <div class="gate-note" style="background:linear-gradient(135deg,rgba(240,180,85,.14),rgba(240,180,85,.05));border:1px solid rgba(240,180,85,.34);border-radius:10px;padding:11px 14px;margin-bottom:14px;font-size:12.5px;color:var(--amber)"><span data-i18n-html="help.signedOut">🔒 You're browsing signed out — the trip is read-only and crew pages are locked. <b>Sign in (top right)</b> to add the crew, claim gear, sync live, and unlock every feature.</span></div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px" data-i18n="help.intro">One shared trip, every device, live. Here's the 60-second version:</p>
+    <div class="help-step"><div class="hn">1</div><p data-i18n-html="help.s7"><b>Sign in to go live</b> — top right. Signing in syncs the trip with the whole crew in real time and unlocks all themes. Signed out, you're in local (this-device) mode on the Classic theme.</p></div>
+    <div class="help-step"><div class="hn">2</div><p data-i18n-html="help.s1"><b>Add the crew</b> — Basecamp tab → type each person's name. Names power everything else.</p></div>
+    <div class="help-step"><div class="hn">3</div><p data-i18n-html="help.s2"><b>Say who you are</b> — Basecamp tab → pick yourself in the <b>"I'm:"</b> dropdown. This gives you a personal packing list and your own progress bar.</p></div>
+    <div class="help-step"><div class="hn">4</div><p data-i18n-html="help.s3"><b>Pick the campsite</b> — Campsites tab → vote with your name, then hit <b>Choose this site</b>. That switches the quick links, weather &amp; route to that site, and shows its <b>site map</b> (zoom, pan, save).</p></div>
+    <div class="help-step"><div class="hn">5</div><p data-i18n-html="help.s4"><b>Claim &amp; pack your gear</b> — Gear tab → assign people per item (or "All"). Your <b>My packing list</b> shows everything you need; tick items off as you pack, and add your own personal items.</p></div>
+    <div class="help-step"><div class="hn">6</div><p data-i18n-html="help.s5"><b>Plan the drive</b> — Itinerary tab → add stops, open the route in Google Maps, one tap reverses it for home.</p></div>
+    <div class="help-step"><div class="hn">7</div><p data-i18n-html="help.s6"><b>Shop &amp; split costs</b> — Shopping tab for the 3-phase lists with store picks; Costs tab logs expenses and computes who pays who.</p></div>
+    <div class="help-step"><div class="hn">8</div><p data-i18n-html="help.s8"><b>Make it yours</b> — ⚙ Settings → switch themes, and turn on <b>Simplify</b> to hide extra tabs for a cleaner phone view. Add the site to your home screen (Share → Add to Home Screen) for an app icon + offline use.</p></div>
   </div>
 </div>
 
@@ -963,8 +1017,8 @@ html.signed-out .panel.gated .gate-disable{opacity:.5;pointer-events:none;filter
 <div class="modal-bg" id="archive-modal" onclick="if(event.target===this)closeArchive()">
   <div class="modal">
     <span class="close-x" onclick="closeArchive()">✕</span>
-    <h3>🗃 Gear archive</h3>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Everything removed from the gear list lands here. Restore anything with one tap.</p>
+    <h3 data-i18n="arch.title">🗃 Gear archive</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px" data-i18n="arch.desc">Everything removed from the gear list lands here. Restore anything with one tap.</p>
     <div id="archive-list"></div>
   </div>
 </div>
@@ -1049,26 +1103,26 @@ html.signed-out .panel.gated .gate-disable{opacity:.5;pointer-events:none;filter
     <div class="set-sec" id="setsec-display">
     <div class="chk toggle" id="motion-toggle" onclick="toggleMotion()" style="border-bottom:none">
       <div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div>
-      <div class="ct">Animations <span class="tg-state">OFF</span><div class="tg-sub">Fireflies, ambient scenes &amp; transitions</div></div>
+      <div class="ct"><span data-i18n="set.animations">Animations</span> <span class="tg-state">OFF</span><div class="tg-sub" data-i18n="set.animationsSub">Fireflies, ambient scenes &amp; transitions</div></div>
     </div>
     <div class="chk toggle" id="perf-toggle" onclick="togglePerf()" style="border-bottom:none">
       <div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div>
-      <div class="ct">Lite mode <span class="tg-state">OFF</span><div class="tg-sub">Trims visual effects (glass blur) for smoother performance on older devices</div></div>
+      <div class="ct"><span data-i18n="set.lite">Lite mode</span> <span class="tg-state">OFF</span><div class="tg-sub" data-i18n="set.liteSub">Trims visual effects (glass blur) for smoother performance on older devices</div></div>
     </div>
     <div class="chk toggle" id="compact-toggle" onclick="toggleCompact()" style="border-bottom:none">
       <div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div>
-      <div class="ct">Compact mode <span class="tg-state">OFF</span><div class="tg-sub">Tighter spacing, more on screen</div></div>
+      <div class="ct"><span data-i18n="set.compact">Compact mode</span> <span class="tg-state">OFF</span><div class="tg-sub" data-i18n="set.compactSub">Tighter spacing, more on screen</div></div>
     </div>
     <div class="chk toggle" id="simplify-toggle" onclick="toggleSimplify()" style="border-bottom:none">
       <div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></div>
-      <div class="ct">Simplify <span class="tg-state">OFF</span><div class="tg-sub">Hide extra tabs &amp; sections (keeps Basecamp, Campsites, Gear, Food, Survival). Great on mobile.</div></div>
+      <div class="ct"><span data-i18n="set.simplify">Simplify</span> <span class="tg-state">OFF</span><div class="tg-sub" data-i18n="set.simplifySub">Hide extra tabs &amp; sections (keeps Basecamp, Campsites, Gear, Food, Survival). Great on mobile.</div></div>
     </div>
     <p id="display-lock-note" style="font-size:12px;color:var(--amber);margin-top:10px;display:none">🔒 Sign in to customize motion &amp; display. Signed out uses a fast, lightweight setup.</p>
     </div>
-    <div class="kicker" style="margin:18px 0 4px">◆ Help</div>
+    <div class="kicker" style="margin:18px 0 4px">◆ <span data-i18n="set.help">Help</span></div>
     <div class="toolbar" style="margin-top:8px">
-      <button class="btn sm ghost" onclick="closeSettings();openHelp()">Open the how-to guide</button>
-      <button class="btn sm ghost" onclick="showBannerAgain()">Show the welcome banner again</button>
+      <button class="btn sm ghost" onclick="closeSettings();openHelp()" data-i18n="set.openGuide">Open the how-to guide</button>
+      <button class="btn sm ghost" onclick="showBannerAgain()"data-i18n="set.showBanner">Show the welcome banner again</button>
     </div>
   </div>
 </div>
@@ -1087,36 +1141,32 @@ html.signed-out .panel.gated .gate-disable{opacity:.5;pointer-events:none;filter
     <div class="map-stage" id="map-stage">
       <img id="map-img" src="" alt="" draggable="false">
     </div>
-    <div class="map-hint">Pinch or scroll to zoom · drag to pan · double-tap to reset</div>
+    <div class="map-hint"data-i18n="map.hint">Pinch or scroll to zoom · drag to pan · double-tap to reset</div>
   </div>
 </div>
 
-<!-- VIEW-AS BAR (owner impersonation preview) -->
-<div id="viewas-bar" style="display:none"><span id="viewas-label">👁 Previewing</span><button class="btn ghost sm" onclick="setViewAs(null)">Exit preview</button></div>
-
 <!-- IDENTITY / LINK MODAL (first sign-in) -->
-<div class="modal-bg" id="link-modal" onclick="if(event.target===this)closeLink()">
+<div class="modal-bg" id="link-modal">
   <div class="modal" style="max-width:380px">
-    <span class="close-x" onclick="closeLink()">✕</span>
-    <h3>Who are you on this trip?</h3>
-    <p style="font-size:12.5px;color:var(--muted);margin-bottom:16px">Link your sign-in to a crew member so you can edit the trip and track your own packing. Or just browse as a visitor.</p>
+    <h3 data-i18n="link.title">Who are you on this trip?</h3>
+    <p style="font-size:12.5px;color:var(--muted);margin-bottom:16px" data-i18n="link.desc">Link your sign-in to a crew member so you can edit the trip and track your own packing. Or just browse as a visitor.</p>
     <div id="link-existing-wrap" style="margin-bottom:14px">
-      <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">I'm an existing crew member</label>
+      <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px" data-i18n="link.existing">I'm an existing crew member</label>
       <div style="display:flex;gap:6px">
-        <select id="link-existing-select" style="flex:1"><option value="">Choose your name…</option></select>
-        <button class="btn sm" onclick="linkChooseExisting()">Link</button>
+        <select id="link-existing-select" style="flex:1"><option value="" data-i18n="link.choose">Choose your name…</option></select>
+        <button class="btn sm" onclick="linkChooseExisting()" data-i18n="link.link">Link</button>
       </div>
     </div>
     <div style="margin-bottom:14px">
-      <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Add me as new crew</label>
+      <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px" data-i18n="link.addNew">Add me as new crew</label>
       <div style="display:flex;gap:6px">
-        <input id="link-new-name" placeholder="Your name" style="flex:1" onkeydown="if(event.key==='Enter')linkCreateNew()">
-        <button class="btn sm" onclick="linkCreateNew()">Add</button>
+        <input id="link-new-name" placeholder="Your name" data-i18n-ph="link.yourNamePh" style="flex:1" onkeydown="if(event.key==='Enter')linkCreateNew()">
+        <button class="btn sm" onclick="linkCreateNew()" data-i18n="link.add">Add</button>
       </div>
     </div>
     <div style="border-top:1px solid var(--border);padding-top:12px">
-      <button class="btn ghost" style="width:100%" onclick="linkJustBrowsing()">Just browsing (visitor)</button>
-      <p style="font-size:11px;color:var(--faint);margin-top:8px;line-height:1.45">Visitors can view everything but can't edit. You can link your name later from Basecamp.</p>
+      <button class="btn ghost" style="width:100%" onclick="linkJustBrowsing()" data-i18n="link.browsing">Just browsing (visitor)</button>
+      <p style="font-size:11px;color:var(--faint);margin-top:8px;line-height:1.45" data-i18n="link.note">Visitors can view everything but can't edit. You can link your name later from Basecamp.</p>
     </div>
   </div>
 </div>
@@ -1188,6 +1238,8 @@ html.signed-out .panel.gated .gate-disable{opacity:.5;pointer-events:none;filter
 
     <!-- DATA -->
     <div id="admin-sec-data" class="admin-sec" style="display:none">
+      <div class="kicker" style="margin-top:4px">◆ Admin guide</div>
+      <button class="btn ghost sm" style="width:100%;margin-bottom:14px" onclick="openAdminGuide()">📖 How the admin tools, roles &amp; sign-in work (FAQ)</button>
       <div class="kicker" style="margin-top:4px">◆ Data tools</div>
       <div class="toolbar">
         <button class="btn ghost sm" onclick="exportJSON()">⬇ Export trip JSON</button>
@@ -1196,6 +1248,55 @@ html.signed-out .panel.gated .gate-disable{opacity:.5;pointer-events:none;filter
         <button class="btn ghost sm" onclick="resetData()">↺ Reset all trip data</button>
       </div>
       <p style="font-size:11px;color:var(--faint);margin-top:10px">Reset wipes crew, gear, costs, votes, stops &amp; roles for everyone on the live trip — use with care.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN GUIDE / FAQ MODAL (owner-only) -->
+<div class="modal-bg" id="admin-guide-modal" onclick="if(event.target===this)closeAdminGuide()">
+  <div class="modal" style="max-width:560px">
+    <span class="close-x" onclick="closeAdminGuide()">✕</span>
+    <h3>📖 Admin guide</h3>
+    <p style="font-size:12.5px;color:var(--muted);margin-bottom:16px">Private reference — only you (the owner) can see this. Everything here is invisible to other users.</p>
+
+    <div class="ag-sec"><div class="ag-h">🛠 What you can do as admin</div>
+      <ul class="ag-list">
+        <li><b>Preview as any role</b> — Live tab → see the site exactly as a signed-out visitor, visitor, camper, or leader sees it. A translucent amber bar appears at the very top; tap <b>Exit preview</b> to return.</li>
+        <li><b>Live presence</b> — see who's online right now and which tab they're on.</li>
+        <li><b>Departure / announcement banner</b> — Banner tab → compose a message (with optional link) shown to everyone at the top of Basecamp; toggle on/off anytime.</li>
+        <li><b>User management</b> — Users tab → block/unblock emails, grant/revoke <b>Leader</b>, link or unlink any crew member to an email, and toggle whether new sign-ups are allowed.</li>
+        <li><b>Reports data center</b> — live counters, visit analytics, time-on-site, and trip charts (see below).</li>
+        <li><b>Data tools</b> — export/import the trip as JSON, export the whole site as a PDF, or reset all trip data.</li>
+      </ul>
+    </div>
+
+    <div class="ag-sec"><div class="ag-h">🔑 How roles work</div>
+      <ul class="ag-list">
+        <li><b>Signed-out</b> — can only see Basecamp, Campsites, Itinerary, Activities &amp; Survival. The Gear, Food, Shopping &amp; Costs pages are hidden until they sign in.</li>
+        <li><b>Visitor</b> — signed in but <i>not</i> linked to a crew member. Can view every page but cannot edit anything. Their email shows in your Users list and the Reports log.</li>
+        <li><b>Camper</b> — signed in and linked to a crew member. Full edit access to crew, gear, food, costs, votes, etc. Can edit only their own packing list.</li>
+        <li><b>Leader</b> — a camper you've promoted. Everything a camper can do, plus reset, edit costs/timeline, and manage any packing list. No admin panel. <b>For live counts a leader is also counted as a camper</b>, but keeps the Leader label.</li>
+        <li><b>Admin</b> — you (<span class="ag-mono" id="ag-owner"></span>). Everything, including this panel.</li>
+      </ul>
+    </div>
+
+    <div class="ag-sec"><div class="ag-h">✉️ How sign-in &amp; email-linking works</div>
+      <ul class="ag-list">
+        <li>When a <b>new email</b> signs in for the first time, a centered prompt asks them to either <b>pick an existing crew member</b>, <b>add themselves as new crew</b>, or <b>just browse</b>.</li>
+        <li>Choosing/creating a crew member <b>links their email</b> to that name (stored privately — other users never see the email) and makes them a <b>camper</b>.</li>
+        <li>Choosing "just browsing" makes them a <b>visitor</b> — view-only. You'll still see their email in Users &amp; Reports.</li>
+        <li>You can <b>re-link or unlink</b> any crew member from the Users tab. Unlinking frees the name so someone else can claim it.</li>
+        <li>The <b>online counter</b> tallies <i>everyone</i> currently on the site — signed-out, visitors, campers, leaders and admin combined.</li>
+      </ul>
+    </div>
+
+    <div class="ag-sec"><div class="ag-h">📊 Reading the Reports data center</div>
+      <ul class="ag-list">
+        <li><b>Live now</b> — real-time counts by role, refreshed automatically from presence.</li>
+        <li><b>Audience</b> — visits this month &amp; all-time, unique people (by email vs anonymous), and total/average time on site.</li>
+        <li><b>Visitor log</b> — every email that has visited, their role, visit count, time on site, and last-seen.</li>
+        <li>Analytics require the one-time <b>analytics SQL</b> to be run in Supabase; until then the panel shows a small "run the SQL" note.</li>
+      </ul>
     </div>
   </div>
 </div>
@@ -1227,7 +1328,8 @@ html.signed-out .panel.gated .gate-disable{opacity:.5;pointer-events:none;filter
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" onerror="window.__gsapFailed=1"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" onerror="window.__sbFailed=1"></script>
 <script src="config.js"></script>
-<script src="i18n.js?v=1"></script>
-<script src="app.js?v=22"></script>
+<script src="i18n.js?v=2"></script>
+<script src="content-fr.js?v=2"></script>
+<script src="app.js?v=23"></script>
 </body>
 </html>

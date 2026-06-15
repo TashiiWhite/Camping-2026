@@ -166,46 +166,59 @@ To share state when Supabase isn't connected: **Export crew data** → send the 
 
 ## Version history
 
-### v8 — June 13, 2026 (current)
+### v8 — June 14, 2026 (current)
 
-This release locked down writes, added a private admin control panel, and built a full signed-in/signed-out access model with roles.
+The big release: a full signed-in/signed-out access model with roles, a private admin control panel, **bilingual (English CA / French CA) support**, an **admin data-center dashboard with live Supabase analytics**, **per-user language**, inline meal editing, auto-sorting timeline, and a privacy pass on locked pages.
+
+**Languages — English (CA) & French (CA)**
+- Switch the entire site between **English (CA)** and **Français (CA)** in ⚙ Settings → Language (minimalist flag-pill selector).
+- Per-device choice (localStorage `ww_lang`), applied instantly; persists across reloads.
+- **Everything** is translated — all UI plus the full trip content (food matrix, 9-meal plan, prep playbook, shopping lists, situations, FAQ, tips, roles). French is Québécois register and crew-eyeball-friendly.
+- Engine (`i18n.js`) + French content (`content-fr.js`) are architected so adding a 3rd language later = one dictionary block + one content file. `dir` attribute switches automatically (RTL-ready).
 
 **Access model & roles**
-- **Signed-out = clean, read-only site.** No crew/trip data shows; signing in reveals the live shared data.
-- **Roles:** `visitor` (signed in but not linked to a crew member — can view everything but not edit), `camper` (linked to a crew member — full edit access), `leader` (granted by the owner — full access plus reset/cost-edit/timeline powers, no admin panel), and `admin`/owner. Your role shows as a badge in the header.
-- **First sign-in identity prompt** — choose *existing crew member* / *add me as new crew* / *just browsing*. Linking stamps your email to that crew name (you become a camper); browsing keeps you a visitor. You can link later anytime via the "This is me" button on Basecamp.
-- **Edit or remove your own crew name** (rename ✎ / remove ✕ on your chip); leaders/admins can edit anyone's. Regular users own one crew member; leaders/admins unlimited.
-- **Offline-resilient:** once signed in, your role and data persist even if the connection drops.
+- **Signed-out users can no longer open locked pages.** Gear, Food, Shopping & Costs are hidden until sign-in; clicking those tabs bounces to Basecamp with a hint. Basecamp, Campsites, Itinerary, Activities & Survival remain public.
+- **Roles:** `visitor` (signed in, not linked — view-only), `camper` (linked to a crew member — full edit), `leader` (owner-granted — full access plus reset/cost-edit/timeline, no admin panel), and `admin`/owner. Role shows as a badge in the header. **For live counts a leader is also counted as a camper, but keeps the Leader label.**
+- **Forced first-sign-in identity prompt** — a centered modal (no click-away) makes every new email choose: *existing crew member* / *add me as new crew* / *just browsing*. Linking privately stamps the email to that crew name → camper; browsing → visitor. The email is never shown to other crew.
+- **Edit / rename / remove your own crew name**; leaders & admins can manage anyone's.
 
 **Crew & packing**
-- **"Who am I" selector** drives your personal packing list and progress bar.
-- **Personal packing list** — everything assigned to you, everything marked "All crew", and your own custom items, each with an optional **quantity**. Tick items off as you pack.
-- **View other crew members' lists read-only**; only leaders/admins can edit someone else's, and visitors can edit none.
+- **"I'm" + "Viewing" selectors sit side by side** on the Gear page to save space.
+- **Personal packing list** — everything assigned to you, "All crew" items, and your own custom items with optional **quantity**.
+- **View other crew members' lists read-only**; campers edit only their own, leaders/admins edit anyone's, visitors none.
 
 **Everyday features**
-- **Add food** (with cooler/dry + cook category) to the food matrix — any signed-in editor.
-- **Edit the meal-plan days** — override any of the 9 meals' item lists.
-- **Leaders/admins add timeline points** anywhere on the itinerary.
-- **Shopping "I bought this"** — multiple crew can confirm a purchase; buyer avatars show globally so you don't double-buy.
-- **Editable cost items** — leaders/admins can fix an expense's name/amount after it's logged.
-- **Collapsible settings sections**, a **back-to-top button** on long pages, and the **Simplify** display mode.
+- **Add food** (with store + cook category) and **edit the 9-meal plan inline** — tap any meal item to edit it directly on the card, Enter/blur saves, blank removes, "+ add item" per card.
+- **Add timeline points that auto-sort by time** — new stops slot chronologically into the itinerary (default points are editable/hideable too).
+- **Shopping "I bought this"** — multiple crew confirm a purchase; buyer avatars show globally.
+- **Editable cost items** (leaders/admins); collapsible settings; back-to-top button; **Simplify** mode.
+- **Readable dropdowns across all themes** (fixed low-contrast option lists).
 
 **Display settings**
-- Gated like themes (locked when signed-out). Signed-out defaults: animations off, Lite on, Compact on. Signed-in: animations on, Lite off, Compact off.
-- "Performance mode" renamed **Lite mode**; toggles show an explicit **ON/OFF** state (no more strikethrough).
+- Gated like themes. Signed-out defaults: animations off, Lite on, Compact on. Signed-in: animations on, Lite off, Compact off. "Lite mode" toggles show explicit ON/OFF.
 
 **Security**
-- **Writes require sign-in at the database level** (via `supabase-v8-admin.sql`); reading stays open.
-- **Reset, cost-editing, and timeline edits** are limited to leaders/admins.
+- **Writes require sign-in at the database level** (`supabase-v8-admin.sql`); reading stays open.
+- **Reset, cost-editing & timeline edits** limited to leaders/admins.
+- Sign-in via Google or email magic-link; the linked email is stored privately in crew metadata and never surfaced to other users.
 
 **Admin (owner-only — `tashiiwhite@gmail.com`)**
 - A hidden **🛠 Admin** panel, visible only to the owner; never surfaced or explained to other users.
-- **Preview as any role** — view the site exactly as not-signed-in / visitor / camper / leader, with a sticky preview bar and one-click exit.
-- **Live presence** — who's online and which tab they're on, via Supabase Presence.
-- **Departure / announcement banner** — title, message, optional link; toggle on/off; shows atop Basecamp for everyone.
-- **User management** — see which emails are online live and **block/unblock** them; view crew with their **linked email**; **link or unlink** any crew member to an email; remove members; **grant/revoke Leader** by email; toggle new sign-ups.
-- **Reports dashboard with charts** (dependency-free inline SVG): site-traffic line chart (peak online per day), gear claimed/unclaimed donut, packing-by-crew bar chart, spend-by-person bar chart, vote donut, shopping-progress donut, items-bought-by-crew bar chart, and a roles overview.
+- **Admin guide / FAQ** (Data tab) — a private reference explaining admin privileges, how to use each tool, how roles work, and how sign-in / email-linking logging works.
+- **Preview as any role** — see the site exactly as signed-out / visitor / camper / leader, with a **translucent preview bar pinned to the very top** and one-click exit.
+- **Live presence** — who's online and which tab they're on.
+- **Departure / announcement banner** — title, message, optional link; toggle on/off; shows atop Basecamp for everyone. *(Tip: point the link at your hosted `whats-new.html` so the crew can read the changelog.)*
+- **User management** — block/unblock emails; view crew with linked email; link/unlink any crew member; grant/revoke Leader; toggle sign-ups.
+- **Reports → data-center dashboard** (dependency-free inline SVG, dense modern UI):
+  - **Live now** counters from presence — online total, signed-out, visitors, campers, leaders, admins (updates in real time).
+  - **Audience** — visits this month & all-time, unique people (emails vs anonymous), total & average time-on-site, crew size.
+  - **Visitor log** — every email that has visited, with role, visit count, time-on-site and last-seen.
+  - **Traffic** (peak online/day, visits/day) plus trip charts: gear claimed, votes, shopping done, packing-by-crew, spend-by-person, items-bought, roles.
 - **Data tools** — export/import JSON, export PDF, reset trip.
+
+**Analytics setup (one-time):** run **`supabase-v8-analytics.sql`** in the Supabase SQL editor to create the `site_visitors` + `site_daily` tables. The client records visits + session time for both signed-in emails and anonymous visitors; the dashboard reads them live. Until the SQL is run, the dashboard shows a small "run the analytics SQL" note and the rest of the panel still works.
+
+**Deploy note:** this release adds three files — **`i18n.js`**, **`content-fr.js`**, and (optional, hosted separately) **`whats-new.html`**. Upload `i18n.js` and `content-fr.js` alongside `app.js` / `index.html` / `sw.js` in the same commit. Cache bumped to **v23**.
 
 ### v7 — June 13, 2026
 
