@@ -183,6 +183,7 @@ This release reworks the **Cost splitter** so an expense no longer has to be spl
 
 **Settle-up math**
 - The per-person balances and the minimal "who pays who" transfers are recomputed from a single beneficiary model that handles all split modes correctly; balances always sum to zero. "Per person" now reads **"Split evenly ($X)"** and only reflects the evenly-shared pool.
+- **Settle-style toggle** (leaders/admins) — switch "Who pays who" between **Grouped** (everyone pays the main payer, who then balances with the other payers — matches the "two of us front everything and settle at the end" plan) and **Fewest** (the minimal-transfer view). Grouped is the default; the choice is saved with the trip and used by "Copy for group chat".
 
 **Trip detail**
 - The crew is now renting **one car split among the five of us**; the header and Basecamp now read **1–2 cars** instead of 2.

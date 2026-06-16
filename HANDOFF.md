@@ -3,7 +3,7 @@
 > Snapshot of where the project stands at finalization. Pair with `ARCHITECTURE.md` (how it works) and `README.md` (full feature changelog).
 
 **Current version:** v8 (everything previously labeled "v9" was merged into v8 — there is no separate v9 anywhere).
-**Cache:** `camping2026-v26` · **Script ref:** `app.js?v=26`
+**Cache:** `camping2026-v27` · **Script ref:** `app.js?v=27`
 **Status:** Feature-complete and code-tested. The analytics dashboard's *live data* still needs real-device verification (see below).
 
 ---

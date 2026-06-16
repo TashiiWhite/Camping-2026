@@ -21,7 +21,7 @@ let state = defaultState();
 function defaultState(){
   return { rev:0, by:'', crew:[], crewMeta:{}, gear:null, gearArchive:[], gearClaims:{}, gearPacked:{}, personalItems:{},
     expenses:[], votes:{}, roles:{}, checks:{}, stops:[], chosenSite:'',
-    customFood:[], timelineExtra:[], timelineEdits:{}, shopBought:{}, prepEdits:{}, mealEdits:{} };
+    customFood:[], timelineExtra:[], timelineEdits:{}, shopBought:{}, prepEdits:{}, mealEdits:{}, settleMode:'grouped' };
 }
 
 /* "Who am I" — per device, never synced. Drives the personal packing list + progress. */
@@ -2188,8 +2188,50 @@ function renderCatBars(){
   });
   w.innerHTML=html;
 }
+/* Build the list of settle-up transfers from net balances, honoring state.settleMode.
+   - 'minimal' : greedy fewest-payments (a debtor may pay several people).
+   - 'grouped' : every debtor pays the single biggest creditor (the "collector"),
+                 who then forwards each other creditor their share. Cleaner for groups
+                 where one or two people front everything and balance at the end. */
+function settleTransfers(bal){
+  const mode=state.settleMode||'grouped';
+  const debtors=[],creditors=[];
+  Object.entries(bal).forEach(([n,b])=>{if(b<-0.005)debtors.push([n,-b]);else if(b>0.005)creditors.push([n,b]);});
+  creditors.sort((a,b)=>b[1]-a[1]);
+  if(!debtors.length||!creditors.length) return {transfers:[],collector:null};
+  if(mode==='minimal'){
+    debtors.sort((a,b)=>b[1]-a[1]);
+    const d=debtors.map(x=>x.slice()),c=creditors.map(x=>x.slice());
+    const out=[];let di=0,ci=0;
+    while(di<d.length&&ci<c.length){
+      const pay=Math.min(d[di][1],c[ci][1]);
+      out.push([d[di][0],c[ci][0],pay]);
+      d[di][1]-=pay;c[ci][1]-=pay;
+      if(d[di][1]<0.005)di++;if(c[ci][1]<0.005)ci++;
+    }
+    return {transfers:out,collector:null};
+  }
+  // grouped
+  const collector=creditors[0][0];
+  const out=[];
+  debtors.forEach(([n,amt])=>out.push([n,collector,amt]));
+  for(let i=1;i<creditors.length;i++) out.push([collector,creditors[i][0],creditors[i][1]]);
+  return {transfers:out,collector};
+}
+// Toggle which settle style the crew uses (manager-controlled, synced).
+function setSettleMode(m){
+  if(!requireManage())return;
+  if(m!=='grouped'&&m!=='minimal')return;
+  state.settleMode=m; persist(); renderSettleModeCtl(); renderSettle();
+}
+function renderSettleModeCtl(){
+  const ctl=$('#settle-seg'); if(!ctl)return;
+  const m=state.settleMode||'grouped';
+  ctl.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.mode===m));
+}
 function renderSettle(){
   const w=$('#settle-body');
+  renderSettleModeCtl();
   if(!state.crew.length||!state.expenses.length){w.innerHTML=`<div class="empty">${t('cost.settleEmpty','Add crew + expenses to see the split.')}</div>`;return;}
   const {bal,total,sharedPerPerson,hasShared,hasCustom}=computeBalances();
   let html=`<div class="settle-row"><span>${t('cost.totalSpent','Total spent')}</span><span class="owe">$${total.toFixed(2)}</span></div>`;
@@ -2202,22 +2244,15 @@ function renderSettle(){
   html+=`<div style="height:8px"></div>`;
   state.crew.forEach(c=>{const b=bal[c];const cls=b>=-0.005?'pos':'neg';const txt=b>=-0.005?`${t('cost.getsBack','gets back')} $${Math.max(0,b).toFixed(2)}`:`${t('cost.owes','owes')} $${Math.abs(b).toFixed(2)}`;
     html+=`<div class="settle-row"><span><span class="avatar" style="width:20px;height:20px;font-size:9px;background:${colorFor(c)};display:inline-flex;vertical-align:middle;margin-right:7px">${initials(c)}</span>${esc(c)}</span><span class="owe ${cls}">${txt}</span></div>`;});
-  // minimal transfers (greedy)
-  const debtors=[],creditors=[];
-  Object.entries(bal).forEach(([n,b])=>{if(b<-0.005)debtors.push([n,-b]);else if(b>0.005)creditors.push([n,b]);});
-  debtors.sort((a,b)=>b[1]-a[1]);creditors.sort((a,b)=>b[1]-a[1]);
-  const transfers=[];let di=0,ci=0;
-  while(di<debtors.length&&ci<creditors.length){
-    const pay=Math.min(debtors[di][1],creditors[ci][1]);
-    transfers.push([debtors[di][0],creditors[ci][0],pay]);
-    debtors[di][1]-=pay;creditors[ci][1]-=pay;
-    if(debtors[di][1]<0.005)di++;if(creditors[ci][1]<0.005)ci++;
-  }
+  const {transfers,collector}=settleTransfers(bal);
   if(transfers.length){
     html+=`<div class="kicker" style="margin:14px 0 10px">◆ ${t('cost.whoPays','Who pays who')} — ${transfers.length} ${transfers.length===1?t('cost.transfer','transfer'):t('cost.transfers','transfers')}</div>`;
     transfers.forEach(([from,to,amt])=>{
       html+=`<div class="transfer"><span class="avatar" style="background:${colorFor(from)}">${initials(from)}</span> ${esc(from)} <span style="color:var(--faint)">${t('cost.pays','pays')}</span> <span class="avatar" style="background:${colorFor(to)}">${initials(to)}</span> ${esc(to)} <span class="amt">$${amt.toFixed(2)}</span></div>`;
     });
+    if(collector){
+      html+=`<div class="settle-note">${t('cost.groupedNote','Everyone pays')} ${esc(collector)}, ${t('cost.groupedNote2','who then settles with the other payers.')}</div>`;
+    }
   }
   w.innerHTML=html;
 }
@@ -2883,20 +2918,13 @@ function renderProgress(){
 function copySettle(){
   if(!state.crew.length||!state.expenses.length){toast('Nothing to copy yet');return;}
   const {bal,total,sharedPerPerson,hasShared}=computeBalances();
-  const debtors=[],creditors=[];
-  Object.entries(bal).forEach(([n,b])=>{if(b<-0.005)debtors.push([n,-b]);else if(b>0.005)creditors.push([n,b]);});
-  debtors.sort((a,b)=>b[1]-a[1]);creditors.sort((a,b)=>b[1]-a[1]);
   let header='Total: $'+total.toFixed(2);
   if(hasShared) header+=' · split evenly: $'+sharedPerPerson.toFixed(2)+'/person';
   let lines=['🏕 Camping 2026 — settle up',header,''];
-  let di=0,ci=0;
-  while(di<debtors.length&&ci<creditors.length){
-    const pay=Math.min(debtors[di][1],creditors[ci][1]);
-    lines.push(debtors[di][0]+' pays '+creditors[ci][0]+' $'+pay.toFixed(2));
-    debtors[di][1]-=pay;creditors[ci][1]-=pay;
-    if(debtors[di][1]<0.005)di++;if(creditors[ci][1]<0.005)ci++;
-  }
-  if(lines.length===3) lines.push('All settled up — nobody owes anything 🎉');
+  const {transfers,collector}=settleTransfers(bal);
+  transfers.forEach(([from,to,amt])=>lines.push(from+' pays '+to+' $'+amt.toFixed(2)));
+  if(!transfers.length) lines.push('All settled up — nobody owes anything 🎉');
+  else if(collector) lines.push('','(everyone pays '+collector+', who settles with the other payers)');
   const txt=lines.join('\n');
   if(navigator.clipboard){navigator.clipboard.writeText(txt).then(()=>toast('Settle-up copied — paste in the group chat')).catch(()=>toast(txt));}
   else toast(txt);

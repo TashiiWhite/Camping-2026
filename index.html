@@ -274,6 +274,13 @@ html.can-manage .exp-adv.manage-only{display:flex !important}
 .exp-edit-actions{display:flex;gap:8px;margin-top:10px}
 @media(max-width:760px){.exp-edit-grid{grid-template-columns:1fr 1fr}}
 .settle-note{font-size:11.5px;color:var(--faint);font-family:var(--mono);margin:2px 0 2px;line-height:1.5}
+.settle-mode{display:none;align-items:center;gap:7px;font-family:var(--mono)}
+html.can-manage .settle-mode.manage-only{display:inline-flex !important}
+.settle-mode .lbl{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.settle-seg{display:inline-flex;border:1px solid var(--border);border-radius:99px;overflow:hidden}
+.settle-seg button{background:transparent;border:0;color:var(--muted);font-family:var(--mono);font-size:10px;letter-spacing:.04em;padding:5px 11px;cursor:pointer;transition:background .12s,color .12s}
+.settle-seg button:hover{color:var(--text)}
+.settle-seg button.on{background:var(--green);color:var(--grad-text,#10140f);font-weight:700}
 .catpill{font-family:var(--mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:5px;background:var(--surface3);color:var(--muted)}
 .settle{background:var(--surface2);border:1px solid var(--border-strong);border-radius:var(--radius);padding:18px;margin-top:18px}
 .settle h4{font-family:var(--display);font-weight:700;font-size:17px;margin-bottom:12px}
@@ -1004,7 +1011,7 @@ html.signed-out .panel.gated .gate-disable{display:none !important}
     <div id="exp-list"></div>
     <div class="cat-bars" id="cat-bars"></div>
   </div>
-  <div class="settle"><h4 style="display:flex;align-items:center;gap:10px">Settle up <button class="btn ghost sm" style="margin-left:auto" onclick="copySettle()">📋 Copy for group chat</button></h4><div id="settle-body"><div class="empty">Add crew + expenses to see the split.</div></div></div>
+  <div class="settle"><h4 style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">Settle up <span class="settle-mode manage-only"><span class="lbl" data-i18n="cost.settleStyle">Style</span><span class="settle-seg" id="settle-seg"><button data-mode="grouped" onclick="setSettleMode('grouped')" data-i18n="cost.settleGrouped">Grouped</button><button data-mode="minimal" onclick="setSettleMode('minimal')" data-i18n="cost.settleMinimal">Fewest</button></span></span><button class="btn ghost sm" style="margin-left:auto" onclick="copySettle()">📋 Copy for group chat</button></h4><div id="settle-body"><div class="empty">Add crew + expenses to see the split.</div></div></div>
   </div>
 </div>
 </section>
@@ -1403,8 +1410,8 @@ html.signed-out .panel.gated .gate-disable{display:none !important}
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" onerror="window.__gsapFailed=1"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" onerror="window.__sbFailed=1"></script>
 <script src="config.js"></script>
-<script src="i18n.js?v=4"></script>
-<script src="content-fr.js?v=4"></script>
-<script src="app.js?v=26"></script>
+<script src="i18n.js?v=5"></script>
+<script src="content-fr.js?v=5"></script>
+<script src="app.js?v=27"></script>
 </body>
 </html>

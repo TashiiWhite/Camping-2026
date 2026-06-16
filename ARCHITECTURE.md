@@ -27,7 +27,7 @@ A **static, no-build progressive web app** for coordinating a group car-camping 
 | `i18n.js` | ~293 | i18n engine (`window.i18n`, `window.t`) + EN and FR dictionaries. |
 | `content-fr.js` | ~114 | French translations of the trip-content data arrays (`window.CONTENT_FR`). |
 | `config.js` | 10 | `window.WW_CONFIG` — Supabase URL, anon key (public by design), TRIP_ID. |
-| `sw.js` | 54 | Service worker. Cache name `camping2026-v26` (bump to force client update). |
+| `sw.js` | 54 | Service worker. Cache name `camping2026-v27` (bump to force client update). |
 | `manifest.webmanifest` | — | PWA manifest (icons, name, theme color). |
 | `netlify.toml` | — | Netlify config. |
 | `icons/`, `maps/`, `ivy.jpg` | — | App icons + campsite map images. |
@@ -37,7 +37,7 @@ A **static, no-build progressive web app** for coordinating a group car-camping 
 | `whats-new.html` | — | Standalone changelog page; host it and link from the admin banner. |
 
 **Script load order in `index.html` (matters):**
-`config.js` → `i18n.js?v=4` → `content-fr.js?v=4` → `app.js?v=26`
+`config.js` → `i18n.js?v=5` → `content-fr.js?v=5` → `app.js?v=27`
 
 ---
 
@@ -82,6 +82,7 @@ A single object `state`, persisted to `localStorage` and synced to Supabase `tri
   gearPacked:{},    // { gearId: bool | { name:bool } }
   personalItems:{}, // { name: [{id,name,qty,packed}] }
   expenses:[],      // [{id,desc,amt,who,cat,split,shareWith}]  split:'all'|'payer'|'custom' (absent ⇒ 'all'); shareWith only when custom
+  settleMode:'grouped',// 'grouped' (everyone pays the top creditor, who forwards) | 'minimal' (fewest transfers)
   votes:{},         // { name: 'plage' | 'ivy' }
   roles:{},         // { roleLabel: name }
   checks:{},        // { 'shop-<cat>-<idx>': bool } shopping checkboxes
